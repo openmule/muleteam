@@ -296,7 +296,7 @@ cmd_messages() {
   data=$(_get "/api/threads/$id/messages")
   echo "$data" | _jq_or_cat -r "
     .messages[-$limit:][]
-    | \"\(.from_name) [\(.type)] \(.body | gsub(\"\n\"; \" \") | if length > 200 then .[:200] + \"...\" else . end)\"
+    | \"\(.from_name) [\(.type)] \(.body)\"
   "
 }
 
@@ -555,7 +555,7 @@ cmd_history() {
 
   _get "/api/threads/$id/git-log?limit=$limit" | _jq_or_cat -r '
     .log[]
-    | "\(.short_hash) \(.date[:16]) \(.author): \(.message)"
+    | "\(.short_hash) \(.date[:16]) \(.author): \(.message | gsub("\n"; " "))"
   '
 }
 
