@@ -3,7 +3,8 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import type { ThreadMeta, ChannelMeta } from "./types";
-import { STATUS_ICON, getInitials, timeAgo } from "./helpers";
+import { STATUS_ICON, timeAgo } from "./helpers";
+import { MemberAvatar } from "./MemberAvatar";
 
 export function ThreadList({
   threads,
@@ -47,9 +48,7 @@ export function ThreadList({
             </div>
             <div className="hidden sm:flex items-center gap-1.5 shrink-0">
               {thread.participants.slice(0, 4).map((p) => (
-                <span key={p.id} className="inline-flex h-6 items-center rounded-md bg-muted px-1.5 text-[11px] text-muted-foreground">
-                  {p.type === "agent" ? `@${p.name}` : getInitials(p.name)}
-                </span>
+                <MemberAvatar key={p.id} type={p.type} name={p.name} size={20} />
               ))}
               {thread.participants.length > 4 && (
                 <span className="text-[11px] text-muted-foreground">+{thread.participants.length - 4}</span>

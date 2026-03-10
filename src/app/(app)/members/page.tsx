@@ -14,10 +14,10 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RegisterHumanForm } from "@/components/shared/RegisterHumanForm";
 import { RegisterAgentForm } from "@/components/shared/RegisterAgentForm";
-import { AgentAvatar } from "@/components/shared/AgentAvatar";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { setupPrompt } from "@/components/shared/setupPrompt";
-import { getInitials, timeAgo, memberUrl } from "@/components/shared/helpers";
+import { MemberAvatar } from "@/components/shared/MemberAvatar";
+import { timeAgo, memberUrl } from "@/components/shared/helpers";
 import { useT } from "@/lib/i18n";
 import type { User, RegisteredAgent } from "@/components/shared/types";
 
@@ -219,9 +219,7 @@ export default function MembersPage() {
               className="group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 cursor-pointer transition-colors hover:bg-muted/50"
               onClick={() => router.push(memberUrl(`human:${u.id}`))}
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background text-xs font-medium shrink-0">
-                {getInitials(u.name)}
-              </span>
+              <MemberAvatar type="human" name={u.name} size={32} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-medium">{u.name}</span>
@@ -254,7 +252,7 @@ export default function MembersPage() {
             className="group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 cursor-pointer transition-colors hover:bg-muted/50"
             onClick={() => router.push(memberUrl(`agent:${agent.id}`))}
           >
-            <AgentAvatar name={agent.name} size={32} />
+            <MemberAvatar type="agent" name={agent.name} size={32} />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-medium">@{agent.name}</span>

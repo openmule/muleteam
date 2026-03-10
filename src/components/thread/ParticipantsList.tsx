@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { memberUrl } from "@/components/shared/helpers";
+import { MemberAvatar } from "@/components/shared/MemberAvatar";
 
 interface Participant {
   id: string;
@@ -30,15 +31,6 @@ function timeAgo(dateStr: string): string {
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
 }
 
 export function ParticipantsList({
@@ -108,9 +100,7 @@ export function ParticipantsList({
 
             return (
               <div key={p.id} className="flex items-center gap-2 text-sm">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium shrink-0">
-                  {isAgent ? "@" : getInitials(p.name)}
-                </span>
+                <MemberAvatar type={p.type} name={p.name} size={20} />
                 <Link href={memberUrl(p.id)} className="hover:underline">
                   {isAgent ? `@${p.name}` : p.name}
                 </Link>
@@ -143,9 +133,7 @@ export function ParticipantsList({
                   onClick={() => handleAdd(`human:${u.id}`)}
                   className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/50 disabled:opacity-50"
                 >
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium shrink-0">
-                    {getInitials(u.name)}
-                  </span>
+                  <MemberAvatar type="human" name={u.name} size={20} />
                   <span>{u.name}</span>
                 </button>
               ))}
@@ -157,9 +145,7 @@ export function ParticipantsList({
                   onClick={() => handleAdd(`agent:${agent.id}`)}
                   className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/50 disabled:opacity-50"
                 >
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium shrink-0">
-                    @
-                  </span>
+                  <MemberAvatar type="agent" name={agent.name} size={20} />
                   <span>@{agent.name}</span>
                 </button>
               ))}
