@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { getInitials, memberUrl } from "@/components/shared/helpers";
 import { useI18n, LOCALES } from "@/lib/i18n";
+import { useTheme } from "@/lib/use-theme";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +34,7 @@ export function Navbar() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { locale, setLocale, t } = useI18n();
+  const { toggle: toggleTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -77,8 +79,18 @@ export function Navbar() {
                   );
                 })}
               </nav>
-              {/* Language selector in mobile menu */}
+              {/* Theme + Language in mobile menu */}
               <div className="border-t border-border px-4 py-3">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs text-muted-foreground">Theme</p>
+                  <button
+                    onClick={toggleTheme}
+                    className="flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  >
+                    <svg className="dark:hidden" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    <svg className="hidden dark:block" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                  </button>
+                </div>
                 <p className="text-xs text-muted-foreground mb-2">{t("language")}</p>
                 <div className="flex gap-1">
                   {LOCALES.map((loc) => (
@@ -129,6 +141,16 @@ export function Navbar() {
 
         {/* Right: Language selector (desktop) + User dropdown */}
         <div className="flex items-center gap-2">
+          {/* Desktop dark mode toggle */}
+          <button
+            onClick={toggleTheme}
+            className="hidden md:flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            title="Toggle dark mode"
+          >
+            <svg className="dark:hidden" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <svg className="hidden dark:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          </button>
+
           {/* Desktop language selector */}
           <DropdownMenu>
             <DropdownMenuTrigger className="hidden md:flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus:outline-none">
