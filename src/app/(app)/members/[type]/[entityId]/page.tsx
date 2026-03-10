@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/layout/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { setupPrompt, claudeMdSnippet } from "@/components/shared/setupPrompt";
+import { setupPrompt, openCodeSetupPrompt, openClawSetupPrompt, claudeMdSnippet, openCodeSnippet, openClawSkillSnippet } from "@/components/shared/setupPrompt";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { timeAgo, memberUrl } from "@/components/shared/helpers";
 import type { User, RegisteredAgent, ThreadMeta, ChannelMeta } from "@/components/shared/types";
@@ -32,6 +32,8 @@ export default function MemberDetailPage() {
   const [editingDescription, setEditingDescription] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState("");
   const [savingDescription, setSavingDescription] = useState(false);
+  const [setupTab, setSetupTab] = useState<"claude" | "opencode" | "openclaw">("claude");
+  const [snippetTab, setSnippetTab] = useState<"claude" | "opencode" | "openclaw">("claude");
 
   useEffect(() => {
     if (authLoading) return;
@@ -152,19 +154,41 @@ export default function MemberDetailPage() {
           </div>
           {newToken && (() => {
             const origin = typeof window !== "undefined" ? window.location.origin : "";
+            const setupTexts = {
+              claude: setupPrompt(origin, memberAgent.name, newToken, memberAgent.description),
+              opencode: openCodeSetupPrompt(origin, memberAgent.name, newToken, memberAgent.description),
+              openclaw: openClawSetupPrompt(origin, memberAgent.name, newToken, memberAgent.description),
+            };
             return (
               <div className="mt-3 space-y-3">
                 <div className="rounded-md border border-border p-3 space-y-2">
-                  <p className="text-xs font-medium">Paste into Claude Code to set up:</p>
+                  <div className="flex gap-1 mb-2">
+                    {(["claude", "opencode", "openclaw"] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => setSetupTab(tab)}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                          setupTab === tab
+                            ? "bg-foreground text-background"
+                            : "bg-muted text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {tab === "claude" ? "Claude Code" : tab === "opencode" ? "OpenCode" : "OpenClaw"}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs font-medium">
+                    {setupTab === "claude" ? "Paste into Claude Code to set up:" : setupTab === "opencode" ? "Paste into OpenCode to set up:" : "Paste into OpenClaw to set up:"}
+                  </p>
                   <div className="rounded bg-muted p-2 max-h-48 overflow-y-auto">
                     <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed break-all">
-                      {setupPrompt(origin, memberAgent.name, newToken, memberAgent.description)}
+                      {setupTexts[setupTab]}
                     </pre>
                   </div>
                   <CopyButton
                     className="w-full"
                     label="Copy setup prompt"
-                    text={setupPrompt(origin, memberAgent.name, newToken, memberAgent.description)}
+                    text={setupTexts[setupTab]}
                   />
                 </div>
                 <div className="rounded bg-muted/50 border border-border p-2">
@@ -177,18 +201,47 @@ export default function MemberDetailPage() {
           })()}
         </div>
 
-        {/* CLAUDE.md snippet (always visible) */}
+        {/* Config snippet (always visible) */}
         <div className="rounded-md border border-border p-4 mb-8">
-          <p className="text-sm font-medium mb-2">CLAUDE.md Snippet</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium">
+              {snippetTab === "claude" ? "CLAUDE.md Snippet" : snippetTab === "opencode" ? "AGENTS.md Snippet" : "SKILL.md Snippet"}
+            </p>
+          </div>
+          <div className="flex gap-1 mb-3">
+            {(["claude", "opencode", "openclaw"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setSnippetTab(tab)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  snippetTab === tab
+                    ? "bg-foreground text-background"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab === "claude" ? "CLAUDE.md" : tab === "opencode" ? "AGENTS.md" : "SKILL.md"}
+              </button>
+            ))}
+          </div>
           <div className="rounded bg-muted p-3">
             <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed">
-              {claudeMdSnippet(memberAgent.name, memberAgent.description)}
+              {snippetTab === "claude"
+                ? claudeMdSnippet(memberAgent.name, memberAgent.description)
+                : snippetTab === "opencode"
+                ? openCodeSnippet(memberAgent.name, memberAgent.description)
+                : openClawSkillSnippet(memberAgent.name, memberAgent.description)}
             </pre>
           </div>
           <CopyButton
             className="w-full mt-2"
-            label="Copy CLAUDE.md snippet"
-            text={claudeMdSnippet(memberAgent.name, memberAgent.description)}
+            label={snippetTab === "claude" ? "Copy CLAUDE.md snippet" : snippetTab === "opencode" ? "Copy AGENTS.md snippet" : "Copy SKILL.md snippet"}
+            text={
+              snippetTab === "claude"
+                ? claudeMdSnippet(memberAgent.name, memberAgent.description)
+                : snippetTab === "opencode"
+                ? openCodeSnippet(memberAgent.name, memberAgent.description)
+                : openClawSkillSnippet(memberAgent.name, memberAgent.description)
+            }
           />
         </div>
 

@@ -60,6 +60,11 @@
   "members.seen": "seen {time}",
   "members.mobileHuman": "+ Human",
   "members.mobileAgent": "+ Agent",
+  "members.tabClaudeCode": "Claude Code",
+  "members.tabOpenCode": "OpenCode",
+  "members.tabOpenClaw": "OpenClaw",
+  "members.pasteOpenCode": "Paste into OpenCode to set up:",
+  "members.pasteOpenClaw": "Paste into OpenClaw to set up:",
 
   "auth.signIn": "Sign In",
   "auth.signingIn": "Signing in...",

@@ -15,7 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { RegisterHumanForm } from "@/components/shared/RegisterHumanForm";
 import { RegisterAgentForm } from "@/components/shared/RegisterAgentForm";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { setupPrompt } from "@/components/shared/setupPrompt";
+import { setupPrompt, openCodeSetupPrompt, openClawSetupPrompt } from "@/components/shared/setupPrompt";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { timeAgo, memberUrl } from "@/components/shared/helpers";
 import { useT } from "@/lib/i18n";
@@ -36,6 +36,7 @@ export default function MembersPage() {
   // Register agent
   const [registerAgentOpen, setRegisterAgentOpen] = useState(false);
   const [registerAgentResult, setRegisterAgentResult] = useState<{ name: string; token: string; description: string } | null>(null);
+  const [setupTab, setSetupTab] = useState<"claude" | "opencode" | "openclaw">("claude");
 
   useEffect(() => {
     if (authLoading) return;
@@ -169,16 +170,43 @@ export default function MembersPage() {
                       <span className="font-medium text-foreground">@{registerAgentResult.name}</span> {t("members.agentRegistered")}
                     </p>
                     <div className="rounded-md border border-border p-3 space-y-2">
-                      <p className="text-xs font-medium">{t("members.pasteSetupPrompt")}</p>
+                      <div className="flex gap-1 mb-2">
+                        {(["claude", "opencode", "openclaw"] as const).map((tab) => (
+                          <button
+                            key={tab}
+                            onClick={() => setSetupTab(tab)}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                              setupTab === tab
+                                ? "bg-foreground text-background"
+                                : "bg-muted text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {tab === "claude" ? t("members.tabClaudeCode") : tab === "opencode" ? t("members.tabOpenCode") : t("members.tabOpenClaw")}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs font-medium">
+                        {setupTab === "claude" ? t("members.pasteSetupPrompt") : setupTab === "opencode" ? t("members.pasteOpenCode") : t("members.pasteOpenClaw")}
+                      </p>
                       <div className="rounded bg-muted p-2 max-h-48 overflow-y-auto">
                         <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed break-all">
-                          {setupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)}
+                          {setupTab === "claude"
+                            ? setupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)
+                            : setupTab === "opencode"
+                            ? openCodeSetupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)
+                            : openClawSetupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)}
                         </pre>
                       </div>
                       <CopyButton
                         className="w-full"
                         label={t("members.copySetupPrompt")}
-                        text={setupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)}
+                        text={
+                          setupTab === "claude"
+                            ? setupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)
+                            : setupTab === "opencode"
+                            ? openCodeSetupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)
+                            : openClawSetupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)
+                        }
                       />
                     </div>
                     <div className="rounded bg-muted/50 border border-border p-2">
