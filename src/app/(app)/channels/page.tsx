@@ -11,9 +11,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ThreadList } from "@/components/shared/ThreadList";
+import { NewThreadDialog } from "@/components/shared/NewThreadDialog";
 import { CreateChannelForm } from "@/components/shared/CreateChannelForm";
-import { timeAgo } from "@/components/shared/helpers";
-import type { ThreadMeta, RegisteredAgent, ChannelMeta, User } from "@/components/shared/types";
+import { timeAgo, getInitials } from "@/components/shared/helpers";
+import type { ThreadMeta, RegisteredAgent, ChannelMeta, User, Participant } from "@/components/shared/types";
 
 export default function ChannelsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -24,6 +25,8 @@ export default function ChannelsPage() {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [expandedChannels, setExpandedChannels] = useState<Set<string>>(new Set());
+  const [addingMemberTo, setAddingMemberTo] = useState<string | null>(null);
+  const [memberAdding, setMemberAdding] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -51,6 +54,23 @@ export default function ChannelsPage() {
   const fetchThreads = async () => {
     const res = await fetch("/api/threads");
     if (res.ok) setThreads((await res.json()).threads ?? []);
+  };
+
+  const handleAddMember = async (channelId: string, member: Participant) => {
+    setMemberAdding(true);
+    try {
+      const res = await fetch(`/api/channels/${channelId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(member),
+      });
+      if (res.ok) {
+        setAddingMemberTo(null);
+        await fetchChannels();
+      }
+    } finally {
+      setMemberAdding(false);
+    }
   };
 
   const handleDeleteChannel = async (channelId: string) => {
@@ -163,8 +183,87 @@ export default function ChannelsPage() {
 
                 {isExpanded && (
                   <div className="border-t border-border">
+                    {/* Members section */}
+                    <div className="px-4 py-3 border-b border-border">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-muted-foreground font-medium">Members:</span>
+                        {channel.members.map((m) => (
+                          <span key={m.id} className="inline-flex h-5 items-center rounded-md bg-muted px-1.5 text-[11px] text-muted-foreground">
+                            {m.type === "agent" ? `@${m.name}` : getInitials(m.name)}
+                          </span>
+                        ))}
+                        {addingMemberTo !== channel.id && (
+                          <button
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            onClick={() => setAddingMemberTo(channel.id)}
+                          >
+                            <span className="text-sm">+</span> Add
+                          </button>
+                        )}
+                      </div>
+                      {addingMemberTo === channel.id && (() => {
+                        const memberIds = new Set(channel.members.map((m) => m.id));
+                        const availUsers = allUsers.filter((u) => !memberIds.has(`human:${u.id}`));
+                        const availAgents = agents.filter((a) => !memberIds.has(`agent:${a.id}`));
+                        return (availUsers.length > 0 || availAgents.length > 0) ? (
+                          <div className="rounded-md border border-border divide-y divide-border mt-2 max-h-40 overflow-y-auto">
+                            {availUsers.map((u) => (
+                              <button
+                                key={u.id}
+                                type="button"
+                                disabled={memberAdding}
+                                onClick={() => handleAddMember(channel.id, { id: `human:${u.id}`, type: "human", name: u.name })}
+                                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/50 disabled:opacity-50"
+                              >
+                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium shrink-0">
+                                  {getInitials(u.name)}
+                                </span>
+                                <span>{u.name}</span>
+                              </button>
+                            ))}
+                            {availAgents.map((agent) => (
+                              <button
+                                key={agent.id}
+                                type="button"
+                                disabled={memberAdding}
+                                onClick={() => handleAddMember(channel.id, { id: `agent:${agent.id}`, type: "agent", name: agent.name })}
+                                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/50 disabled:opacity-50"
+                              >
+                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium shrink-0">
+                                  @
+                                </span>
+                                <span>@{agent.name}</span>
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => setAddingMemberTo(null)}
+                              className="flex w-full items-center justify-center px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="mt-2 text-xs text-muted-foreground">
+                            No more members to add.{" "}
+                            <button onClick={() => setAddingMemberTo(null)} className="hover:text-foreground">Dismiss</button>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Threads + New Thread button */}
+                    <div className="px-4 py-2 flex items-center justify-end">
+                      <NewThreadDialog
+                        agents={agents}
+                        users={allUsers}
+                        channels={channels}
+                        defaultChannelId={channel.id}
+                        onCreated={fetchThreads}
+                      />
+                    </div>
                     {channelThreads.length === 0 ? (
-                      <div className="px-4 py-4 text-center">
+                      <div className="px-4 pb-4 text-center">
                         <p className="text-xs text-muted-foreground">No threads in this channel yet.</p>
                       </div>
                     ) : (

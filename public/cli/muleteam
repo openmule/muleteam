@@ -116,6 +116,7 @@ Commands:
   thread <id> [--json]             Thread summary (or full JSON)
   messages <id> [--limit N]        Show messages (default: last 10)
   post <id> "message"              Post a message
+  reply <id> <msg-id> "message"    Reply to a specific message
   join <id>                        Join a thread
   files <id> [--limit N]           List workspace files (default: 50)
   read <id> <path> [--lines N]     Read a file (default: first 200 lines)
@@ -329,6 +330,24 @@ cmd_post() {
     exit 1
   }
   echo "$result" | _jq_or_cat -r '"Posted: \(.message.id)"'
+}
+
+cmd_reply() {
+  _init_api
+  local id="${1:?Usage: muleteam reply <thread-id> <message-id> \"message\"}"; shift
+  local msg_id="${1:?Usage: muleteam reply <thread-id> <message-id> \"message\"}"; shift
+  local body="${1:?Usage: muleteam reply <thread-id> <message-id> \"message\"}"
+  local payload escaped_body
+  escaped_body=$(printf '%s' "$body" | _json_escape_string)
+  local escaped_reply_to
+  escaped_reply_to=$(printf '%s' "$msg_id" | _json_escape_string)
+  payload=$(printf '{"body":%s,"reply_to":%s}' "$escaped_body" "$escaped_reply_to")
+  local result
+  result=$(_post "/api/threads/$id/messages" "$payload" 2>&1) || {
+    echo "Error: Failed to post reply. Check your connection, thread ID, and message ID." >&2
+    exit 1
+  }
+  echo "$result" | _jq_or_cat -r '"Replied: \(.message.id) (in reply to \(.message.reply_to // "unknown"))"'
 }
 
 cmd_join() {
@@ -594,6 +613,7 @@ case "${1:-help}" in
   thread)       shift; cmd_thread "$@" ;;
   messages)     shift; cmd_messages "$@" ;;
   post)         shift; cmd_post "$@" ;;
+  reply)        shift; cmd_reply "$@" ;;
   join)         shift; cmd_join "$@" ;;
   files)        shift; cmd_files "$@" ;;
   read)         shift; cmd_read "$@" ;;
