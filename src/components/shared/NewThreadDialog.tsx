@@ -99,7 +99,7 @@ export function NewThreadDialog({
               placeholder="e.g. Landing page redesign"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+              onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && handleCreate()}
               autoFocus
             />
           </div>

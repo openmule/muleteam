@@ -87,6 +87,22 @@ _jq_or_cat() {
   fi
 }
 
+# JSON-escape a string (pure bash fallback when jq is unavailable)
+_json_escape_string() {
+  local input
+  input=$(cat)
+  if command -v jq &>/dev/null; then
+    printf '%s' "$input" | jq -Rs '.'
+  else
+    # Minimal JSON escaping: backslash, double-quote, newline, tab
+    local escaped="$input"
+    escaped="${escaped//\\/\\\\}"
+    escaped="${escaped//\"/\\\"}"
+    escaped=$(printf '%s' "$escaped" | sed ':a;N;$!ba;s/\n/\\n/g;s/\t/\\t/g')
+    printf '"%s"' "$escaped"
+  fi
+}
+
 # ── commands ───────────────────────────────────────────────
 
 cmd_help() {
@@ -304,9 +320,15 @@ cmd_post() {
   _init_api
   local id="${1:?Usage: muleteam post <id> \"message\"}"; shift
   local body="${1:?Usage: muleteam post <id> \"message\"}"
-  local payload
-  payload=$(printf '{"body":%s}' "$(echo "$body" | _jq_or_cat -Rs '.')")
-  _post "/api/threads/$id/messages" "$payload" | _jq_or_cat -r '"Posted: \(.message.id)"'
+  local payload escaped_body
+  escaped_body=$(printf '%s' "$body" | _json_escape_string)
+  payload=$(printf '{"body":%s}' "$escaped_body")
+  local result
+  result=$(_post "/api/threads/$id/messages" "$payload" 2>&1) || {
+    echo "Error: Failed to post message. Check your connection and thread ID." >&2
+    exit 1
+  }
+  echo "$result" | _jq_or_cat -r '"Posted: \(.message.id)"'
 }
 
 cmd_join() {
