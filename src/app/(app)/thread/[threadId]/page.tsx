@@ -223,7 +223,7 @@ export default function ThreadDetailPage() {
     : false;
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] flex flex-col">
+    <div className="h-[calc(100dvh-3.5rem)] flex flex-col overflow-hidden">
       {/* Header */}
       <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">

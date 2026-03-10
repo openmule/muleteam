@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
-import { getInitials } from "@/components/shared/helpers";
+import { getInitials, memberUrl } from "@/components/shared/helpers";
 import { useI18n, LOCALES } from "@/lib/i18n";
 import {
   DropdownMenu,
@@ -36,7 +36,7 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
         {/* Left: Logo + mobile hamburger */}
         <div className="flex items-center gap-2">
@@ -166,7 +166,7 @@ export function Navbar() {
                   <p className="text-xs text-muted-foreground break-all">{user.email}</p>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push(`/members/human/${user.id}`)}>
+                <DropdownMenuItem onClick={() => router.push(memberUrl(`human:${user.id}`))}>
                   {t("nav.myProfile")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
