@@ -14,6 +14,12 @@ interface RegisteredAgent {
   last_seen_at: string;
 }
 
+interface UserInfo {
+  id: string;
+  name: string;
+  email: string;
+}
+
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -34,16 +40,49 @@ function getInitials(name: string): string {
 }
 
 export function ParticipantsList({
+  threadId,
   participants,
   agents,
+  users,
+  onParticipantAdded,
+  readOnly,
 }: {
+  threadId: string;
   participants: Participant[];
   agents: RegisteredAgent[];
+  users?: UserInfo[];
+  onParticipantAdded?: () => void;
+  readOnly?: boolean;
 }) {
   const [expanded, setExpanded] = useState(true);
+  const [showPicker, setShowPicker] = useState(false);
+  const [adding, setAdding] = useState(false);
 
   // Build a map of agent last_seen
   const agentMap = new Map(agents.map((a) => [a.id, a]));
+
+  // Filter out participants already in the thread
+  const participantIds = new Set(participants.map((p) => p.id));
+  const availableAgents = agents.filter((a) => !participantIds.has(`agent:${a.id}`));
+  const availableUsers = (users ?? []).filter((u) => !participantIds.has(`human:${u.id}`));
+  const hasAvailable = availableAgents.length > 0 || availableUsers.length > 0;
+
+  const handleAdd = async (participantId: string) => {
+    setAdding(true);
+    try {
+      const res = await fetch(`/api/threads/${threadId}/participants`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ participantId }),
+      });
+      if (res.ok) {
+        setShowPicker(false);
+        onParticipantAdded?.();
+      }
+    } finally {
+      setAdding(false);
+    }
+  };
 
   return (
     <div>
@@ -76,6 +115,56 @@ export function ParticipantsList({
               </div>
             );
           })}
+
+          {/* Add participant button & picker */}
+          {!readOnly && hasAvailable && !showPicker && (
+            <button
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors pt-1"
+              onClick={() => setShowPicker(true)}
+            >
+              <span className="text-sm">+</span> Add participant
+            </button>
+          )}
+
+          {showPicker && (
+            <div className="rounded-md border border-border divide-y divide-border mt-1 max-h-48 overflow-y-auto">
+              {availableUsers.map((u) => (
+                <button
+                  key={`human:${u.id}`}
+                  type="button"
+                  disabled={adding}
+                  onClick={() => handleAdd(`human:${u.id}`)}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/50 disabled:opacity-50"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium shrink-0">
+                    {getInitials(u.name)}
+                  </span>
+                  <span>{u.name}</span>
+                </button>
+              ))}
+              {availableAgents.map((agent) => (
+                <button
+                  key={`agent:${agent.id}`}
+                  type="button"
+                  disabled={adding}
+                  onClick={() => handleAdd(`agent:${agent.id}`)}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/50 disabled:opacity-50"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium shrink-0">
+                    @
+                  </span>
+                  <span>@{agent.name}</span>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setShowPicker(false)}
+                className="flex w-full items-center justify-center px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

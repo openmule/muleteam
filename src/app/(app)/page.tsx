@@ -4,26 +4,29 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/components/layout/AuthProvider";
 import { ThreadList } from "@/components/shared/ThreadList";
 import { NewThreadDialog } from "@/components/shared/NewThreadDialog";
-import type { ThreadMeta, RegisteredAgent, ChannelMeta } from "@/components/shared/types";
+import type { ThreadMeta, RegisteredAgent, ChannelMeta, User } from "@/components/shared/types";
 
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth();
   const [threads, setThreads] = useState<ThreadMeta[]>([]);
   const [agents, setAgents] = useState<RegisteredAgent[]>([]);
   const [channels, setChannels] = useState<ChannelMeta[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
     async function load() {
-      const [threadsRes, agentsRes, channelsRes] = await Promise.all([
+      const [threadsRes, agentsRes, channelsRes, usersRes] = await Promise.all([
         fetch("/api/threads"),
         fetch("/api/agents"),
         fetch("/api/channels"),
+        fetch("/api/users"),
       ]);
       if (threadsRes.ok) setThreads((await threadsRes.json()).threads ?? []);
       if (agentsRes.ok) setAgents((await agentsRes.json()).agents ?? []);
       if (channelsRes.ok) setChannels((await channelsRes.json()).channels ?? []);
+      if (usersRes.ok) setAllUsers((await usersRes.json()).users ?? []);
       setLoading(false);
     }
     load();
@@ -73,7 +76,7 @@ export default function HomePage() {
       {/* All Threads */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold tracking-tight">Threads</h2>
-        <NewThreadDialog agents={agents} channels={channels} onCreated={fetchThreads} />
+        <NewThreadDialog agents={agents} users={allUsers} channels={channels} onCreated={fetchThreads} />
       </div>
 
       {allThreadsSorted.length === 0 ? (
