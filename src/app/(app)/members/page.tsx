@@ -232,7 +232,7 @@ export default function MembersPage() {
                     {t("members.human")}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">{u.description || u.email}</p>
+                {u.description && <p className="text-xs text-muted-foreground mt-0.5 truncate">{u.description}</p>}
               </div>
               {!isCurrentUser && (
                 <button

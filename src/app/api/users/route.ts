@@ -9,7 +9,12 @@ export async function GET(request: Request) {
 
   await ensureMigrations();
   const sql = db();
-  const users = (await sql`SELECT id, email, name, description, avatar_url, created_at, invited_by FROM users ORDER BY name`) as { id: string; email: string; name: string; description: string | null; avatar_url: string | null; created_at: string; invited_by: { id: string; name: string } | null }[];
+  const rows = (await sql`SELECT id, email, name, description, avatar_url, created_at, invited_by FROM users ORDER BY name`) as { id: string; email: string; name: string; description: string | null; avatar_url: string | null; created_at: string; invited_by: { id: string; name: string } | null }[];
+
+  // Only include email for the requesting user's own record
+  const users = rows.map(({ email, ...rest }) =>
+    rest.id === user.id ? { ...rest, email } : rest
+  );
 
   return NextResponse.json({ users });
 }
