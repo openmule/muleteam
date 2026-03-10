@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       }
     } else if (pid.startsWith("human:")) {
       const userId = pid.replace("human:", "");
-      const users = await sql`SELECT id, name FROM users WHERE id = ${userId}`;
+      const users = (await sql`SELECT id, name FROM users WHERE id = ${userId}`) as { id: string; name: string }[];
       if (users.length > 0) {
         participants.push({ id: pid, type: "human", name: users[0].name });
       }
