@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { hashPassword } from "@/lib/auth";
+import { hashPassword, getUser } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
+    const inviter = await getUser(request);
     const body = await request.json();
     const { email, password, name } = body;
 
@@ -40,9 +41,10 @@ export async function POST(request: Request) {
     }
 
     const passwordHash = await hashPassword(password);
+    const invitedBy = inviter ? JSON.stringify({ id: inviter.id, name: inviter.name }) : null;
     const result = (await sql`
-      INSERT INTO users (email, password_hash, name)
-      VALUES (${email}, ${passwordHash}, ${name})
+      INSERT INTO users (email, password_hash, name, invited_by)
+      VALUES (${email}, ${passwordHash}, ${name}, ${invitedBy}::jsonb)
       RETURNING id, email, name
     `) as { id: string; email: string; name: string }[];
 

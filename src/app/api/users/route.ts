@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const sql = db();
-  const users = (await sql`SELECT id, email, name, description, avatar_url, created_at FROM users ORDER BY name`) as { id: string; email: string; name: string; description: string | null; avatar_url: string | null; created_at: string }[];
+  const users = (await sql`SELECT id, email, name, description, avatar_url, created_at, invited_by FROM users ORDER BY name`) as { id: string; email: string; name: string; description: string | null; avatar_url: string | null; created_at: string; invited_by: { id: string; name: string } | null }[];
 
   return NextResponse.json({ users });
 }
