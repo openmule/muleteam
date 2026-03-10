@@ -6,7 +6,7 @@ import { useAuth } from "@/components/layout/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { AgentAvatar } from "@/components/shared/AgentAvatar";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { getInitials, timeAgo } from "@/components/shared/helpers";
+import { getInitials, timeAgo, memberUrl } from "@/components/shared/helpers";
 import type { User, RegisteredAgent, ThreadMeta, ChannelMeta } from "@/components/shared/types";
 
 function setupPrompt(origin: string, name: string, token: string, description: string) {
@@ -56,11 +56,13 @@ Run \`muleteam help\` for all available commands.
 export default function MemberDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { loading: authLoading } = useAuth();
+  const { user: currentUser, loading: authLoading } = useAuth();
 
-  const rawId = decodeURIComponent(params.id as string);
-  const isAgent = rawId.startsWith("agent:");
-  const entityId = rawId.replace(/^(human|agent):/, "");
+  const memberType = params.type as string;
+  const entityId = params.entityId as string;
+  const isAgent = memberType === "agent";
+  const rawId = `${memberType}:${entityId}`;
+  const isOwnProfile = !isAgent && currentUser?.id === entityId;
 
   const [memberUser, setMemberUser] = useState<User | null>(null);
   const [memberAgent, setMemberAgent] = useState<RegisteredAgent | null>(null);
@@ -69,6 +71,9 @@ export default function MemberDetailPage() {
   const [loading, setLoading] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
   const [newToken, setNewToken] = useState<string | null>(null);
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [savingDescription, setSavingDescription] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -276,7 +281,76 @@ export default function MemberDetailPage() {
           </span>
           <div>
             <h1 className="text-xl font-semibold">{memberUser.name}</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">{memberUser.email}</p>
+            {editingDescription ? (
+              <div className="flex items-center gap-2 mt-1">
+                <input
+                  type="text"
+                  className="text-sm border border-border rounded px-2 py-1 bg-background text-foreground w-64"
+                  value={descriptionDraft}
+                  onChange={(e) => setDescriptionDraft(e.target.value)}
+                  placeholder="Add a description..."
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setEditingDescription(false);
+                    if (e.key === "Enter") {
+                      setSavingDescription(true);
+                      fetch(`/api/users/${entityId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ description: descriptionDraft }),
+                      }).then(() => {
+                        setMemberUser({ ...memberUser, description: descriptionDraft || undefined });
+                        setEditingDescription(false);
+                      }).finally(() => setSavingDescription(false));
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={savingDescription}
+                  onClick={() => {
+                    setSavingDescription(true);
+                    fetch(`/api/users/${entityId}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ description: descriptionDraft }),
+                    }).then(() => {
+                      setMemberUser({ ...memberUser, description: descriptionDraft || undefined });
+                      setEditingDescription(false);
+                    }).finally(() => setSavingDescription(false));
+                  }}
+                >
+                  {savingDescription ? "Saving..." : "Save"}
+                </Button>
+                <button
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => setEditingDescription(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-sm text-muted-foreground">
+                  {memberUser.description || (isOwnProfile ? "No description" : "")}
+                </p>
+                {isOwnProfile && (
+                  <button
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setDescriptionDraft(memberUser.description || "");
+                      setEditingDescription(true);
+                    }}
+                  >
+                    {memberUser.description ? "Edit" : "Add"}
+                  </button>
+                )}
+              </div>
+            )}
+            {isOwnProfile && (
+              <p className="text-xs text-muted-foreground mt-0.5">{memberUser.email}</p>
+            )}
           </div>
           <span className="inline-flex h-6 items-center rounded bg-muted px-2 text-xs font-medium text-muted-foreground ml-auto">
             Human

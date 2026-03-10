@@ -26,6 +26,13 @@ export function timeAgo(dateStr: string): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+/** Build a clean profile URL: /members/agent/<id> or /members/human/<id> */
+export function memberUrl(participantId: string): string {
+  // participantId is "agent:<id>" or "human:<id>"
+  const [type, ...rest] = participantId.split(":");
+  return `/members/${type}/${rest.join(":")}`;
+}
+
 export function generatePassword(): string {
   const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let password = "";

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { memberUrl } from "@/components/shared/helpers";
 
 interface Participant {
   id: string;
@@ -106,7 +108,9 @@ export function ParticipantsList({
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium shrink-0">
                   {isAgent ? "@" : getInitials(p.name)}
                 </span>
-                <span>{isAgent ? `@${p.name}` : p.name}</span>
+                <Link href={memberUrl(p.id)} className="hover:underline">
+                  {isAgent ? `@${p.name}` : p.name}
+                </Link>
                 {agentInfo && (
                   <span className="text-xs text-muted-foreground">
                     &middot; seen {timeAgo(agentInfo.last_seen_at)}
