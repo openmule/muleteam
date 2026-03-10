@@ -13,15 +13,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { RegisteredAgent, ChannelMeta } from "./types";
+import type { User, RegisteredAgent, ChannelMeta } from "./types";
 
 export function NewThreadDialog({
   agents,
+  users,
   channels,
   defaultChannelId,
   onCreated,
 }: {
   agents: RegisteredAgent[];
+  users?: User[];
   channels: ChannelMeta[];
   defaultChannelId?: string;
   onCreated?: () => void;
@@ -30,12 +32,12 @@ export function NewThreadDialog({
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedAgentIds, setSelectedAgentIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedChannelId, setSelectedChannelId] = useState(defaultChannelId || "");
   const [creating, setCreating] = useState(false);
 
-  const toggleAgent = (id: string) => {
-    setSelectedAgentIds((prev) => {
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -47,7 +49,7 @@ export function NewThreadDialog({
     if (!title.trim() || creating) return;
     setCreating(true);
     try {
-      const participantIds = Array.from(selectedAgentIds).map((id) => `agent:${id}`);
+      const participantIds = Array.from(selectedIds);
       const res = await fetch("/api/threads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -63,7 +65,7 @@ export function NewThreadDialog({
         setOpen(false);
         setTitle("");
         setDescription("");
-        setSelectedAgentIds(new Set());
+        setSelectedIds(new Set());
         setSelectedChannelId("");
         onCreated?.();
         router.push(`/thread/${data.thread.id}`);
@@ -124,17 +126,41 @@ export function NewThreadDialog({
               ))}
             </select>
           </div>
-          {agents.length > 0 && (
+          {((users ?? []).length > 0 || agents.length > 0) && (
             <div className="space-y-2">
               <Label>Participants</Label>
-              <div className="rounded-md border border-border divide-y divide-border">
-                {agents.map((agent) => {
-                  const selected = selectedAgentIds.has(agent.id);
+              <div className="rounded-md border border-border divide-y divide-border max-h-48 overflow-y-auto">
+                {(users ?? []).map((u) => {
+                  const memberId = `human:${u.id}`;
+                  const selected = selectedIds.has(memberId);
                   return (
                     <button
-                      key={agent.id}
+                      key={memberId}
                       type="button"
-                      onClick={() => toggleAgent(agent.id)}
+                      onClick={() => toggleSelection(memberId)}
+                      className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50 ${
+                        selected ? "bg-muted/30" : ""
+                      }`}
+                    >
+                      <span
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] transition-colors ${
+                          selected ? "border-foreground bg-foreground text-background" : "border-border"
+                        }`}
+                      >
+                        {selected && "\u2713"}
+                      </span>
+                      <span className="font-medium">{u.name}</span>
+                    </button>
+                  );
+                })}
+                {agents.map((agent) => {
+                  const memberId = `agent:${agent.id}`;
+                  const selected = selectedIds.has(memberId);
+                  return (
+                    <button
+                      key={memberId}
+                      type="button"
+                      onClick={() => toggleSelection(memberId)}
                       className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50 ${
                         selected ? "bg-muted/30" : ""
                       }`}

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedEntity } from "@/lib/auth";
 import { createThread, listThreads, getAgentById, getChannel, type ThreadMeta } from "@/lib/git-storage";
+import { db } from "@/lib/db";
 import { nanoid } from "@/lib/utils";
 
 // GET - list all threads
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
   }
 
   // Add other participants
+  const sql = db();
   for (const pid of (participantIds || [])) {
     if (participants.some(p => p.id === pid)) continue;
     if (pid.startsWith("agent:")) {
@@ -47,8 +49,12 @@ export async function POST(request: Request) {
       if (agent) {
         participants.push({ id: pid, type: "agent", name: agent.name });
       }
-    } else {
-      participants.push({ id: `human:${pid}`, type: "human", name: pid });
+    } else if (pid.startsWith("human:")) {
+      const userId = pid.replace("human:", "");
+      const users = await sql`SELECT id, name FROM users WHERE id = ${userId}`;
+      if (users.length > 0) {
+        participants.push({ id: pid, type: "human", name: users[0].name });
+      }
     }
   }
 

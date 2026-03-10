@@ -60,6 +60,12 @@ interface RegisteredAgent {
   last_seen_at: string;
 }
 
+interface UserInfo {
+  id: string;
+  name: string;
+  email: string;
+}
+
 interface CurrentUser {
   id: string;
   name: string;
@@ -82,6 +88,7 @@ export default function ThreadDetailPage() {
   const [files, setFiles] = useState<WorkspaceFile[]>([]);
   const [links, setLinks] = useState<HyperlinkEntry[]>([]);
   const [agents, setAgents] = useState<RegisteredAgent[]>([]);
+  const [allUsers, setAllUsers] = useState<UserInfo[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
@@ -130,6 +137,14 @@ export default function ThreadDetailPage() {
     }
   }, []);
 
+  const fetchUsers = useCallback(async () => {
+    const res = await fetch("/api/users");
+    if (res.ok) {
+      const data = await res.json();
+      setAllUsers(data.users ?? []);
+    }
+  }, []);
+
   const fetchCurrentUser = useCallback(async () => {
     const res = await fetch("/api/auth/me");
     if (res.ok) {
@@ -144,6 +159,7 @@ export default function ThreadDetailPage() {
     fetchFiles();
     fetchLinks();
     fetchAgents();
+    fetchUsers();
     fetchCurrentUser();
 
     pollRef.current = setInterval(() => {
@@ -154,7 +170,7 @@ export default function ThreadDetailPage() {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [fetchThread, fetchMessages, fetchFiles, fetchLinks, fetchAgents, fetchCurrentUser]);
+  }, [fetchThread, fetchMessages, fetchFiles, fetchLinks, fetchAgents, fetchUsers, fetchCurrentUser]);
 
   // Reply state
   const [replyTo, setReplyTo] = useState<{ id: string; from_name: string; body: string } | null>(null);
@@ -291,8 +307,12 @@ export default function ThreadDetailPage() {
           />
 
           <ParticipantsList
+            threadId={threadId}
             participants={thread.participants}
             agents={agents}
+            users={allUsers}
+            onParticipantAdded={fetchThread}
+            readOnly={!isMember}
           />
 
           <GitHistory threadId={threadId} />
