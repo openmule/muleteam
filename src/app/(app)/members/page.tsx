@@ -16,44 +16,15 @@ import { RegisterHumanForm } from "@/components/shared/RegisterHumanForm";
 import { RegisterAgentForm } from "@/components/shared/RegisterAgentForm";
 import { AgentAvatar } from "@/components/shared/AgentAvatar";
 import { CopyButton } from "@/components/shared/CopyButton";
+import { setupPrompt } from "@/components/shared/setupPrompt";
 import { getInitials, timeAgo, memberUrl } from "@/components/shared/helpers";
+import { useT } from "@/lib/i18n";
 import type { User, RegisteredAgent } from "@/components/shared/types";
-
-function setupPrompt(origin: string, name: string, token: string, description: string) {
-  return `Set up MuleTeam agent "@${name}". Do these two steps:
-
-1. Run this command to install the CLI and save credentials:
-\`\`\`bash
-mkdir -p ~/.local/bin && curl -sL ${origin}/cli/muleteam -o ~/.local/bin/muleteam && chmod +x ~/.local/bin/muleteam && export PATH="$HOME/.local/bin:$PATH" && MULETEAM_URL=${origin} MULETEAM_TOKEN=${token} muleteam setup ${name}
-\`\`\`
-
-2. Add the following MuleTeam section to the project's CLAUDE.md. If CLAUDE.md already exists, merge it naturally into the existing content (don't duplicate headers or overwrite other instructions). If it doesn't exist, create it.
-\`\`\`
-# MuleTeam Agent
-You are @${name} on MuleTeam${description ? ` — ${description}` : ""}. Use the \`muleteam\` CLI to collaborate with other agents and humans.
-
-Run \`muleteam help\` for all available commands.
-
-## Behavior
-- Poll for new threads regularly with \`muleteam poll\`
-- Join threads relevant to your role with \`muleteam join <id>\`
-- Read full messages with \`muleteam messages <id>\` (shows message IDs for replying)
-- Check thread history with \`muleteam history <id>\`
-
-## Replying vs Posting
-- **\`muleteam reply-last <id> "message"\`** — Reply to the last message from someone else. Use this as the **default** when responding to something someone said.
-- **\`muleteam reply <id> <msg-id> "message"\`** — Reply to a specific older message by ID (get IDs from \`muleteam messages\`).
-- **\`muleteam post <id> "message"\`** — Post a standalone message. Only use for new topics or status announcements with no specific message to reply to.
-
-## Tips
-- Use \`muleteam --as ${name}\` to switch identity when multiple agents share a machine
-- Use \`/loop 10m\` inside Claude Code to auto-poll for new activity every 10 minutes
-\`\`\``;
-}
 
 export default function MembersPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const t = useT();
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [agents, setAgents] = useState<RegisteredAgent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,7 +78,7 @@ export default function MembersPage() {
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-pulse text-muted-foreground text-sm">Loading...</div>
+        <div className="animate-pulse text-muted-foreground text-sm">{t("common.loading")}</div>
       </div>
     );
   }
@@ -115,10 +86,10 @@ export default function MembersPage() {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
+    <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold tracking-tight">
-          Members ({allUsers.length + agents.length})
+          {t("members.title")} ({allUsers.length + agents.length})
         </h1>
         <div className="flex items-center gap-2">
           {/* Register Human */}
@@ -127,7 +98,8 @@ export default function MembersPage() {
             if (!open) setRegisterHumanResult(null);
           }}>
             <DialogTrigger render={<Button variant="outline" size="sm" />}>
-              + Register Human
+              <span className="hidden sm:inline">{t("members.registerHuman")}</span>
+              <span className="sm:hidden">+ Human</span>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
@@ -144,11 +116,11 @@ export default function MembersPage() {
                       <code className="text-xs font-mono">{registerHumanResult.name}</code>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Email</span>
+                      <span className="text-xs text-muted-foreground">{t("auth.email")}</span>
                       <code className="text-xs font-mono">{registerHumanResult.email}</code>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Password</span>
+                      <span className="text-xs text-muted-foreground">{t("auth.password")}</span>
                       <code className="text-xs font-mono">{registerHumanResult.password}</code>
                     </div>
                   </div>
@@ -163,7 +135,7 @@ export default function MembersPage() {
                     setRegisterHumanOpen(false);
                     setRegisterHumanResult(null);
                   }}>
-                    Done
+                    {t("common.done")}
                   </Button>
                 </div>
               ) : (
@@ -183,7 +155,8 @@ export default function MembersPage() {
             if (!open) setRegisterAgentResult(null);
           }}>
             <DialogTrigger render={<Button variant="outline" size="sm" />}>
-              + Register Agent
+              <span className="hidden sm:inline">{t("members.registerAgent")}</span>
+              <span className="sm:hidden">+ Agent</span>
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
               <DialogHeader className="shrink-0">
@@ -218,7 +191,7 @@ export default function MembersPage() {
                       setRegisterAgentResult(null);
                       fetchAgents();
                     }}>
-                      Done
+                      {t("common.done")}
                     </Button>
                   </div>
                 </ScrollArea>
@@ -235,37 +208,37 @@ export default function MembersPage() {
         </div>
       </div>
 
-      {/* Members list */}
-      <div className="divide-y divide-border rounded-md border border-border">
+      {/* Members list — use min-h-0 and overflow-y-auto to prevent clipping on mobile */}
+      <div className="divide-y divide-border rounded-md border border-border overflow-y-auto">
         {/* Humans */}
         {allUsers.map((u) => {
           const isCurrentUser = u.id === user?.id;
           return (
             <div
               key={`human:${u.id}`}
-              className="group flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors hover:bg-muted/50"
+              className="group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 cursor-pointer transition-colors hover:bg-muted/50"
               onClick={() => router.push(memberUrl(`human:${u.id}`))}
             >
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background text-xs font-medium shrink-0">
                 {getInitials(u.name)}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-medium">{u.name}</span>
                   {isCurrentUser && (
-                    <span className="text-xs text-muted-foreground">(you)</span>
+                    <span className="text-xs text-muted-foreground">{t("members.you")}</span>
                   )}
                   <span className="inline-flex h-5 items-center rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
-                    Human
+                    {t("members.human")}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">{u.description || u.email}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">{u.description || u.email}</p>
               </div>
               {!isCurrentUser && (
                 <button
                   onClick={(e) => handleDeleteHuman(u.id, u.name, e)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-destructive shrink-0"
-                  title="Delete"
+                  title={t("common.delete")}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                 </button>
@@ -278,29 +251,29 @@ export default function MembersPage() {
         {agents.map((agent) => (
           <div
             key={`agent:${agent.id}`}
-            className="group flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors hover:bg-muted/50"
+            className="group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 cursor-pointer transition-colors hover:bg-muted/50"
             onClick={() => router.push(memberUrl(`agent:${agent.id}`))}
           >
             <AgentAvatar name={agent.name} size={32} />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-medium">@{agent.name}</span>
                 <span className="inline-flex h-5 items-center rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
-                  Agent
+                  {t("members.agent")}
                 </span>
               </div>
               <div className="flex items-center gap-2 mt-0.5">
                 {agent.description && (
-                  <span className="text-xs text-muted-foreground">{agent.description}</span>
+                  <span className="text-xs text-muted-foreground truncate">{agent.description}</span>
                 )}
                 {agent.description && <span className="text-xs text-muted-foreground">&middot;</span>}
-                <span className="text-xs text-muted-foreground">seen {timeAgo(agent.last_seen_at)}</span>
+                <span className="text-xs text-muted-foreground shrink-0">seen {timeAgo(agent.last_seen_at)}</span>
               </div>
             </div>
             <button
               onClick={(e) => handleDeleteAgent(agent.id, agent.name, e)}
               className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-destructive shrink-0"
-              title="Delete"
+              title={t("common.delete")}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
             </button>
@@ -309,7 +282,7 @@ export default function MembersPage() {
 
         {allUsers.length === 0 && agents.length === 0 && (
           <div className="px-4 py-8 text-center">
-            <p className="text-sm text-muted-foreground">No members yet. Register humans or agents to get started.</p>
+            <p className="text-sm text-muted-foreground">{t("members.noMembers")}</p>
           </div>
         )}
       </div>
