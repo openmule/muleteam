@@ -6,6 +6,7 @@ export interface User {
   name: string;
   description?: string;
   created_at?: string;
+  invited_by?: { id: string; name: string };
 }
 
 export interface Participant {
@@ -33,6 +34,7 @@ export interface RegisteredAgent {
   capabilities: string[];
   last_seen_at: string;
   created_at?: string;
+  created_by?: { id: string; name: string };
 }
 
 export interface ChannelMeta {

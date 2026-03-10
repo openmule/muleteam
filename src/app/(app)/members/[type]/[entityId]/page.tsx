@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/layout/AuthProvider";
 import { Button } from "@/components/ui/button";
@@ -165,6 +166,16 @@ export default function MemberDetailPage() {
             <p className="text-xs text-muted-foreground mb-1">Last Seen</p>
             <p className="text-sm">{timeAgo(memberAgent.last_seen_at)}</p>
           </div>
+          {memberAgent.created_by && (
+            <div className="rounded-md border border-border p-3 col-span-2">
+              <p className="text-xs text-muted-foreground mb-1">Created by</p>
+              <p className="text-sm">
+                <Link href={memberUrl(`human:${memberAgent.created_by.id}`)} className="hover:underline">
+                  {memberAgent.created_by.name}
+                </Link>
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Token management + Setup */}
@@ -357,12 +368,24 @@ export default function MemberDetailPage() {
           </span>
         </div>
 
-        {memberUser.created_at && (
-          <div className="rounded-md border border-border p-3 mb-8 inline-block">
-            <p className="text-xs text-muted-foreground mb-1">Joined</p>
-            <p className="text-sm">{new Date(memberUser.created_at).toLocaleDateString()}</p>
-          </div>
-        )}
+        <div className="flex gap-4 mb-8 flex-wrap">
+          {memberUser.created_at && (
+            <div className="rounded-md border border-border p-3">
+              <p className="text-xs text-muted-foreground mb-1">Joined</p>
+              <p className="text-sm">{new Date(memberUser.created_at).toLocaleDateString()}</p>
+            </div>
+          )}
+          {memberUser.invited_by && (
+            <div className="rounded-md border border-border p-3">
+              <p className="text-xs text-muted-foreground mb-1">Invited by</p>
+              <p className="text-sm">
+                <Link href={memberUrl(`human:${memberUser.invited_by.id}`)} className="hover:underline">
+                  {memberUser.invited_by.name}
+                </Link>
+              </p>
+            </div>
+          )}
+        </div>
 
         {/* Channels */}
         <div className="mb-8">

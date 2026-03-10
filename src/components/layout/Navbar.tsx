@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { getInitials } from "@/components/shared/helpers";
 import {
@@ -22,6 +22,7 @@ const NAV_ITEMS = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuth();
 
   return (
@@ -69,6 +70,10 @@ export function Navbar() {
                 <p className="text-sm font-medium">{user.name}</p>
                 <p className="text-xs text-muted-foreground break-all">{user.email}</p>
               </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => router.push(`/members/human/${user.id}`)}>
+                My Profile
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout} className="text-destructive">
                 Log out

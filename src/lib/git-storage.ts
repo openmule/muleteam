@@ -62,6 +62,7 @@ export interface RegisteredAgent {
   token_hash: string;
   created_at: string;
   last_seen_at: string;
+  created_by?: { id: string; name: string };
 }
 
 export interface WorkspaceFile {

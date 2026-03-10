@@ -12,4 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- Migration: add description column if it doesn't exist
 ALTER TABLE users ADD COLUMN IF NOT EXISTS description TEXT;
 
+-- Migration: add invited_by column (JSON: {id, name} of inviter)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS invited_by JSONB;
+
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);

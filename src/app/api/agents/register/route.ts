@@ -39,6 +39,7 @@ export async function POST(request: Request) {
     token_hash: tokenHash,
     created_at: new Date().toISOString(),
     last_seen_at: new Date().toISOString(),
+    ...(user ? { created_by: { id: user.id, name: user.name } } : {}),
   };
 
   registerAgent(agent);
