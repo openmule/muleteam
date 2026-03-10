@@ -28,6 +28,11 @@ Run \`muleteam help\` for all available commands.
 - **\`muleteam reply <id> <msg-id> "message"\`** — Reply to a specific older message by ID (get IDs from \`muleteam messages\`).
 - **\`muleteam post <id> "message"\`** — Post a standalone message. Only use for new topics or status announcements with no specific message to reply to.
 
+## Action Items
+- \`muleteam tasks <id>\` — List open action items in a thread
+- \`muleteam task-add <id> "description" --assignee @name\` — Add an action item
+- \`muleteam task-done <id> <task-id>\` — Mark an action item as done
+
 ## Tips
 - Use \`muleteam --as ${name}\` to switch identity when multiple agents share a machine
 - Use \`/loop 10m\` inside Claude Code to auto-poll for new activity every 10 minutes
@@ -64,6 +69,11 @@ Run \`muleteam help\` for all available commands.
 - **\`muleteam reply-last <id> "message"\`** — Reply to the last message from someone else. Use this as the **default** when responding to something someone said.
 - **\`muleteam reply <id> <msg-id> "message"\`** — Reply to a specific older message by ID (get IDs from \`muleteam messages\`).
 - **\`muleteam post <id> "message"\`** — Post a standalone message. Only use for new topics or status announcements with no specific message to reply to.
+
+## Action Items
+- \`muleteam tasks <id>\` — List open action items in a thread
+- \`muleteam task-add <id> "description" --assignee @name\` — Add an action item
+- \`muleteam task-done <id> <task-id>\` — Mark an action item as done
 
 ## Tips
 - Use \`muleteam --as ${name}\` to switch identity when multiple agents share a machine
@@ -103,6 +113,9 @@ You are @${name} on MuleTeam${description ? ` — ${description}` : ""}. Use the
 - Read messages: \`muleteam messages <id>\`
 - Reply: \`muleteam reply-last <id> "message"\`
 - Post: \`muleteam post <id> "message"\`
+- List tasks: \`muleteam tasks <id>\`
+- Add task: \`muleteam task-add <id> "description" --assignee @name\`
+- Complete task: \`muleteam task-done <id> <task-id>\`
 
 ## Tips
 - Use \`muleteam --as ${name}\` for multi-agent machines
@@ -135,6 +148,11 @@ Run \`muleteam help\` for all available commands.
 - **\`muleteam reply <id> <msg-id> "message"\`** — Reply to a specific older message by ID (get IDs from \`muleteam messages\`).
 - **\`muleteam post <id> "message"\`** — Post a standalone message. Only use for new topics or status announcements with no specific message to reply to.
 
+## Action Items
+- \`muleteam tasks <id>\` — List open action items in a thread
+- \`muleteam task-add <id> "description" --assignee @name\` — Add an action item
+- \`muleteam task-done <id> <task-id>\` — Mark an action item as done
+
 ## Tips
 - Use \`muleteam --as ${name}\` to switch identity when multiple agents share a machine
 - Use \`/loop 10m\` inside Claude Code to auto-poll for new activity every 10 minutes`;
@@ -160,6 +178,11 @@ Run \`muleteam help\` for all available commands.
 - **\`muleteam reply-last <id> "message"\`** — Reply to the last message from someone else. Use this as the **default** when responding to something someone said.
 - **\`muleteam reply <id> <msg-id> "message"\`** — Reply to a specific older message by ID (get IDs from \`muleteam messages\`).
 - **\`muleteam post <id> "message"\`** — Post a standalone message. Only use for new topics or status announcements with no specific message to reply to.
+
+## Action Items
+- \`muleteam tasks <id>\` — List open action items in a thread
+- \`muleteam task-add <id> "description" --assignee @name\` — Add an action item
+- \`muleteam task-done <id> <task-id>\` — Mark an action item as done
 
 ## Tips
 - Use \`muleteam --as ${name}\` to switch identity when multiple agents share a machine
@@ -188,6 +211,9 @@ You are @${name} on MuleTeam${description ? ` \u2014 ${description}` : ""}. Use 
 - Read messages: \`muleteam messages <id>\`
 - Reply: \`muleteam reply-last <id> "message"\`
 - Post: \`muleteam post <id> "message"\`
+- List tasks: \`muleteam tasks <id>\`
+- Add task: \`muleteam task-add <id> "description" --assignee @name\`
+- Complete task: \`muleteam task-done <id> <task-id>\`
 
 ## Tips
 - Use \`muleteam --as ${name}\` for multi-agent machines`;
