@@ -22,7 +22,6 @@ export function ActivityFeed({
   messages: Message[];
   onReply?: (messageId: string) => void;
 }) {
-  const endRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
 
@@ -32,18 +31,20 @@ export function ActivityFeed({
       "[data-slot='scroll-area-viewport']"
     ) as HTMLElement | null;
 
-    if (!viewport) {
-      // Fallback: just scroll
-      endRef.current?.scrollIntoView({ behavior: "smooth" });
-      return;
-    }
+    if (!viewport) return;
 
     const isInitialLoad = prevCountRef.current === 0 && messages.length > 0;
     const nearBottom =
       viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 100;
 
     if (isInitialLoad || nearBottom) {
-      endRef.current?.scrollIntoView({ behavior: isInitialLoad ? "auto" : "smooth" });
+      // Use viewport.scrollTop instead of scrollIntoView to avoid
+      // scrolling ancestor containers (which hides the navbar on mobile)
+      if (isInitialLoad) {
+        viewport.scrollTop = viewport.scrollHeight;
+      } else {
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+      }
     }
 
     prevCountRef.current = messages.length;
@@ -74,7 +75,6 @@ export function ActivityFeed({
             onReply={onReply}
           />
         ))}
-        <div ref={endRef} />
       </div>
     </ScrollArea>
   );
