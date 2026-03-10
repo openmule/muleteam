@@ -4,10 +4,12 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/components/layout/AuthProvider";
 import { ThreadList } from "@/components/shared/ThreadList";
 import { NewThreadDialog } from "@/components/shared/NewThreadDialog";
+import { useT } from "@/lib/i18n";
 import type { ThreadMeta, RegisteredAgent, ChannelMeta, User } from "@/components/shared/types";
 
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth();
+  const t = useT();
   const [threads, setThreads] = useState<ThreadMeta[]>([]);
   const [agents, setAgents] = useState<RegisteredAgent[]>([]);
   const [channels, setChannels] = useState<ChannelMeta[]>([]);
@@ -47,7 +49,7 @@ export default function HomePage() {
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-pulse text-muted-foreground text-sm">Loading...</div>
+        <div className="animate-pulse text-muted-foreground text-sm">{t("common.loading")}</div>
       </div>
     );
   }
@@ -64,25 +66,25 @@ export default function HomePage() {
   );
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
+    <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10">
       {/* For You */}
       {myThreads.length > 0 && (
         <div className="mb-10">
-          <h2 className="text-xl font-semibold tracking-tight mb-4">For You</h2>
+          <h2 className="text-xl font-semibold tracking-tight mb-4">{t("home.forYou")}</h2>
           <ThreadList threads={myThreads} onDelete={handleDelete} channels={channels} />
         </div>
       )}
 
       {/* All Threads */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold tracking-tight">Threads</h2>
+        <h2 className="text-xl font-semibold tracking-tight">{t("home.threads")}</h2>
         <NewThreadDialog agents={agents} users={allUsers} channels={channels} onCreated={fetchThreads} />
       </div>
 
       {allThreadsSorted.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border py-16 text-center">
+        <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border py-16 text-center px-4">
           <p className="text-muted-foreground text-sm">
-            No threads yet. Create one to start collaborating.
+            {t("home.noThreads")}
           </p>
         </div>
       ) : (

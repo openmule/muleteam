@@ -10,6 +10,7 @@ import { WorkspaceLinks } from "@/components/thread/WorkspaceLinks";
 import { ParticipantsList } from "@/components/thread/ParticipantsList";
 import { GitHistory } from "@/components/thread/GitHistory";
 import { JoinButton } from "@/components/thread/JoinButton";
+import { useT } from "@/lib/i18n";
 
 interface Participant {
   id: string;
@@ -82,6 +83,7 @@ const STATUS_ICON: Record<string, string> = {
 export default function ThreadDetailPage() {
   const { threadId } = useParams<{ threadId: string }>();
   const router = useRouter();
+  const t = useT();
 
   const [thread, setThread] = useState<ThreadMeta | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -90,6 +92,7 @@ export default function ThreadDetailPage() {
   const [agents, setAgents] = useState<RegisteredAgent[]>([]);
   const [allUsers, setAllUsers] = useState<UserInfo[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [showSidebar, setShowSidebar] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const fetchThread = useCallback(async () => {
@@ -210,7 +213,7 @@ export default function ThreadDetailPage() {
   if (!thread) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground text-sm">Loading...</div>
+        <div className="animate-pulse text-muted-foreground text-sm">{t("common.loading")}</div>
       </div>
     );
   }
@@ -222,24 +225,36 @@ export default function ThreadDetailPage() {
   return (
     <div className="h-[calc(100vh-3.5rem)] flex flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-3 border-b border-border shrink-0">
-        <div className="flex items-center gap-3">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => router.push("/")}
-            className="text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground shrink-0"
           >
-            &larr; Back
+            &larr; <span className="hidden sm:inline">{t("common.back")}</span>
           </Button>
-          <div className="h-4 w-px bg-border" />
-          <h1 className="text-base font-semibold truncate">{thread.title}</h1>
-          <span className="text-sm text-muted-foreground font-mono" title={thread.status}>
+          <div className="h-4 w-px bg-border hidden sm:block" />
+          <h1 className="text-sm sm:text-base font-semibold truncate">{thread.title}</h1>
+          <span className="text-sm text-muted-foreground font-mono shrink-0 hidden sm:inline" title={thread.status}>
             {STATUS_ICON[thread.status] || "\u25CB"} {thread.status.replace("_", " ")}
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Mobile sidebar toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="md:hidden text-muted-foreground"
+            onClick={() => setShowSidebar(!showSidebar)}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="15" y1="3" x2="15" y2="21" />
+            </svg>
+          </Button>
           {isMember && thread.status !== "done" && (
             <Button
               variant="outline"
@@ -247,7 +262,7 @@ export default function ThreadDetailPage() {
               onClick={() => handleStatusChange("done")}
               className="text-xs"
             >
-              Close
+              {t("common.close")}
             </Button>
           )}
           {isMember && thread.status === "done" && (
@@ -257,19 +272,19 @@ export default function ThreadDetailPage() {
               onClick={() => handleStatusChange("open")}
               className="text-xs"
             >
-              Reopen
+              {t("common.reopen")}
             </Button>
           )}
         </div>
       </header>
 
       {/* Main: Split View */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left: Activity Feed (60%) */}
-        <div className="w-3/5 flex flex-col border-r border-border min-h-0">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        {/* Left: Activity Feed */}
+        <div className="flex-1 md:w-3/5 flex flex-col md:border-r border-border min-h-0">
           {/* Description */}
           {thread.description && (
-            <div className="px-6 py-4 border-b border-border">
+            <div className="px-4 sm:px-6 py-4 border-b border-border">
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                 {thread.description}
               </p>
@@ -291,8 +306,8 @@ export default function ThreadDetailPage() {
           )}
         </div>
 
-        {/* Right: Workspace (40%) */}
-        <div className="w-2/5 flex flex-col overflow-y-auto">
+        {/* Right: Workspace (sidebar) — hidden on mobile by default, toggled via button */}
+        <div className={`md:w-2/5 flex flex-col overflow-y-auto border-t md:border-t-0 border-border ${showSidebar ? "block" : "hidden md:flex"}`}>
           <WorkspaceFiles
             threadId={threadId}
             files={files}

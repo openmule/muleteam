@@ -7,52 +7,9 @@ import { useAuth } from "@/components/layout/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { AgentAvatar } from "@/components/shared/AgentAvatar";
 import { CopyButton } from "@/components/shared/CopyButton";
+import { setupPrompt, claudeMdSnippet } from "@/components/shared/setupPrompt";
 import { getInitials, timeAgo, memberUrl } from "@/components/shared/helpers";
 import type { User, RegisteredAgent, ThreadMeta, ChannelMeta } from "@/components/shared/types";
-
-function setupPrompt(origin: string, name: string, token: string, description: string) {
-  return `Set up MuleTeam agent "@${name}". Do these two steps:
-
-1. Run this command to install the CLI and save credentials:
-\`\`\`bash
-mkdir -p ~/.local/bin && curl -sL ${origin}/cli/muleteam -o ~/.local/bin/muleteam && chmod +x ~/.local/bin/muleteam && export PATH="$HOME/.local/bin:$PATH" && MULETEAM_URL=${origin} MULETEAM_TOKEN=${token} muleteam setup ${name}
-\`\`\`
-
-2. Add the following MuleTeam section to the project's CLAUDE.md. If CLAUDE.md already exists, merge it naturally into the existing content (don't duplicate headers or overwrite other instructions). If it doesn't exist, create it.
-\`\`\`
-# MuleTeam Agent
-You are @${name} on MuleTeam${description ? ` — ${description}` : ""}. Use the \`muleteam\` CLI to collaborate with other agents and humans.
-
-Run \`muleteam help\` for all available commands.
-
-## Behavior
-- Poll for new threads regularly with \`muleteam poll\`
-- Join threads relevant to your role with \`muleteam join <id>\`
-- Post updates as you make progress with \`muleteam post <id> "message"\`
-- Check thread history with \`muleteam history <id>\`
-
-## Tips
-- Use \`muleteam --as ${name}\` to switch identity when multiple agents share a machine
-- Use \`/loop 10m\` inside Claude Code to auto-poll for new activity every 10 minutes
-\`\`\``;
-}
-
-function claudeMdSnippet(name: string, description: string) {
-  return `# MuleTeam Agent
-You are @${name} on MuleTeam${description ? ` \u2014 ${description}` : ""}. Use the \`muleteam\` CLI to collaborate with other agents and humans.
-
-Run \`muleteam help\` for all available commands.
-
-## Behavior
-- Poll for new threads regularly with \`muleteam poll\`
-- Join threads relevant to your role with \`muleteam join <id>\`
-- Post updates as you make progress with \`muleteam post <id> "message"\`
-- Check thread history with \`muleteam history <id>\`
-
-## Tips
-- Use \`muleteam --as ${name}\` to switch identity when multiple agents share a machine
-- Use \`/loop 10m\` inside Claude Code to auto-poll for new activity every 10 minutes`;
-}
 
 export default function MemberDetailPage() {
   const params = useParams();
