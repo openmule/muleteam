@@ -165,6 +165,7 @@ export default function ThreadDetailPage() {
     pollRef.current = setInterval(() => {
       fetchMessages();
       fetchFiles();
+      fetchThread();
     }, 3000);
 
     return () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { User, RegisteredAgent, ChannelMeta } from "./types";
+
+function useIsMac() {
+  return useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    return /Mac|iPod|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  }, []);
+}
 
 export function NewThreadDialog({
   agents,
@@ -29,6 +36,7 @@ export function NewThreadDialog({
   onCreated?: () => void;
 }) {
   const router = useRouter();
+  const isMac = useIsMac();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -99,7 +107,7 @@ export function NewThreadDialog({
               placeholder="e.g. Landing page redesign"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && handleCreate()}
+              onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing && handleCreate()}
               autoFocus
             />
           </div>
@@ -187,7 +195,7 @@ export function NewThreadDialog({
             </div>
           )}
           <Button className="w-full" onClick={handleCreate} disabled={!title.trim() || creating}>
-            {creating ? "Creating..." : "Create Thread"}
+            {creating ? "Creating..." : <>Create Thread <span className="ml-1 text-xs opacity-60">{isMac ? "⌘↵" : "Ctrl↵"}</span></>}
           </Button>
         </div>
       </DialogContent>

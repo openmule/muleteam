@@ -1,8 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+
+function useIsMac() {
+  return useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    return /Mac|iPod|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  }, []);
+}
 
 interface ReplyContext {
   id: string;
@@ -24,6 +31,7 @@ export function CommentInput({
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isMac = useIsMac();
 
   // Focus textarea when replying
   useEffect(() => {
@@ -45,7 +53,7 @@ export function CommentInput({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSend();
     }
@@ -83,8 +91,9 @@ export function CommentInput({
           onClick={handleSend}
           disabled={sending || !input.trim() || disabled}
           size="sm"
+          title={isMac ? "Send (⌘↵)" : "Send (Ctrl+Enter)"}
         >
-          {sending ? "..." : "Comment"}
+          {sending ? "..." : <>Send <span className="ml-1 text-xs opacity-60">{isMac ? "⌘↵" : "Ctrl↵"}</span></>}
         </Button>
       </div>
     </div>
