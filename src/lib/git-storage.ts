@@ -206,7 +206,7 @@ export function addMessage(threadId: string, message: Message): void {
   }
 
   gitCommit(
-    `${message.from_name}: ${message.body.substring(0, 80)}`,
+    `${message.from_name}: ${message.body}`,
     message.from_name,
     `${message.from.replace(":", "-")}@muleteam.local`
   );
@@ -492,14 +492,16 @@ export function getThreadGitLog(threadId: string, limit = 20): GitLogEntry[] {
   initRepo();
   const threadDir = path.join("threads", threadId);
   try {
+    // Use %x00 as record separator and %x01 as field separator to handle multiline messages
     const log = execSync(
-      `git log --format="%H|%h|%an|%aI|%s" -n ${limit} -- "${threadDir}"`,
+      `git log --format="%x00%H%x01%h%x01%an%x01%aI%x01%B" -n ${limit} -- "${threadDir}"`,
       { cwd: REPO_BASE }
     ).toString().trim();
     if (!log) return [];
-    return log.split("\n").map(line => {
-      const [hash, short_hash, author, date, ...messageParts] = line.split("|");
-      return { hash, short_hash, author, date, message: messageParts.join("|") };
+    return log.split("\x00").filter(Boolean).map(record => {
+      const [hash, short_hash, author, date, ...messageParts] = record.split("\x01");
+      const message = messageParts.join("").trim();
+      return { hash, short_hash, author, date, message };
     });
   } catch {
     return [];
