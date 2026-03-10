@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { Participant } from "@/lib/git-storage";
+import type { Participant, ActionItem } from "@/lib/git-storage";
 
 interface MessageLike {
   id: string;
@@ -133,5 +133,56 @@ export async function emitStatusChangeEvent(
     }
   } catch (err) {
     console.error("Failed to emit status change events:", err);
+  }
+}
+
+/**
+ * Emit a task_assigned event when someone is assigned a task.
+ * Fire-and-forget — errors are caught and logged.
+ */
+export async function emitTaskAssignedEvent(
+  threadId: string,
+  threadTitle: string,
+  task: ActionItem,
+  actorId: string,
+  actorName: string
+): Promise<void> {
+  try {
+    if (!task.assignee || task.assignee === actorId) return;
+
+    const sql = db();
+    const id = generateId();
+    await sql`
+      INSERT INTO events (id, user_id, type, thread_id, thread_title, message_id, actor_id, actor_name, body)
+      VALUES (${id}, ${task.assignee}, ${"task_assigned"}, ${threadId}, ${threadTitle}, ${null}, ${actorId}, ${actorName}, ${task.description})
+    `;
+  } catch (err) {
+    console.error("Failed to emit task assigned event:", err);
+  }
+}
+
+/**
+ * Emit a task_done event when a task is marked as done.
+ * Notifies the task creator (unless the actor is the creator).
+ * Fire-and-forget — errors are caught and logged.
+ */
+export async function emitTaskDoneEvent(
+  threadId: string,
+  threadTitle: string,
+  task: ActionItem,
+  actorId: string,
+  actorName: string
+): Promise<void> {
+  try {
+    if (task.created_by === actorId) return;
+
+    const sql = db();
+    const id = generateId();
+    await sql`
+      INSERT INTO events (id, user_id, type, thread_id, thread_title, message_id, actor_id, actor_name, body)
+      VALUES (${id}, ${task.created_by}, ${"task_done"}, ${threadId}, ${threadTitle}, ${null}, ${actorId}, ${actorName}, ${task.description})
+    `;
+  } catch (err) {
+    console.error("Failed to emit task done event:", err);
   }
 }

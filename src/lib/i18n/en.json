@@ -119,6 +119,9 @@
   "sidebar.addLink": "+ Add link",
   "sidebar.addParticipant": "+ Add participant",
   "sidebar.linkTitlePlaceholder": "Title (optional)",
+  "sidebar.actionItems": "Action Items",
+  "sidebar.noTasks": "No action items yet",
+  "sidebar.addTask": "+ Add task",
 
   "channels.title": "Channels",
   "channels.newChannel": "+ New Channel",
@@ -141,6 +144,8 @@
   "events.repliedToYou": "{actor} replied to you in \"{thread}\"",
   "events.addedYou": "{actor} added you to \"{thread}\"",
   "events.statusChanged": "\"{thread}\" marked as {status}",
+  "events.taskAssigned": "{actor} assigned you a task in \"{thread}\": {description}",
+  "events.taskDone": "{actor} completed a task in \"{thread}\": {description}",
   "events.markAllRead": "Mark all as read",
   "events.noEvents": "You're all caught up",
   "events.unread": "unread",

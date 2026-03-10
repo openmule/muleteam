@@ -8,6 +8,7 @@ import { CommentInput } from "@/components/thread/CommentInput";
 import { WorkspaceFiles } from "@/components/thread/WorkspaceFiles";
 import { WorkspaceLinks } from "@/components/thread/WorkspaceLinks";
 import { ParticipantsList } from "@/components/thread/ParticipantsList";
+import { ActionItems } from "@/components/thread/ActionItems";
 import { GitHistory } from "@/components/thread/GitHistory";
 import { JoinButton } from "@/components/thread/JoinButton";
 import { useT } from "@/lib/i18n";
@@ -55,6 +56,19 @@ interface HyperlinkEntry {
   added_at: string;
 }
 
+interface ActionItemData {
+  id: string;
+  description: string;
+  assignee?: string;
+  assignee_name?: string;
+  status: "open" | "in_progress" | "done";
+  created_by: string;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+  source_message_id?: string;
+}
+
 interface RegisteredAgent {
   id: string;
   name: string;
@@ -89,6 +103,7 @@ export default function ThreadDetailPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [files, setFiles] = useState<WorkspaceFile[]>([]);
   const [links, setLinks] = useState<HyperlinkEntry[]>([]);
+  const [tasks, setTasks] = useState<ActionItemData[]>([]);
   const [agents, setAgents] = useState<RegisteredAgent[]>([]);
   const [allUsers, setAllUsers] = useState<UserInfo[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -132,6 +147,14 @@ export default function ThreadDetailPage() {
     }
   }, [threadId]);
 
+  const fetchTasks = useCallback(async () => {
+    const res = await fetch(`/api/threads/${threadId}/tasks`);
+    if (res.ok) {
+      const data = await res.json();
+      setTasks(data.tasks ?? []);
+    }
+  }, [threadId]);
+
   const fetchAgents = useCallback(async () => {
     const res = await fetch("/api/agents");
     if (res.ok) {
@@ -161,6 +184,7 @@ export default function ThreadDetailPage() {
     fetchMessages();
     fetchFiles();
     fetchLinks();
+    fetchTasks();
     fetchAgents();
     fetchUsers();
     fetchCurrentUser();
@@ -169,12 +193,13 @@ export default function ThreadDetailPage() {
       fetchMessages();
       fetchFiles();
       fetchThread();
+      fetchTasks();
     }, 3000);
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [fetchThread, fetchMessages, fetchFiles, fetchLinks, fetchAgents, fetchUsers, fetchCurrentUser]);
+  }, [fetchThread, fetchMessages, fetchFiles, fetchLinks, fetchTasks, fetchAgents, fetchUsers, fetchCurrentUser]);
 
   // Reply state
   const [replyTo, setReplyTo] = useState<{ id: string; from_name: string; body: string } | null>(null);
@@ -319,6 +344,14 @@ export default function ThreadDetailPage() {
             threadId={threadId}
             links={links}
             onRefresh={fetchLinks}
+            readOnly={!isMember}
+          />
+
+          <ActionItems
+            threadId={threadId}
+            tasks={tasks}
+            participants={thread.participants}
+            onRefresh={fetchTasks}
             readOnly={!isMember}
           />
 

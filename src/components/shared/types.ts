@@ -46,10 +46,23 @@ export interface ChannelMeta {
   updated_at: string;
 }
 
+export interface ActionItem {
+  id: string;
+  description: string;
+  assignee?: string;
+  assignee_name?: string;
+  status: "open" | "in_progress" | "done";
+  created_by: string;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+  source_message_id?: string;
+}
+
 export interface NotificationEvent {
   id: string;
   user_id: string;
-  type: "mention" | "reply" | "join" | "status_change";
+  type: "mention" | "reply" | "join" | "status_change" | "task_assigned" | "task_done";
   thread_id: string;
   thread_title: string;
   message_id: string | null;

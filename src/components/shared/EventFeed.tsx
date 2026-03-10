@@ -11,6 +11,8 @@ const TYPE_ICONS: Record<NotificationEvent["type"], string> = {
   reply: "\u21A9",   // ↩
   join: "+",
   status_change: "\u25CB", // ○
+  task_assigned: "\u2610", // ☐
+  task_done: "\u2611",     // ☑
 };
 
 function formatEventText(
@@ -34,6 +36,16 @@ function formatEventText(
       return t("events.statusChanged")
         .replace("{thread}", event.thread_title)
         .replace("{status}", event.body ?? "");
+    case "task_assigned":
+      return t("events.taskAssigned")
+        .replace("{actor}", event.actor_name)
+        .replace("{thread}", event.thread_title)
+        .replace("{description}", event.body ?? "");
+    case "task_done":
+      return t("events.taskDone")
+        .replace("{actor}", event.actor_name)
+        .replace("{thread}", event.thread_title)
+        .replace("{description}", event.body ?? "");
     default:
       return "";
   }
