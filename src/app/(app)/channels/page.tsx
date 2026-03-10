@@ -13,7 +13,8 @@ import {
 import { ThreadList } from "@/components/shared/ThreadList";
 import { NewThreadDialog } from "@/components/shared/NewThreadDialog";
 import { CreateChannelForm } from "@/components/shared/CreateChannelForm";
-import { timeAgo, getInitials } from "@/components/shared/helpers";
+import { timeAgo } from "@/components/shared/helpers";
+import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import type { ThreadMeta, RegisteredAgent, ChannelMeta, User, Participant } from "@/components/shared/types";
 
 export default function ChannelsPage() {
@@ -188,9 +189,7 @@ export default function ChannelsPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs text-muted-foreground font-medium">Members:</span>
                         {channel.members.map((m) => (
-                          <span key={m.id} className="inline-flex h-5 items-center rounded-md bg-muted px-1.5 text-[11px] text-muted-foreground">
-                            {m.type === "agent" ? `@${m.name}` : getInitials(m.name)}
-                          </span>
+                          <MemberAvatar key={m.id} type={m.type} name={m.name} size={20} />
                         ))}
                         {addingMemberTo !== channel.id && (
                           <button
@@ -215,9 +214,7 @@ export default function ChannelsPage() {
                                 onClick={() => handleAddMember(channel.id, { id: `human:${u.id}`, type: "human", name: u.name })}
                                 className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/50 disabled:opacity-50"
                               >
-                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium shrink-0">
-                                  {getInitials(u.name)}
-                                </span>
+                                <MemberAvatar type="human" name={u.name} size={20} />
                                 <span>{u.name}</span>
                               </button>
                             ))}
@@ -229,9 +226,7 @@ export default function ChannelsPage() {
                                 onClick={() => handleAddMember(channel.id, { id: `agent:${agent.id}`, type: "agent", name: agent.name })}
                                 className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/50 disabled:opacity-50"
                               >
-                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium shrink-0">
-                                  @
-                                </span>
+                                <MemberAvatar type="agent" name={agent.name} size={20} />
                                 <span>@{agent.name}</span>
                               </button>
                             ))}

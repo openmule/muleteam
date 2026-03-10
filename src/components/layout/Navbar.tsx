@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
-import { getInitials, memberUrl } from "@/components/shared/helpers";
+import { memberUrl } from "@/components/shared/helpers";
+import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { useI18n, LOCALES } from "@/lib/i18n";
 import { useTheme } from "@/lib/use-theme";
 import {
@@ -177,9 +178,7 @@ export function Navbar() {
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus:outline-none">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                  {getInitials(user.name)}
-                </span>
+                <MemberAvatar type="human" name={user.name} size={28} />
                 <span className="hidden sm:inline">{user.name}</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" sideOffset={8} className="min-w-56">

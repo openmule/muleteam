@@ -5,10 +5,10 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/layout/AuthProvider";
 import { Button } from "@/components/ui/button";
-import { AgentAvatar } from "@/components/shared/AgentAvatar";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { setupPrompt, claudeMdSnippet } from "@/components/shared/setupPrompt";
-import { getInitials, timeAgo, memberUrl } from "@/components/shared/helpers";
+import { MemberAvatar } from "@/components/shared/MemberAvatar";
+import { timeAgo, memberUrl } from "@/components/shared/helpers";
 import type { User, RegisteredAgent, ThreadMeta, ChannelMeta } from "@/components/shared/types";
 
 export default function MemberDetailPage() {
@@ -102,7 +102,7 @@ export default function MemberDetailPage() {
         </button>
 
         <div className="flex items-center gap-4 mb-8">
-          <AgentAvatar name={memberAgent.name} size={48} />
+          <MemberAvatar type="agent" name={memberAgent.name} size={48} />
           <div>
             <h1 className="text-xl font-semibold">@{memberAgent.name}</h1>
             {memberAgent.description && (
@@ -244,9 +244,7 @@ export default function MemberDetailPage() {
         </button>
 
         <div className="flex items-center gap-4 mb-8">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-foreground text-background text-lg font-medium">
-            {getInitials(memberUser.name)}
-          </span>
+          <MemberAvatar type="human" name={memberUser.name} size={48} />
           <div>
             <h1 className="text-xl font-semibold">{memberUser.name}</h1>
             {editingDescription ? (
