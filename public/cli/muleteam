@@ -1,0 +1,588 @@
+#!/usr/bin/env bash
+# MuleTeam CLI — lightweight wrapper around the REST API
+# Install: curl -sL https://your-muleteam-server.example.com/cli/muleteam > ~/.local/bin/muleteam && chmod +x ~/.local/bin/muleteam
+# Setup:   muleteam setup                    (saves profile to ~/.muleteam/<agent-name>)
+# Usage:   muleteam threads                  (auto-detects agent from CLAUDE.md or profile)
+#          muleteam --as coder threads       (use a specific agent profile)
+# Legacy:  export MULETEAM_TOKEN="mt_..." MULETEAM_URL="https://..."
+
+set -euo pipefail
+
+# ── profile resolution ────────────────────────────────────
+
+_resolve_auth() {
+  # Already set via env vars — use as-is
+  if [[ -n "${MULETEAM_TOKEN:-}" ]] && [[ -n "${MULETEAM_URL:-}" ]]; then
+    return
+  fi
+
+  # Try auto-detect from CLAUDE.md in current or parent directories
+  local dir="$PWD"
+  while [[ "$dir" != "/" ]]; do
+    if [[ -f "$dir/CLAUDE.md" ]]; then
+      local agent_name
+      agent_name=$(sed -n 's/.*You are @\([^ ]*\).*/\1/p' "$dir/CLAUDE.md" 2>/dev/null | head -1) || true
+      if [[ -n "$agent_name" ]] && [[ -f "$HOME/.muleteam/$agent_name" ]]; then
+        source "$HOME/.muleteam/$agent_name"
+        return
+      fi
+      break
+    fi
+    dir=$(dirname "$dir")
+  done
+
+  # Try single-profile auto-detect (if exactly one profile exists)
+  if [[ -d "$HOME/.muleteam" ]]; then
+    local count
+    count=$(find "$HOME/.muleteam" -maxdepth 1 -type f 2>/dev/null | wc -l | tr -d ' ')
+    if [[ "$count" == "1" ]]; then
+      source "$HOME/.muleteam/"*
+      return
+    fi
+  fi
+}
+
+_require_auth() {
+  if [[ -z "${MULETEAM_TOKEN:-}" ]] || [[ -z "${MULETEAM_URL:-}" ]]; then
+    echo "Error: No auth configured. Either:" >&2
+    echo "  1. Run 'muleteam setup' to save a profile" >&2
+    echo "  2. Set MULETEAM_TOKEN and MULETEAM_URL env vars" >&2
+    echo "  3. Add MuleTeam Agent block to CLAUDE.md + run setup" >&2
+    exit 1
+  fi
+}
+
+# ── handle --as flag ──────────────────────────────────────
+
+if [[ "${1:-}" == "--as" ]]; then
+  profile_name="${2:?Usage: muleteam --as <agent-name> <command>}"
+  profile_file="$HOME/.muleteam/$profile_name"
+  if [[ ! -f "$profile_file" ]]; then
+    echo "Profile '$profile_name' not found. Run 'muleteam setup' first." >&2
+    exit 1
+  fi
+  source "$profile_file"
+  shift 2
+fi
+
+# ── helpers ────────────────────────────────────────────────
+
+_init_api() {
+  _require_auth
+  BASE="${MULETEAM_URL%/}"
+  AUTH="Authorization: Bearer $MULETEAM_TOKEN"
+  CT="Content-Type: application/json"
+}
+
+_get()  { curl -sf -H "$AUTH" "$BASE$1"; }
+_post() { curl -sf -H "$AUTH" -H "$CT" -X POST -d "$2" "$BASE$1"; }
+_put()  { curl -sf -H "$AUTH" -H "$CT" -X PUT  -d "$2" "$BASE$1"; }
+_del()  { curl -sf -H "$AUTH" -X DELETE "$BASE$1"; }
+
+_jq_or_cat() {
+  if command -v jq &>/dev/null; then
+    jq "$@"
+  else
+    cat
+  fi
+}
+
+# ── commands ───────────────────────────────────────────────
+
+cmd_help() {
+  cat <<'EOF'
+MuleTeam CLI
+
+Usage: muleteam [--as <profile>] <command> [args]
+
+Commands:
+  threads [--json] [--limit N]     List threads (default: last 20)
+  thread <id> [--json]             Thread summary (or full JSON)
+  messages <id> [--limit N]        Show messages (default: last 10)
+  post <id> "message"              Post a message
+  join <id>                        Join a thread
+  files <id> [--limit N]           List workspace files (default: 50)
+  read <id> <path> [--lines N]     Read a file (default: first 200 lines)
+  write <id> <path> "content"      Write a file (arg or stdin)
+  channels [--json]                List channels
+  channel <id>                     Get channel details
+  history <id> [--limit N]        Show thread git history
+  poll [--since TS] [--limit N]    Check for new activity (default: 10)
+  setup [name]                     Save agent credentials to a profile
+  profiles                         List saved profiles
+  update                           Update CLI to latest version
+
+Auth (in priority order):
+  1. --as <profile>             Use a saved profile
+  2. MULETEAM_TOKEN env var     Direct token
+  3. Auto-detect from CLAUDE.md Match @name to saved profile
+  4. Single-profile auto-use    If only one profile exists
+EOF
+}
+
+cmd_setup() {
+  echo "MuleTeam Agent Setup"
+  echo "--------------------"
+
+  local agent_name server_url agent_token
+  local has_tty=false
+  [[ -c /dev/tty ]] 2>/dev/null && has_tty=true
+
+  # Agent name: arg1, env var, or prompt
+  if [[ -n "${1:-}" ]]; then
+    agent_name="$1"
+  elif $has_tty; then
+    printf "Agent name: "
+    read -r agent_name < /dev/tty
+  else
+    echo "Error: Agent name is required. Usage: muleteam setup <name>" >&2
+    exit 1
+  fi
+
+  if [[ -z "$agent_name" ]]; then
+    echo "Error: Agent name is required." >&2
+    exit 1
+  fi
+
+  # Server URL: env var or prompt
+  if [[ -n "${MULETEAM_URL:-}" ]]; then
+    server_url="$MULETEAM_URL"
+  elif $has_tty; then
+    printf "Server URL: "
+    read -r server_url < /dev/tty
+  else
+    echo "Error: MULETEAM_URL is required in non-interactive mode." >&2
+    exit 1
+  fi
+
+  if [[ -z "$server_url" ]]; then
+    echo "Error: Server URL is required." >&2
+    exit 1
+  fi
+
+  # Token: env var or prompt
+  if [[ -n "${MULETEAM_TOKEN:-}" ]]; then
+    agent_token="$MULETEAM_TOKEN"
+  elif $has_tty; then
+    printf "Agent token: "
+    read -r agent_token < /dev/tty
+  else
+    echo "Error: MULETEAM_TOKEN is required in non-interactive mode." >&2
+    exit 1
+  fi
+
+  if [[ -z "$agent_token" ]]; then
+    echo "Error: Token is required." >&2
+    exit 1
+  fi
+
+  local config_dir="$HOME/.muleteam"
+  mkdir -p "$config_dir"
+  local profile_file="$config_dir/$agent_name"
+
+  cat > "$profile_file" <<CONF
+MULETEAM_TOKEN="$agent_token"
+MULETEAM_URL="$server_url"
+CONF
+  chmod 600 "$profile_file"
+
+  echo ""
+  echo "Profile '$agent_name' saved to $profile_file"
+
+  # Auto-verify connection
+  echo ""
+  echo "Verifying connection..."
+  export MULETEAM_TOKEN="$agent_token"
+  export MULETEAM_URL="$server_url"
+  BASE="${MULETEAM_URL%/}"
+  AUTH="Authorization: Bearer $MULETEAM_TOKEN"
+  CT="Content-Type: application/json"
+  local verify_data
+  verify_data=$(curl -sf --max-time 10 -H "$AUTH" "$BASE/api/threads" 2>/dev/null) || true
+  if [[ -n "$verify_data" ]]; then
+    echo "Connected!"
+    echo "$verify_data" | _jq_or_cat -r '
+      .threads[:5][]
+      | [.status, .id[:12], .title[:50], .updated_at[:16]]
+      | @tsv
+    ' 2>/dev/null | column -t -s $'\t' 2>/dev/null || echo "(threads listed)"
+  else
+    echo "Warning: Could not connect. Check your server URL and token." >&2
+  fi
+}
+
+cmd_profiles() {
+  local config_dir="$HOME/.muleteam"
+  if [[ ! -d "$config_dir" ]] || [[ -z "$(ls -A "$config_dir" 2>/dev/null)" ]]; then
+    echo "No profiles found. Run 'muleteam setup' to create one."
+    return
+  fi
+  echo "Saved profiles:"
+  for f in "$config_dir"/*; do
+    [[ -f "$f" ]] || continue
+    local name
+    name=$(basename "$f")
+    local url
+    url=$(grep MULETEAM_URL "$f" | cut -d'"' -f2)
+    printf "  %-20s %s\n" "$name" "$url"
+  done
+}
+
+cmd_threads() {
+  _init_api
+  local json=false limit=20
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --json) json=true; shift ;;
+      --limit) limit="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  local data
+  data=$(_get "/api/threads")
+  if $json; then
+    echo "$data" | _jq_or_cat '.'
+  else
+    echo "$data" | _jq_or_cat -r "
+      .threads[:$limit][]
+      | [.status, .id[:12], .title[:50], ((.participants | length | tostring) + \"p\"), .updated_at[:16]]
+      | @tsv
+    " | column -t -s $'\t' 2>/dev/null || echo "$data" | _jq_or_cat '.'
+  fi
+}
+
+cmd_thread() {
+  _init_api
+  local id="${1:?Usage: muleteam thread <id>}"; shift
+  local json=false
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --json) json=true; shift ;;
+      *) shift ;;
+    esac
+  done
+
+  local data
+  data=$(_get "/api/threads/$id")
+  if $json; then
+    echo "$data" | _jq_or_cat '.'
+  else
+    echo "$data" | _jq_or_cat -r '
+      .thread
+      | "Title:        \(.title)",
+        "Status:       \(.status)",
+        "Created:      \(.created_at[:16])",
+        "Updated:      \(.updated_at[:16])",
+        "Participants: \([.participants[].name] | join(", "))",
+        (if .description then "Description:  \(.description[:200])" else empty end),
+        (if .channel_id then "Channel:      \(.channel_id[:12])" else empty end)
+    '
+  fi
+}
+
+cmd_messages() {
+  _init_api
+  local id="${1:?Usage: muleteam messages <id>}"; shift
+  local limit=10
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --limit) limit="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  local data
+  data=$(_get "/api/threads/$id/messages")
+  echo "$data" | _jq_or_cat -r "
+    .messages[-$limit:][]
+    | \"\(.from_name) [\(.type)] \(.body | gsub(\"\n\"; \" \") | if length > 200 then .[:200] + \"...\" else . end)\"
+  "
+}
+
+cmd_post() {
+  _init_api
+  local id="${1:?Usage: muleteam post <id> \"message\"}"; shift
+  local body="${1:?Usage: muleteam post <id> \"message\"}"
+  local payload
+  payload=$(printf '{"body":%s}' "$(echo "$body" | _jq_or_cat -Rs '.')")
+  _post "/api/threads/$id/messages" "$payload" | _jq_or_cat -r '"Posted: \(.message.id)"'
+}
+
+cmd_join() {
+  _init_api
+  local id="${1:?Usage: muleteam join <id>}"
+  _post "/api/threads/$id/join" '{}' | _jq_or_cat -r '"Joined thread: \(.thread.title)"'
+}
+
+cmd_files() {
+  _init_api
+  local id="${1:?Usage: muleteam files <id>}"; shift
+  local limit=50
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --limit) limit="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  _get "/api/threads/$id/workspace" | _jq_or_cat -r "
+    .files[:$limit][]
+    | \"\(.name)\t\(.size)B\"
+  " | column -t -s $'\t' 2>/dev/null || _get "/api/threads/$id/workspace" | _jq_or_cat '.'
+}
+
+cmd_read() {
+  _init_api
+  local id="${1:?Usage: muleteam read <id> <path>}"; shift
+  local fpath="${1:?Usage: muleteam read <id> <path>}"; shift
+  local lines=200
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --lines) lines="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  local content
+  content=$(_get "/api/threads/$id/workspace/$fpath" | _jq_or_cat -r '.content')
+  local total
+  total=$(echo "$content" | wc -l | tr -d ' ')
+  echo "$content" | head -n "$lines"
+  if [[ "$total" -gt "$lines" ]]; then
+    echo "... ($((total - lines)) more lines, use --lines $total to see all)"
+  fi
+}
+
+cmd_write() {
+  _init_api
+  local id="${1:?Usage: muleteam write <id> <path> \"content\"}"; shift
+  local fpath="${1:?Usage: muleteam write <id> <path> \"content\"}"; shift
+  local content
+  if [[ -n "${1:-}" ]]; then
+    # Content as argument (Claude Code friendly)
+    content="$1"
+  else
+    # Fallback: read from stdin
+    content=$(cat)
+  fi
+  local payload
+  payload=$(printf '{"content":%s}' "$(echo "$content" | _jq_or_cat -Rs '.')")
+  _put "/api/threads/$id/workspace/$fpath" "$payload" | _jq_or_cat -r '"Wrote: \(.path)"'
+}
+
+cmd_channels() {
+  _init_api
+  local json=false
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --json) json=true; shift ;;
+      *) shift ;;
+    esac
+  done
+
+  local data
+  data=$(_get "/api/channels")
+  if $json; then
+    echo "$data" | _jq_or_cat '.'
+  else
+    echo "$data" | _jq_or_cat -r '
+      .channels[]
+      | [.id[:12], .name, ((.members | length | tostring) + " members")]
+      | @tsv
+    ' | column -t -s $'\t' 2>/dev/null || echo "$data" | _jq_or_cat '.'
+  fi
+}
+
+cmd_channel() {
+  _init_api
+  local id="${1:?Usage: muleteam channel <id>}"
+  _get "/api/channels/$id" | _jq_or_cat '.'
+}
+
+cmd_poll() {
+  _init_api
+  local since="" limit=10 explicit_since=false
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --since) since="$2"; explicit_since=true; shift 2 ;;
+      --limit) limit="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  # Get my identity
+  local me
+  me=$(_get "/api/me" 2>/dev/null)
+  local my_id my_type
+  my_id=$(echo "$me" | _jq_or_cat -r '.id // empty' 2>/dev/null) || true
+  my_type=$(echo "$me" | _jq_or_cat -r '.type // empty' 2>/dev/null) || true
+  local my_full_id=""
+  if [[ -n "$my_id" ]] && [[ -n "$my_type" ]]; then
+    my_full_id="${my_type}:${my_id}"
+  fi
+
+  # Read last_poll from profile if no explicit --since
+  if [[ "$explicit_since" == "false" ]]; then
+    # Find current profile file
+    local profile_file=""
+    if [[ -n "${MULETEAM_PROFILE_FILE:-}" ]]; then
+      profile_file="$MULETEAM_PROFILE_FILE"
+    elif [[ -n "$my_id" ]] && [[ -d "$HOME/.muleteam" ]]; then
+      # Try to find profile by agent name
+      local my_name
+      my_name=$(echo "$me" | _jq_or_cat -r '.name // empty' 2>/dev/null) || true
+      if [[ -n "$my_name" ]] && [[ -f "$HOME/.muleteam/$my_name" ]]; then
+        profile_file="$HOME/.muleteam/$my_name"
+      fi
+    fi
+    if [[ -n "$profile_file" ]] && [[ -f "$profile_file" ]]; then
+      local stored_poll
+      stored_poll=$(grep '^LAST_POLL=' "$profile_file" 2>/dev/null | tail -1 | cut -d'=' -f2- | tr -d '"') || true
+      if [[ -n "$stored_poll" ]]; then
+        since="$stored_poll"
+      fi
+    fi
+  fi
+
+  # Fetch threads
+  local data
+  data=$(_get "/api/threads")
+
+  if [[ -z "$my_full_id" ]]; then
+    # Fallback: no identity, just show recent threads
+    if [[ -n "$since" ]]; then
+      echo "$data" | _jq_or_cat --arg since "$since" --argjson limit "$limit" '
+        .threads
+        | map(select(.updated_at > $since))
+        | .[:$limit]
+        | map({id, title, status, updated_at})
+      '
+    else
+      echo "$data" | _jq_or_cat --argjson limit "$limit" '.threads[:$limit] | map({id, title, status, updated_at})'
+    fi
+  else
+    # Smart categorized output
+    local since_filter="${since:-1970-01-01T00:00:00Z}"
+
+    echo "=== Unread (your threads, updated since last poll) ==="
+    echo "$data" | _jq_or_cat -r --arg me "$my_full_id" --arg since "$since_filter" --argjson limit "$limit" '
+      .threads
+      | map(select(.participants | any(.id == $me)))
+      | map(select(.updated_at > $since))
+      | .[:$limit][]
+      | [.status, .id[:12], .title[:50], .updated_at[:16]]
+      | @tsv
+    ' | column -t -s $'\t' 2>/dev/null || true
+    echo ""
+
+    echo "=== New (threads you haven'\''t joined) ==="
+    echo "$data" | _jq_or_cat -r --arg me "$my_full_id" --argjson limit "$limit" '
+      .threads
+      | map(select(.participants | all(.id != $me)))
+      | .[:$limit][]
+      | [.status, .id[:12], .title[:50], .updated_at[:16]]
+      | @tsv
+    ' | column -t -s $'\t' 2>/dev/null || true
+    echo ""
+
+    echo "=== Quiet (your threads, no recent updates) ==="
+    echo "$data" | _jq_or_cat -r --arg me "$my_full_id" --arg since "$since_filter" --argjson limit "$limit" '
+      .threads
+      | map(select(.participants | any(.id == $me)))
+      | map(select(.updated_at <= $since))
+      | .[:$limit][]
+      | [.status, .id[:12], .title[:50], .updated_at[:16]]
+      | @tsv
+    ' | column -t -s $'\t' 2>/dev/null || true
+  fi
+
+  # Update LAST_POLL in profile
+  local now
+  now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  local profile_file=""
+  if [[ -n "$my_id" ]] && [[ -d "$HOME/.muleteam" ]]; then
+    local my_name
+    my_name=$(echo "$me" | _jq_or_cat -r '.name // empty' 2>/dev/null) || true
+    if [[ -n "$my_name" ]] && [[ -f "$HOME/.muleteam/$my_name" ]]; then
+      profile_file="$HOME/.muleteam/$my_name"
+    fi
+  fi
+  if [[ -n "$profile_file" ]] && [[ -f "$profile_file" ]]; then
+    # Remove old LAST_POLL and append new one
+    sed -i.bak '/^LAST_POLL=/d' "$profile_file" 2>/dev/null || true
+    rm -f "${profile_file}.bak"
+    echo "LAST_POLL=\"$now\"" >> "$profile_file"
+  fi
+}
+
+cmd_update() {
+  # Determine the server URL from profile or env
+  local url="${MULETEAM_URL:-}"
+  if [[ -z "$url" ]]; then
+    # Try to find URL from any profile
+    if [[ -d "$HOME/.muleteam" ]]; then
+      for f in "$HOME/.muleteam"/*; do
+        [[ -f "$f" ]] || continue
+        url=$(grep MULETEAM_URL "$f" | cut -d'"' -f2)
+        [[ -n "$url" ]] && break
+      done
+    fi
+  fi
+  if [[ -z "$url" ]]; then
+    echo "Error: Cannot determine server URL. Set MULETEAM_URL or run 'muleteam setup' first." >&2
+    exit 1
+  fi
+
+  local self_path
+  self_path=$(command -v muleteam 2>/dev/null || echo "$HOME/.local/bin/muleteam")
+  echo "Updating CLI from ${url}..."
+  curl -sfL "${url}/cli/muleteam" -o "$self_path"
+  chmod +x "$self_path"
+  echo "Updated: $self_path"
+}
+
+cmd_history() {
+  _init_api
+  local id="${1:?Usage: muleteam history <thread-id>}"; shift
+  local limit=20
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --limit) limit="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  _get "/api/threads/$id/git-log?limit=$limit" | _jq_or_cat -r '
+    .log[]
+    | "\(.short_hash) \(.date[:16]) \(.author): \(.message)"
+  '
+}
+
+# ── resolve auth (unless --as already set it) ─────────────
+
+if [[ -z "${MULETEAM_TOKEN:-}" ]]; then
+  _resolve_auth
+fi
+
+# ── dispatch ───────────────────────────────────────────────
+
+case "${1:-help}" in
+  threads)      shift; cmd_threads "$@" ;;
+  thread)       shift; cmd_thread "$@" ;;
+  messages)     shift; cmd_messages "$@" ;;
+  post)         shift; cmd_post "$@" ;;
+  join)         shift; cmd_join "$@" ;;
+  files)        shift; cmd_files "$@" ;;
+  read)         shift; cmd_read "$@" ;;
+  write)        shift; cmd_write "$@" ;;
+  channels)     shift; cmd_channels "$@" ;;
+  channel)      shift; cmd_channel "$@" ;;
+  history)      shift; cmd_history "$@" ;;
+  poll)         shift; cmd_poll "$@" ;;
+  setup)        shift; cmd_setup "$@" ;;
+  profiles)     cmd_profiles ;;
+  update)       cmd_update ;;
+  help|--help|-h) cmd_help ;;
+  *) echo "Unknown command: $1. Run 'muleteam help' for usage." >&2; exit 1 ;;
+esac

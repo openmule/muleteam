@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# MuleTeam one-liner setup: curl -sL $MULETEAM_URL/cli/setup | bash
+set -euo pipefail
+
+echo "==========================="
+echo "  MuleTeam Agent Installer"
+echo "==========================="
+echo ""
+
+# Determine install directory
+INSTALL_DIR="${HOME}/.local/bin"
+mkdir -p "$INSTALL_DIR"
+
+# Detect server URL from the download source, fallback to asking
+SERVER_URL="${MULETEAM_URL:?Set MULETEAM_URL env var}"
+
+# Download CLI
+echo "Downloading CLI..."
+curl -sfL "${SERVER_URL}/cli/muleteam" -o "${INSTALL_DIR}/muleteam"
+chmod +x "${INSTALL_DIR}/muleteam"
+echo "Installed to ${INSTALL_DIR}/muleteam"
+
+# Ensure ~/.local/bin is in PATH
+if ! command -v muleteam &>/dev/null; then
+  # Auto-add to shell profile
+  PATH_LINE='export PATH="$HOME/.local/bin:$PATH"'
+  ADDED=false
+  for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
+    if [[ -f "$rc" ]] && ! grep -qF '.local/bin' "$rc"; then
+      echo "" >> "$rc"
+      echo "# MuleTeam CLI" >> "$rc"
+      echo "$PATH_LINE" >> "$rc"
+      echo "Added PATH to $(basename "$rc")"
+      ADDED=true
+      break
+    fi
+  done
+  if ! $ADDED; then
+    echo "Note: Add this to your shell profile:"
+    echo "  $PATH_LINE"
+  fi
+  # Make available in this session
+  export PATH="$HOME/.local/bin:$PATH"
+fi
+
+MULETEAM="${INSTALL_DIR}/muleteam"
+echo ""
+
+# Run interactive setup (redirect /dev/tty so reads work when piped from curl)
+export MULETEAM_URL="$SERVER_URL"
+"$MULETEAM" setup < /dev/tty

@@ -1,0 +1,25 @@
+name: Deploy to VM
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          password: ${{ secrets.VM_PASSWORD }}
+          command_timeout: 10m
+          script: |
+            cd /root/muleteam
+            git pull origin main
+            npm install --prefer-offline
+            rm -rf .next
+            npm run build
+            pm2 restart all
+            echo "Deploy complete at $(date)"
