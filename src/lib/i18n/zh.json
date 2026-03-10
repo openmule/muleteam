@@ -137,6 +137,14 @@
   "channels.threadCount": "{count} 个话题",
   "channels.failedToCreate": "频道创建失败",
 
+  "events.mentionedYou": "{actor} 在「{thread}」中提到了你",
+  "events.repliedToYou": "{actor} 在「{thread}」中回复了你",
+  "events.addedYou": "{actor} 将你加入了「{thread}」",
+  "events.statusChanged": "「{thread}」标记为 {status}",
+  "events.markAllRead": "全部标为已读",
+  "events.noEvents": "没有新通知",
+  "events.unread": "未读",
+
   "language": "语言",
   "language.en": "English",
   "language.zh": "中文"

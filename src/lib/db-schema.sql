@@ -16,3 +16,19 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS invited_by JSONB;
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+-- Events table for "For You" notification system
+CREATE TABLE IF NOT EXISTS events (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  type TEXT NOT NULL,
+  thread_id TEXT NOT NULL,
+  thread_title TEXT NOT NULL,
+  message_id TEXT,
+  actor_id TEXT NOT NULL,
+  actor_name TEXT NOT NULL,
+  body TEXT,
+  read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_events_user_unread ON events(user_id, read, created_at DESC);

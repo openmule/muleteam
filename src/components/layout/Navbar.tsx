@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
@@ -37,6 +37,20 @@ export function Navbar() {
   const { locale, setLocale, t } = useI18n();
   const { toggle: toggleTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchCount = () => {
+      fetch("/api/events/count")
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => { if (data) setUnreadCount(data.unread ?? 0); })
+        .catch(() => {});
+    };
+    fetchCount();
+    const interval = setInterval(fetchCount, 15000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
@@ -69,13 +83,18 @@ export function Navbar() {
                       key={item.href}
                       href={item.href}
                       onClick={() => setMobileOpen(false)}
-                      className={`px-4 py-2.5 text-sm transition-colors ${
+                      className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors ${
                         isActive
                           ? "text-foreground font-medium bg-muted"
                           : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                       }`}
                     >
                       {t(item.labelKey)}
+                      {item.href === "/" && unreadCount > 0 && (
+                        <span className="flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-blue-500 text-white text-[10px] font-medium leading-none">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
@@ -128,13 +147,18 @@ export function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                className={`relative px-3 py-1.5 text-sm rounded-md transition-colors ${
                   isActive
                     ? "text-foreground font-medium bg-muted"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 }`}
               >
                 {t(item.labelKey)}
+                {item.href === "/" && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-blue-500 text-white text-[10px] font-medium leading-none">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </Link>
             );
           })}

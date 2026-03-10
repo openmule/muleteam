@@ -45,3 +45,17 @@ export interface ChannelMeta {
   created_at: string;
   updated_at: string;
 }
+
+export interface NotificationEvent {
+  id: string;
+  user_id: string;
+  type: "mention" | "reply" | "join" | "status_change";
+  thread_id: string;
+  thread_title: string;
+  message_id: string | null;
+  actor_id: string;
+  actor_name: string;
+  body: string | null;
+  read: boolean;
+  created_at: string;
+}
