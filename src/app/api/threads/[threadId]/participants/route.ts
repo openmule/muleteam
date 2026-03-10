@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedEntity } from "@/lib/auth";
 import { getThread, joinThread, getAgentById } from "@/lib/git-storage";
 import { db } from "@/lib/db";
+import { emitJoinEvent } from "@/lib/events";
 
 // POST - add a participant to thread
 // Body: { participantId: string } — e.g. "agent:abc123" or "human:uuid"
@@ -44,6 +45,12 @@ export async function POST(
     joinThread(threadId, { id: participantId, type: "human", name: users[0].name });
   } else {
     return NextResponse.json({ error: "participantId must start with 'agent:' or 'human:'" }, { status: 400 });
+  }
+
+  // Fire-and-forget: emit join event if someone else added this participant
+  const actorId = entity.type === "human" ? `human:${entity.id}` : `agent:${entity.id}`;
+  if (actorId !== participantId) {
+    emitJoinEvent(threadId, thread.title, participantId, actorId, entity.name);
   }
 
   const updated = getThread(threadId);

@@ -4,8 +4,9 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/components/layout/AuthProvider";
 import { ThreadList } from "@/components/shared/ThreadList";
 import { NewThreadDialog } from "@/components/shared/NewThreadDialog";
+import { EventFeed } from "@/components/shared/EventFeed";
 import { useT } from "@/lib/i18n";
-import type { ThreadMeta, RegisteredAgent, ChannelMeta, User } from "@/components/shared/types";
+import type { ThreadMeta, RegisteredAgent, ChannelMeta, User, NotificationEvent } from "@/components/shared/types";
 
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth();
@@ -14,21 +15,24 @@ export default function HomePage() {
   const [agents, setAgents] = useState<RegisteredAgent[]>([]);
   const [channels, setChannels] = useState<ChannelMeta[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [events, setEvents] = useState<NotificationEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
     async function load() {
-      const [threadsRes, agentsRes, channelsRes, usersRes] = await Promise.all([
+      const [threadsRes, agentsRes, channelsRes, usersRes, eventsRes] = await Promise.all([
         fetch("/api/threads"),
         fetch("/api/agents"),
         fetch("/api/channels"),
         fetch("/api/users"),
+        fetch("/api/events?limit=30"),
       ]);
       if (threadsRes.ok) setThreads((await threadsRes.json()).threads ?? []);
       if (agentsRes.ok) setAgents((await agentsRes.json()).agents ?? []);
       if (channelsRes.ok) setChannels((await channelsRes.json()).channels ?? []);
       if (usersRes.ok) setAllUsers((await usersRes.json()).users ?? []);
+      if (eventsRes.ok) setEvents((await eventsRes.json()).events ?? []);
       setLoading(false);
     }
     load();
@@ -54,26 +58,28 @@ export default function HomePage() {
     );
   }
 
-  // For You — threads where current user is a participant
-  const myUserId = user ? `human:${user.id}` : "";
-  const myThreads = threads
-    .filter((t) => t.participants.some((p) => p.id === myUserId))
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-
   // All threads sorted by updated_at
   const allThreadsSorted = [...threads].sort(
     (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
   );
 
+  const handleMarkRead = async (eventId: string) => {
+    await fetch(`/api/events/${eventId}`, { method: "PATCH" });
+    setEvents((prev) => prev.map((e) => (e.id === eventId ? { ...e, read: true } : e)));
+  };
+
+  const handleMarkAllRead = async () => {
+    await fetch("/api/events/read-all", { method: "POST" });
+    setEvents((prev) => prev.map((e) => ({ ...e, read: true })));
+  };
+
   return (
     <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10">
-      {/* For You */}
-      {myThreads.length > 0 && (
-        <div className="mb-10">
-          <h2 className="text-xl font-semibold tracking-tight mb-4">{t("home.forYou")}</h2>
-          <ThreadList threads={myThreads} onDelete={handleDelete} channels={channels} />
-        </div>
-      )}
+      {/* For You — notification events */}
+      <div className="mb-10">
+        <h2 className="text-xl font-semibold tracking-tight mb-4">{t("home.forYou")}</h2>
+        <EventFeed events={events} onMarkRead={handleMarkRead} onMarkAllRead={handleMarkAllRead} />
+      </div>
 
       {/* All Threads */}
       <div className="flex items-center justify-between mb-6">

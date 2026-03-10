@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedEntity } from "@/lib/auth";
 import { getThread, updateThread, deleteThread, isParticipant } from "@/lib/git-storage";
+import { emitStatusChangeEvent } from "@/lib/events";
 
 // GET - get single thread (open to all authenticated users)
 export async function GET(
@@ -38,8 +39,20 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
+  // Read current thread to detect status change
+  const currentThread = getThread(threadId);
+  const oldStatus = currentThread?.status;
+
   updateThread(threadId, { status, description, labels });
   const thread = getThread(threadId);
+
+  // Fire-and-forget: emit status change event if status actually changed
+  if (status && oldStatus !== status && currentThread) {
+    const actorId = participantId;
+    const participantIds = currentThread.participants.map((p) => p.id);
+    emitStatusChangeEvent(threadId, currentThread.title, status, actorId, entity.name, participantIds);
+  }
+
   return NextResponse.json({ thread });
 }
 

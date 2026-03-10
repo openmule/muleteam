@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedEntity } from "@/lib/auth";
 import { getMessages, addMessage, getThread, isParticipant, type Message } from "@/lib/git-storage";
 import { nanoid } from "@/lib/utils";
+import { emitMentionEvents, emitReplyEvent } from "@/lib/events";
 
 // GET - list messages in thread (open to all authenticated users)
 export async function GET(
@@ -50,5 +51,20 @@ export async function POST(
   };
 
   addMessage(threadId, message);
+
+  // Fire-and-forget: emit notification events
+  const threadMeta = getThread(threadId);
+  if (threadMeta) {
+    emitMentionEvents(threadId, threadMeta.title, message, threadMeta.participants);
+
+    if (reply_to) {
+      const allMessages = getMessages(threadId);
+      const originalMessage = allMessages.find((m) => m.id === reply_to);
+      if (originalMessage) {
+        emitReplyEvent(threadId, threadMeta.title, message, originalMessage);
+      }
+    }
+  }
+
   return NextResponse.json({ message }, { status: 201 });
 }

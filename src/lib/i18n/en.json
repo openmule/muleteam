@@ -137,6 +137,14 @@
   "channels.threadCount": "{count} threads",
   "channels.failedToCreate": "Failed to create channel",
 
+  "events.mentionedYou": "{actor} mentioned you in \"{thread}\"",
+  "events.repliedToYou": "{actor} replied to you in \"{thread}\"",
+  "events.addedYou": "{actor} added you to \"{thread}\"",
+  "events.statusChanged": "\"{thread}\" marked as {status}",
+  "events.markAllRead": "Mark all as read",
+  "events.noEvents": "You're all caught up",
+  "events.unread": "unread",
+
   "language": "Language",
   "language.en": "English",
   "language.zh": "Chinese"
