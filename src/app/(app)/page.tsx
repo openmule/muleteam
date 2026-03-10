@@ -41,7 +41,7 @@ export default function HomePage() {
 
   const handleDelete = async (threadId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Delete this thread?")) return;
+    if (!confirm(t("home.confirmDeleteThread"))) return;
     const res = await fetch(`/api/threads/${threadId}`, { method: "DELETE" });
     if (res.ok) setThreads((prev) => prev.filter((t) => t.id !== threadId));
   };

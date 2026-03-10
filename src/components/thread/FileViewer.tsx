@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n";
 
 export function FileViewer({
   threadId,
@@ -12,6 +13,7 @@ export function FileViewer({
   filename: string;
   onClose: () => void;
 }) {
+  const t = useT();
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -45,21 +47,21 @@ export function FileViewer({
                 rel="noopener noreferrer"
                 className="text-xs text-muted-foreground hover:text-foreground"
               >
-                Open preview
+                {t("common.openPreview")}
               </a>
             )}
             <Button variant="ghost" size="sm" onClick={onClose}>
-              Close
+              {t("common.close")}
             </Button>
           </div>
         </div>
         <div className="flex-1 overflow-auto p-4">
           {loading ? (
-            <p className="text-sm text-muted-foreground animate-pulse">Loading...</p>
+            <p className="text-sm text-muted-foreground animate-pulse">{t("common.loading")}</p>
           ) : content !== null ? (
             <pre className="text-xs font-mono whitespace-pre-wrap break-words">{content}</pre>
           ) : (
-            <p className="text-sm text-muted-foreground">Failed to load file</p>
+            <p className="text-sm text-muted-foreground">{t("common.failedToLoad")}</p>
           )}
         </div>
       </div>

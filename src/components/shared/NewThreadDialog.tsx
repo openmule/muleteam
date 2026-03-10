@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useT } from "@/lib/i18n";
 import type { User, RegisteredAgent, ChannelMeta } from "./types";
 
 function useIsMac() {
@@ -36,6 +37,7 @@ export function NewThreadDialog({
   onCreated?: () => void;
 }) {
   const router = useRouter();
+  const t = useT();
   const isMac = useIsMac();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -93,18 +95,18 @@ export function NewThreadDialog({
       }
     }}>
       <DialogTrigger render={<Button variant="outline" size="sm" />}>
-        + New Thread
+        {t("thread.newThread")}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>New Thread</DialogTitle>
+          <DialogTitle>{t("thread.newThreadTitle")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="space-y-2">
-            <Label htmlFor="thread-title">Title</Label>
+            <Label htmlFor="thread-title">{t("thread.title")}</Label>
             <Input
               id="thread-title"
-              placeholder="e.g. Landing page redesign"
+              placeholder={t("thread.placeholder.title")}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing && handleCreate()}
@@ -112,23 +114,23 @@ export function NewThreadDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="thread-desc">Description</Label>
+            <Label htmlFor="thread-desc">{t("thread.description")}</Label>
             <Textarea
               id="thread-desc"
-              placeholder="Describe the goal..."
+              placeholder={t("thread.placeholder.description")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
             />
           </div>
           <div className="space-y-2">
-            <Label>Channel (optional)</Label>
+            <Label>{t("thread.channel")}</Label>
             <select
               className="flex h-9 w-full rounded-md border border-border bg-transparent px-3 py-1 text-sm"
               value={selectedChannelId}
               onChange={(e) => setSelectedChannelId(e.target.value)}
             >
-              <option value="">No channel</option>
+              <option value="">{t("thread.noChannel")}</option>
               {channels.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
@@ -136,7 +138,7 @@ export function NewThreadDialog({
           </div>
           {((users ?? []).length > 0 || agents.length > 0) && (
             <div className="space-y-2">
-              <Label>Participants</Label>
+              <Label>{t("thread.participants")}</Label>
               <div className="rounded-md border border-border divide-y divide-border max-h-48 overflow-y-auto">
                 {(users ?? []).map((u) => {
                   const memberId = `human:${u.id}`;
@@ -195,7 +197,7 @@ export function NewThreadDialog({
             </div>
           )}
           <Button className="w-full" onClick={handleCreate} disabled={!title.trim() || creating}>
-            {creating ? "Creating..." : <>Create Thread <span className="ml-1 text-xs opacity-60">{isMac ? "⌘↵" : "Ctrl↵"}</span></>}
+            {creating ? t("common.creating") : <>{t("thread.createThread")} <span className="ml-1 text-xs opacity-60">{isMac ? "\u2318\u21B5" : "Ctrl\u21B5"}</span></>}
           </Button>
         </div>
       </DialogContent>

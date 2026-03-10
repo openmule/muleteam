@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n";
 import type { ThreadMeta, ChannelMeta } from "./types";
 import { STATUS_ICON, timeAgo } from "./helpers";
 import { MemberAvatar } from "./MemberAvatar";
@@ -16,6 +17,7 @@ export function ThreadList({
   channels?: ChannelMeta[];
 }) {
   const router = useRouter();
+  const t = useT();
   const channelMap = new Map((channels ?? []).map((p) => [p.id, p]));
 
   return (
@@ -58,7 +60,7 @@ export function ThreadList({
               <button
                 onClick={(e) => onDelete(thread.id, e)}
                 className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-destructive"
-                title="Delete"
+                title={t("common.delete")}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
               </button>

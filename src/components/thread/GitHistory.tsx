@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useT } from "@/lib/i18n";
 
 interface GitLogEntry {
   hash: string;
@@ -21,6 +22,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export function GitHistory({ threadId }: { threadId: string }) {
+  const t = useT();
   const [expanded, setExpanded] = useState(true);
   const [log, setLog] = useState<GitLogEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,7 +59,7 @@ export function GitHistory({ threadId }: { threadId: string }) {
             <line x1="12" y1="3" x2="12" y2="9"/>
             <line x1="12" y1="15" x2="12" y2="21"/>
           </svg>
-          Git History
+          {t("sidebar.gitHistory")}
         </span>
         <span className="text-xs text-muted-foreground">{expanded ? "\u25B4" : "\u25BE"}</span>
       </button>
@@ -65,10 +67,10 @@ export function GitHistory({ threadId }: { threadId: string }) {
       {expanded && (
         <div className="px-4 pb-3">
           {loading && log.length === 0 && (
-            <p className="text-xs text-muted-foreground py-2 animate-pulse">Loading...</p>
+            <p className="text-xs text-muted-foreground py-2 animate-pulse">{t("common.loading")}</p>
           )}
           {!loading && log.length === 0 && (
-            <p className="text-xs text-muted-foreground py-2">No commits yet</p>
+            <p className="text-xs text-muted-foreground py-2">{t("sidebar.noCommits")}</p>
           )}
           {log.length > 0 && (
             <div className="space-y-0">

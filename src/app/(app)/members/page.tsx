@@ -63,14 +63,14 @@ export default function MembersPage() {
 
   const handleDeleteAgent = async (agentId: string, agentName: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm(`Delete agent @${agentName}? This cannot be undone.`)) return;
+    if (!confirm(t("members.confirmDeleteAgent").replace("{name}", agentName))) return;
     const res = await fetch(`/api/agents/${agentId}`, { method: "DELETE" });
     if (res.ok) setAgents((prev) => prev.filter((a) => a.id !== agentId));
   };
 
   const handleDeleteHuman = async (userId: string, userName: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm(`Delete user ${userName}? This cannot be undone.`)) return;
+    if (!confirm(t("members.confirmDeleteHuman").replace("{name}", userName))) return;
     const res = await fetch(`/api/users/${userId}`, { method: "DELETE" });
     if (res.ok) setAllUsers((prev) => prev.filter((u) => u.id !== userId));
   };
@@ -99,20 +99,20 @@ export default function MembersPage() {
           }}>
             <DialogTrigger render={<Button variant="outline" size="sm" />}>
               <span className="hidden sm:inline">{t("members.registerHuman")}</span>
-              <span className="sm:hidden">+ Human</span>
+              <span className="sm:hidden">{t("members.mobileHuman")}</span>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Register Human</DialogTitle>
+                <DialogTitle>{t("members.registerHumanTitle")}</DialogTitle>
               </DialogHeader>
               {registerHumanResult ? (
                 <div className="space-y-4 pt-2">
                   <p className="text-sm text-muted-foreground">
-                    User <span className="font-medium text-foreground">{registerHumanResult.name}</span> registered. Share these credentials — the password won&apos;t be shown again.
+                    <span className="font-medium text-foreground">{registerHumanResult.name}</span> {t("members.humanRegistered")}
                   </p>
                   <div className="rounded-md bg-muted p-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Name</span>
+                      <span className="text-xs text-muted-foreground">{t("auth.name")}</span>
                       <code className="text-xs font-mono">{registerHumanResult.name}</code>
                     </div>
                     <div className="flex items-center justify-between">
@@ -128,8 +128,8 @@ export default function MembersPage() {
                     className="w-full"
                     variant="outline"
                     size="default"
-                    label="Copy to clipboard"
-                    text={`Name: ${registerHumanResult.name}\nEmail: ${registerHumanResult.email}\nPassword: ${registerHumanResult.password}`}
+                    label={t("members.copyToClipboard")}
+                    text={`${t("auth.name")}: ${registerHumanResult.name}\n${t("auth.email")}: ${registerHumanResult.email}\n${t("auth.password")}: ${registerHumanResult.password}`}
                   />
                   <Button className="w-full" onClick={() => {
                     setRegisterHumanOpen(false);
@@ -156,20 +156,20 @@ export default function MembersPage() {
           }}>
             <DialogTrigger render={<Button variant="outline" size="sm" />}>
               <span className="hidden sm:inline">{t("members.registerAgent")}</span>
-              <span className="sm:hidden">+ Agent</span>
+              <span className="sm:hidden">{t("members.mobileAgent")}</span>
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
               <DialogHeader className="shrink-0">
-                <DialogTitle>Register Agent</DialogTitle>
+                <DialogTitle>{t("members.registerAgentTitle")}</DialogTitle>
               </DialogHeader>
               {registerAgentResult ? (
                 <ScrollArea className="flex-1 pr-4">
                   <div className="space-y-4 pt-2 pb-2">
                     <p className="text-sm text-muted-foreground">
-                      Agent <span className="font-medium text-foreground">@{registerAgentResult.name}</span> registered.
+                      <span className="font-medium text-foreground">@{registerAgentResult.name}</span> {t("members.agentRegistered")}
                     </p>
                     <div className="rounded-md border border-border p-3 space-y-2">
-                      <p className="text-xs font-medium">Paste into Claude Code to set up:</p>
+                      <p className="text-xs font-medium">{t("members.pasteSetupPrompt")}</p>
                       <div className="rounded bg-muted p-2 max-h-48 overflow-y-auto">
                         <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed break-all">
                           {setupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)}
@@ -177,13 +177,13 @@ export default function MembersPage() {
                       </div>
                       <CopyButton
                         className="w-full"
-                        label="Copy setup prompt"
+                        label={t("members.copySetupPrompt")}
                         text={setupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)}
                       />
                     </div>
                     <div className="rounded bg-muted/50 border border-border p-2">
                       <p className="text-[11px] text-muted-foreground">
-                        Token: <code className="font-mono text-foreground break-all">{registerAgentResult.token}</code>
+                        {t("members.token")}: <code className="font-mono text-foreground break-all">{registerAgentResult.token}</code>
                       </p>
                     </div>
                     <Button className="w-full" onClick={() => {
@@ -265,7 +265,7 @@ export default function MembersPage() {
                   <span className="text-xs text-muted-foreground truncate">{agent.description}</span>
                 )}
                 {agent.description && <span className="text-xs text-muted-foreground">&middot;</span>}
-                <span className="text-xs text-muted-foreground shrink-0">seen {timeAgo(agent.last_seen_at)}</span>
+                <span className="text-xs text-muted-foreground shrink-0">{t("members.seen").replace("{time}", timeAgo(agent.last_seen_at))}</span>
               </div>
             </div>
             <button

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useT } from "@/lib/i18n";
 import type { User, RegisteredAgent, Participant } from "./types";
 
 export function CreateChannelForm({
@@ -17,6 +18,7 @@ export function CreateChannelForm({
   currentUserId?: string;
   onSuccess: () => void;
 }) {
+  const t = useT();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
@@ -59,12 +61,12 @@ export function CreateChannelForm({
       });
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || "Failed to create channel");
+        setError(data.error || t("channels.failedToCreate"));
         return;
       }
       onSuccess();
     } catch {
-      setError("Request failed");
+      setError(t("auth.requestFailed"));
     } finally {
       setLoading(false);
     }
@@ -76,15 +78,15 @@ export function CreateChannelForm({
         <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>
       )}
       <div className="space-y-2">
-        <Label>Channel Name</Label>
-        <Input placeholder="e.g. Frontend Redesign" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+        <Label>{t("channels.channelName")}</Label>
+        <Input placeholder={t("channels.placeholder.name")} value={name} onChange={(e) => setName(e.target.value)} autoFocus />
       </div>
       <div className="space-y-2">
-        <Label>Description (optional)</Label>
-        <Input placeholder="What this channel is about" value={description} onChange={(e) => setDescription(e.target.value)} />
+        <Label>{t("channels.description")}</Label>
+        <Input placeholder={t("channels.placeholder.description")} value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
       <div className="space-y-2">
-        <Label>Members</Label>
+        <Label>{t("channels.members")}</Label>
         <div className="rounded-md border border-border divide-y divide-border max-h-48 overflow-y-auto">
           {users.map((u) => {
             const memberId = `human:${u.id}`;
@@ -104,7 +106,7 @@ export function CreateChannelForm({
                 }`}>
                   {selected && "\u2713"}
                 </span>
-                <span className="font-medium">{u.name}{isCurrentUser ? " (you)" : ""}</span>
+                <span className="font-medium">{u.name}{isCurrentUser ? ` ${t("members.you")}` : ""}</span>
               </button>
             );
           })}
@@ -132,7 +134,7 @@ export function CreateChannelForm({
         </div>
       </div>
       <Button className="w-full" onClick={handleCreate} disabled={!name.trim() || loading}>
-        {loading ? "Creating..." : "Create Channel"}
+        {loading ? t("common.creating") : t("channels.createChannel")}
       </Button>
     </div>
   );
