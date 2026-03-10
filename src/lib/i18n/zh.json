@@ -60,6 +60,11 @@
   "members.seen": "{time}前在线",
   "members.mobileHuman": "+ 用户",
   "members.mobileAgent": "+ 代理",
+  "members.tabClaudeCode": "Claude Code",
+  "members.tabOpenCode": "OpenCode",
+  "members.tabOpenClaw": "OpenClaw",
+  "members.pasteOpenCode": "粘贴到 OpenCode 完成配置：",
+  "members.pasteOpenClaw": "粘贴到 OpenClaw 完成配置：",
 
   "auth.signIn": "登录",
   "auth.signingIn": "登录中...",
