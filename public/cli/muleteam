@@ -114,9 +114,10 @@ Usage: muleteam [--as <profile>] <command> [args]
 Commands:
   threads [--json] [--limit N]     List threads (default: last 20)
   thread <id> [--json]             Thread summary (or full JSON)
-  messages <id> [--limit N]        Show messages (default: last 10)
-  post <id> "message"              Post a message
-  reply <id> <msg-id> "message"    Reply to a specific message
+  messages <id> [--limit N]        Show messages with IDs (default: last 10)
+  post <id> "message"              Post a new message (for new topics)
+  reply <id> <msg-id> "message"    Reply to a specific message by ID
+  reply-last <id> "message"        Reply to the last message from someone else
   join <id>                        Join a thread
   files <id> [--limit N]           List workspace files (default: 50)
   read <id> <path> [--lines N]     Read a file (default: first 200 lines)
@@ -313,7 +314,7 @@ cmd_messages() {
   data=$(_get "/api/threads/$id/messages")
   echo "$data" | _jq_or_cat -r "
     .messages[-$limit:][]
-    | \"\(.from_name) [\(.type)] \(.body)\"
+    | \"[\(.id)] \(.from_name)\(if .reply_to then \" (reply to \(.reply_to))\" else \"\" end): \(.body)\"
   "
 }
 
@@ -348,6 +349,47 @@ cmd_reply() {
     exit 1
   }
   echo "$result" | _jq_or_cat -r '"Replied: \(.message.id) (in reply to \(.message.reply_to // "unknown"))"'
+}
+
+cmd_reply_last() {
+  _init_api
+  local id="${1:?Usage: muleteam reply-last <thread-id> \"message\"}"; shift
+  local body="${1:?Usage: muleteam reply-last <thread-id> \"message\"}"
+
+  # Get my identity
+  local me
+  me=$(_get "/api/me" 2>/dev/null)
+  local my_name
+  my_name=$(echo "$me" | _jq_or_cat -r '.name // empty' 2>/dev/null) || true
+
+  # Find the last message NOT from me
+  local data last_msg_id last_from
+  data=$(_get "/api/threads/$id/messages")
+  last_msg_id=$(echo "$data" | _jq_or_cat -r --arg me "$my_name" '
+    [.messages[] | select(.from_name != $me and .type != "activity")] | last | .id // empty
+  ' 2>/dev/null) || true
+
+  if [[ -z "$last_msg_id" ]]; then
+    echo "No message from others to reply to. Using post instead." >&2
+    cmd_post "$id" "$body"
+    return
+  fi
+
+  last_from=$(echo "$data" | _jq_or_cat -r --arg id "$last_msg_id" '
+    .messages[] | select(.id == $id) | .from_name
+  ' 2>/dev/null) || true
+
+  # Use the existing reply logic
+  local payload escaped_body escaped_reply_to
+  escaped_body=$(printf '%s' "$body" | _json_escape_string)
+  escaped_reply_to=$(printf '%s' "$last_msg_id" | _json_escape_string)
+  payload=$(printf '{"body":%s,"reply_to":%s}' "$escaped_body" "$escaped_reply_to")
+  local result
+  result=$(_post "/api/threads/$id/messages" "$payload" 2>&1) || {
+    echo "Error: Failed to post reply." >&2
+    exit 1
+  }
+  echo "$result" | _jq_or_cat -r "\"Replied to ${last_from:-someone}: \(.message.id) (in reply to $last_msg_id)\""
 }
 
 cmd_join() {
@@ -614,6 +656,7 @@ case "${1:-help}" in
   messages)     shift; cmd_messages "$@" ;;
   post)         shift; cmd_post "$@" ;;
   reply)        shift; cmd_reply "$@" ;;
+  reply-last)   shift; cmd_reply_last "$@" ;;
   join)         shift; cmd_join "$@" ;;
   files)        shift; cmd_files "$@" ;;
   read)         shift; cmd_read "$@" ;;
