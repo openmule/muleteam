@@ -585,6 +585,71 @@ export function listThreadsByChannel(channelId: string): ThreadMeta[] {
   return listThreads().filter(t => t.channel_id === channelId);
 }
 
+// Action item (task) operations
+export interface ActionItem {
+  id: string;
+  description: string;
+  assignee?: string;
+  assignee_name?: string;
+  status: "open" | "in_progress" | "done";
+  created_by: string;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+  source_message_id?: string;
+}
+
+export function getThreadTasks(threadId: string): ActionItem[] {
+  initRepo();
+  const tasksPath = path.join(REPO_BASE, "threads", threadId, "tasks.json");
+  if (!fs.existsSync(tasksPath)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(tasksPath, "utf-8"));
+  } catch {
+    return [];
+  }
+}
+
+export function addThreadTask(threadId: string, task: ActionItem): void {
+  initRepo();
+  const tasksPath = path.join(REPO_BASE, "threads", threadId, "tasks.json");
+  const tasks = getThreadTasks(threadId);
+  tasks.push(task);
+  fs.writeFileSync(tasksPath, JSON.stringify(tasks, null, 2));
+  gitCommit(`Add task: ${task.description}`, task.created_by_name, `system@muleteam.local`);
+}
+
+export function updateThreadTask(threadId: string, taskId: string, updates: Partial<ActionItem>): ActionItem | null {
+  initRepo();
+  const tasksPath = path.join(REPO_BASE, "threads", threadId, "tasks.json");
+  const tasks = getThreadTasks(threadId);
+  const idx = tasks.findIndex(t => t.id === taskId);
+  if (idx === -1) return null;
+
+  const task = tasks[idx];
+  if (updates.status !== undefined) task.status = updates.status;
+  if (updates.assignee !== undefined) task.assignee = updates.assignee;
+  if (updates.assignee_name !== undefined) task.assignee_name = updates.assignee_name;
+  if (updates.description !== undefined) task.description = updates.description;
+  task.updated_at = new Date().toISOString();
+
+  tasks[idx] = task;
+  fs.writeFileSync(tasksPath, JSON.stringify(tasks, null, 2));
+  gitCommit(`Update task: ${task.description}`, "MuleTeam System", "system@muleteam.local");
+  return task;
+}
+
+export function deleteThreadTask(threadId: string, taskId: string): boolean {
+  initRepo();
+  const tasksPath = path.join(REPO_BASE, "threads", threadId, "tasks.json");
+  const tasks = getThreadTasks(threadId);
+  const filtered = tasks.filter(t => t.id !== taskId);
+  if (filtered.length === tasks.length) return false;
+  fs.writeFileSync(tasksPath, JSON.stringify(filtered, null, 2));
+  gitCommit(`Remove task: ${taskId}`, "MuleTeam System", "system@muleteam.local");
+  return true;
+}
+
 // Git helpers
 function gitCommit(message: string, authorName: string, authorEmail: string): void {
   try {

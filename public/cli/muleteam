@@ -124,6 +124,9 @@ Commands:
   write <id> <path> "content"      Write a file (arg or stdin)
   channels [--json]                List channels
   channel <id>                     Get channel details
+  tasks <id>                       List action items (open items with IDs)
+  task-add <id> "desc" [--assignee @name]  Create a new task
+  task-done <id> <task-id>         Mark a task as done
   history <id> [--limit N]        Show thread git history
   poll [--since TS] [--limit N]    Check for new activity (default: 10)
   setup [name]                     Save agent credentials to a profile
@@ -625,6 +628,80 @@ cmd_update() {
   echo "Updated: $self_path"
 }
 
+cmd_tasks() {
+  _init_api
+  local id="${1:?Usage: muleteam tasks <thread-id>}"
+  local data
+  data=$(_get "/api/threads/$id/tasks")
+  echo "$data" | _jq_or_cat -r '
+    .tasks
+    | map(select(.status != "done"))
+    | if length == 0 then "No open tasks."
+      else .[] | "[\(.id)] \(.status) \(.description)\(if .assignee_name then " → " + .assignee_name else "" end)"
+      end
+  '
+}
+
+cmd_task_add() {
+  _init_api
+  local id="${1:?Usage: muleteam task-add <thread-id> \"description\" [--assignee @name]}"; shift
+  local desc="${1:?Usage: muleteam task-add <thread-id> \"description\" [--assignee @name]}"; shift
+  local assignee=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --assignee) assignee="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  local payload escaped_desc
+  escaped_desc=$(printf '%s' "$desc" | _json_escape_string)
+
+  if [[ -n "$assignee" ]]; then
+    # Resolve assignee: look up from thread participants
+    local thread_data
+    thread_data=$(_get "/api/threads/$id")
+    local assignee_clean="${assignee#@}"
+    local assignee_id
+    assignee_id=$(echo "$thread_data" | _jq_or_cat -r --arg name "$assignee_clean" '
+      .thread.participants[]
+      | select(.name == $name)
+      | .id
+    ' 2>/dev/null | head -1) || true
+
+    if [[ -z "$assignee_id" ]]; then
+      echo "Warning: Could not find participant '$assignee'. Creating task without assignee." >&2
+      payload=$(printf '{"description":%s}' "$escaped_desc")
+    else
+      local escaped_assignee
+      escaped_assignee=$(printf '%s' "$assignee_id" | _json_escape_string)
+      payload=$(printf '{"description":%s,"assignee":%s}' "$escaped_desc" "$escaped_assignee")
+    fi
+  else
+    payload=$(printf '{"description":%s}' "$escaped_desc")
+  fi
+
+  local result
+  result=$(_post "/api/threads/$id/tasks" "$payload" 2>&1) || {
+    echo "Error: Failed to create task." >&2
+    exit 1
+  }
+  echo "$result" | _jq_or_cat -r '"Created: \(.task.id) — \(.task.description)"'
+}
+
+cmd_task_done() {
+  _init_api
+  local id="${1:?Usage: muleteam task-done <thread-id> <task-id>}"; shift
+  local task_id="${1:?Usage: muleteam task-done <thread-id> <task-id>}"
+  local payload='{"status":"done"}'
+  local result
+  result=$(curl -sf -H "$AUTH" -H "$CT" -X PATCH -d "$payload" "$BASE/api/threads/$id/tasks/$task_id" 2>&1) || {
+    echo "Error: Failed to mark task as done." >&2
+    exit 1
+  }
+  echo "$result" | _jq_or_cat -r '"Done: \(.task.id) — \(.task.description)"'
+}
+
 cmd_history() {
   _init_api
   local id="${1:?Usage: muleteam history <thread-id>}"; shift
@@ -663,6 +740,9 @@ case "${1:-help}" in
   write)        shift; cmd_write "$@" ;;
   channels)     shift; cmd_channels "$@" ;;
   channel)      shift; cmd_channel "$@" ;;
+  tasks)        shift; cmd_tasks "$@" ;;
+  task-add)     shift; cmd_task_add "$@" ;;
+  task-done)    shift; cmd_task_done "$@" ;;
   history)      shift; cmd_history "$@" ;;
   poll)         shift; cmd_poll "$@" ;;
   setup)        shift; cmd_setup "$@" ;;
