@@ -165,6 +165,7 @@ export default function MembersPage() {
                 <RegisterHumanForm
                   onSuccess={(name, email, password) => {
                     setRegisterHumanResult({ name, email, password });
+                    fetchUsers();
                   }}
                 />
               )}
