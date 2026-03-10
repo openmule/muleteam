@@ -4,8 +4,10 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n";
 
 export default function LoginPage() {
+  const t = useT();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -27,13 +29,13 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || "Login failed");
+        setError(data.error || t("auth.loginFailed"));
         return;
       }
 
       window.location.href = "/";
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(t("auth.somethingWentWrong"));
     } finally {
       setLoading(false);
     }
@@ -45,7 +47,7 @@ export default function LoginPage() {
         <img src="/logo.svg" width={32} height={32} alt="MuleTeam" className="mx-auto mb-2" />
         <h1 className="text-xl font-semibold tracking-tight">MuleTeam</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Agent Native Collaboration Platform
+          {t("auth.subtitle")}
         </p>
       </div>
 
@@ -57,34 +59,34 @@ export default function LoginPage() {
 
       <form onSubmit={handleLogin} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="login-email">Email</Label>
+          <Label htmlFor="login-email">{t("auth.email")}</Label>
           <Input
             id="login-email"
             name="email"
             type="email"
-            placeholder="you@example.com"
+            placeholder={t("auth.placeholder.email")}
             required
             autoComplete="email"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="login-password">Password</Label>
+          <Label htmlFor="login-password">{t("auth.password")}</Label>
           <Input
             id="login-password"
             name="password"
             type="password"
-            placeholder="Enter your password"
+            placeholder={t("auth.placeholder.password")}
             required
             autoComplete="current-password"
           />
         </div>
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Signing in..." : "Sign In"}
+          {loading ? t("auth.signingIn") : t("auth.signIn")}
         </Button>
       </form>
 
       <p className="mt-4 text-center text-xs text-muted-foreground">
-        Don&apos;t have an account? Contact your organization admin.
+        {t("auth.noAccount")}
       </p>
     </div>
   );

@@ -15,10 +15,12 @@ import { NewThreadDialog } from "@/components/shared/NewThreadDialog";
 import { CreateChannelForm } from "@/components/shared/CreateChannelForm";
 import { timeAgo } from "@/components/shared/helpers";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
+import { useT } from "@/lib/i18n";
 import type { ThreadMeta, RegisteredAgent, ChannelMeta, User, Participant } from "@/components/shared/types";
 
 export default function ChannelsPage() {
   const { user, loading: authLoading } = useAuth();
+  const t = useT();
   const [threads, setThreads] = useState<ThreadMeta[]>([]);
   const [agents, setAgents] = useState<RegisteredAgent[]>([]);
   const [channels, setChannels] = useState<ChannelMeta[]>([]);
@@ -75,7 +77,7 @@ export default function ChannelsPage() {
   };
 
   const handleDeleteChannel = async (channelId: string) => {
-    if (!confirm("Delete this channel? Threads in this channel will become unassigned.")) return;
+    if (!confirm(t("channels.confirmDelete"))) return;
     const res = await fetch(`/api/channels/${channelId}`, { method: "DELETE" });
     if (res.ok) {
       setChannels((prev) => prev.filter((p) => p.id !== channelId));
@@ -85,7 +87,7 @@ export default function ChannelsPage() {
 
   const handleDeleteThread = async (threadId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Delete this thread?")) return;
+    if (!confirm(t("home.confirmDeleteThread"))) return;
     const res = await fetch(`/api/threads/${threadId}`, { method: "DELETE" });
     if (res.ok) setThreads((prev) => prev.filter((t) => t.id !== threadId));
   };
@@ -102,7 +104,7 @@ export default function ChannelsPage() {
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-pulse text-muted-foreground text-sm">Loading...</div>
+        <div className="animate-pulse text-muted-foreground text-sm">{t("common.loading")}</div>
       </div>
     );
   }
@@ -114,14 +116,14 @@ export default function ChannelsPage() {
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold tracking-tight">Channels</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{t("channels.title")}</h1>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger render={<Button variant="outline" size="sm" />}>
-            + New Channel
+            {t("channels.newChannel")}
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Create Channel</DialogTitle>
+              <DialogTitle>{t("channels.createChannel")}</DialogTitle>
             </DialogHeader>
             <CreateChannelForm
               agents={agents}
@@ -139,7 +141,7 @@ export default function ChannelsPage() {
       {sortedChannels.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border py-16 text-center">
           <p className="text-muted-foreground text-sm">
-            Create channels to organize threads and members.
+            {t("channels.noChannels")}
           </p>
         </div>
       ) : (
@@ -162,7 +164,7 @@ export default function ChannelsPage() {
                       )}
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs text-muted-foreground">
-                          {channel.members.length} members &middot; {channelThreads.length} threads
+                          {t("channels.memberCount").replace("{count}", String(channel.members.length))} &middot; {t("channels.threadCount").replace("{count}", String(channelThreads.length))}
                         </span>
                         <span className="text-xs text-muted-foreground">&middot;</span>
                         <span className="text-xs text-muted-foreground">{timeAgo(channel.updated_at)}</span>
@@ -177,7 +179,7 @@ export default function ChannelsPage() {
                         handleDeleteChannel(channel.id);
                       }}
                     >
-                      Delete
+                      {t("common.delete")}
                     </button>
                   </div>
                 </button>
@@ -187,7 +189,7 @@ export default function ChannelsPage() {
                     {/* Members section */}
                     <div className="px-4 py-3 border-b border-border">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-muted-foreground font-medium">Members:</span>
+                        <span className="text-xs text-muted-foreground font-medium">{t("channels.membersLabel")}</span>
                         {channel.members.map((m) => (
                           <MemberAvatar key={m.id} type={m.type} name={m.name} size={20} />
                         ))}
@@ -196,7 +198,7 @@ export default function ChannelsPage() {
                             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                             onClick={() => setAddingMemberTo(channel.id)}
                           >
-                            <span className="text-sm">+</span> Add
+                            <span className="text-sm">+</span> {t("common.add")}
                           </button>
                         )}
                       </div>
@@ -235,13 +237,13 @@ export default function ChannelsPage() {
                               onClick={() => setAddingMemberTo(null)}
                               className="flex w-full items-center justify-center px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                             >
-                              Cancel
+                              {t("common.cancel")}
                             </button>
                           </div>
                         ) : (
                           <div className="mt-2 text-xs text-muted-foreground">
-                            No more members to add.{" "}
-                            <button onClick={() => setAddingMemberTo(null)} className="hover:text-foreground">Dismiss</button>
+                            {t("channels.noMoreMembers")}{" "}
+                            <button onClick={() => setAddingMemberTo(null)} className="hover:text-foreground">{t("common.dismiss")}</button>
                           </div>
                         );
                       })()}
@@ -259,7 +261,7 @@ export default function ChannelsPage() {
                     </div>
                     {channelThreads.length === 0 ? (
                       <div className="px-4 pb-4 text-center">
-                        <p className="text-xs text-muted-foreground">No threads in this channel yet.</p>
+                        <p className="text-xs text-muted-foreground">{t("channels.noThreads")}</p>
                       </div>
                     ) : (
                       <ThreadList threads={channelThreads} onDelete={handleDeleteThread} />

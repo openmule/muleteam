@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useT } from "@/lib/i18n";
 import { FileViewer } from "./FileViewer";
 
 interface WorkspaceFile {
@@ -29,6 +30,7 @@ export function WorkspaceFiles({
   onRefresh: () => void;
   readOnly?: boolean;
 }) {
+  const t = useT();
   const [expanded, setExpanded] = useState(true);
   const [viewingFile, setViewingFile] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
@@ -64,7 +66,7 @@ export function WorkspaceFiles({
       >
         <span className="flex items-center gap-1.5">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-          Files
+          {t("sidebar.files")}
         </span>
         <span className="text-xs text-muted-foreground">{expanded ? "\u25B4" : "\u25BE"}</span>
       </button>
@@ -72,7 +74,7 @@ export function WorkspaceFiles({
       {expanded && (
         <div className="px-4 pb-3 space-y-1">
           {files.length === 0 && (
-            <p className="text-xs text-muted-foreground py-2">No files yet</p>
+            <p className="text-xs text-muted-foreground py-2">{t("sidebar.noFiles")}</p>
           )}
           {files.map((file) => (
             <div
@@ -96,7 +98,7 @@ export function WorkspaceFiles({
                     className="text-xs text-muted-foreground hover:text-foreground"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    Preview
+                    {t("common.preview")}
                   </a>
                 )}
               </div>
@@ -106,13 +108,13 @@ export function WorkspaceFiles({
           {!readOnly && (showUpload ? (
             <div className="mt-2 space-y-2 rounded-md border border-border p-3">
               <Input
-                placeholder="filename.html"
+                placeholder={t("thread.placeholder.filename")}
                 value={uploadName}
                 onChange={(e) => setUploadName(e.target.value)}
                 className="text-sm h-8"
               />
               <Textarea
-                placeholder="File content..."
+                placeholder={t("thread.fileContent")}
                 value={uploadContent}
                 onChange={(e) => setUploadContent(e.target.value)}
                 rows={4}
@@ -120,10 +122,10 @@ export function WorkspaceFiles({
               />
               <div className="flex gap-2">
                 <Button size="sm" onClick={handleUpload} disabled={uploading || !uploadName.trim()}>
-                  {uploading ? "..." : "Save"}
+                  {uploading ? "..." : t("common.save")}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setShowUpload(false)}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
               </div>
             </div>
@@ -132,7 +134,7 @@ export function WorkspaceFiles({
               className="text-xs text-muted-foreground hover:text-foreground mt-1"
               onClick={() => setShowUpload(true)}
             >
-              + Upload file
+              {t("sidebar.uploadFile")}
             </button>
           ))}
         </div>

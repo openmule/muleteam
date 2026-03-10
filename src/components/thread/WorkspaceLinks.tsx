@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useT } from "@/lib/i18n";
 
 interface HyperlinkEntry {
   id: string;
@@ -24,6 +25,7 @@ export function WorkspaceLinks({
   onRefresh: () => void;
   readOnly?: boolean;
 }) {
+  const t = useT();
   const [expanded, setExpanded] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [newUrl, setNewUrl] = useState("");
@@ -56,7 +58,7 @@ export function WorkspaceLinks({
       >
         <span className="flex items-center gap-1.5">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-          Links
+          {t("sidebar.links")}
         </span>
         <span className="text-xs text-muted-foreground">{expanded ? "\u25B4" : "\u25BE"}</span>
       </button>
@@ -64,7 +66,7 @@ export function WorkspaceLinks({
       {expanded && (
         <div className="px-4 pb-3 space-y-1">
           {links.length === 0 && !showAdd && (
-            <p className="text-xs text-muted-foreground py-2">No links yet</p>
+            <p className="text-xs text-muted-foreground py-2">{t("sidebar.noLinks")}</p>
           )}
           {links.map((link) => (
             <a
@@ -88,17 +90,17 @@ export function WorkspaceLinks({
                 className="text-sm h-8"
               />
               <Input
-                placeholder="Title (optional)"
+                placeholder={t("sidebar.linkTitlePlaceholder")}
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 className="text-sm h-8"
               />
               <div className="flex gap-2">
                 <Button size="sm" onClick={handleAdd} disabled={adding || !newUrl.trim()}>
-                  {adding ? "..." : "Add"}
+                  {adding ? "..." : t("common.add")}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setShowAdd(false)}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
               </div>
             </div>
@@ -107,7 +109,7 @@ export function WorkspaceLinks({
               className="text-xs text-muted-foreground hover:text-foreground mt-1"
               onClick={() => setShowAdd(true)}
             >
-              + Add link
+              {t("sidebar.addLink")}
             </button>
           ))}
         </div>

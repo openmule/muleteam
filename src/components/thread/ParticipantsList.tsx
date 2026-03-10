@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { memberUrl } from "@/components/shared/helpers";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
+import { useT } from "@/lib/i18n";
 
 interface Participant {
   id: string;
@@ -48,6 +49,7 @@ export function ParticipantsList({
   onParticipantAdded?: () => void;
   readOnly?: boolean;
 }) {
+  const t = useT();
   const [expanded, setExpanded] = useState(true);
   const [showPicker, setShowPicker] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -86,7 +88,7 @@ export function ParticipantsList({
       >
         <span className="flex items-center gap-1.5">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Participants
+          {t("sidebar.participants")}
         </span>
         <span className="text-xs text-muted-foreground">{expanded ? "\u25B4" : "\u25BE"}</span>
       </button>
@@ -106,7 +108,7 @@ export function ParticipantsList({
                 </Link>
                 {agentInfo && (
                   <span className="text-xs text-muted-foreground">
-                    &middot; seen {timeAgo(agentInfo.last_seen_at)}
+                    &middot; {t("members.seen").replace("{time}", timeAgo(agentInfo.last_seen_at))}
                   </span>
                 )}
               </div>
@@ -119,7 +121,7 @@ export function ParticipantsList({
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors pt-1"
               onClick={() => setShowPicker(true)}
             >
-              <span className="text-sm">+</span> Add participant
+              <span className="text-sm">+</span> {t("thread.addParticipant")}
             </button>
           )}
 
@@ -154,7 +156,7 @@ export function ParticipantsList({
                 onClick={() => setShowPicker(false)}
                 className="flex w-full items-center justify-center px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
           )}

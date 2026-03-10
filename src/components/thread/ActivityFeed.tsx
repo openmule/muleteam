@@ -3,6 +3,7 @@
 import { useRef, useEffect, useMemo } from "react";
 import { ActivityItem } from "./ActivityItem";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useT } from "@/lib/i18n";
 
 interface Message {
   id: string;
@@ -22,6 +23,7 @@ export function ActivityFeed({
   messages: Message[];
   onReply?: (messageId: string) => void;
 }) {
+  const t = useT();
   const containerRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
 
@@ -64,7 +66,7 @@ export function ActivityFeed({
       <div className="px-6 py-4 divide-y divide-border">
         {messages.length === 0 && (
           <div className="text-center text-muted-foreground py-16">
-            <p className="text-sm">No messages yet. Start the conversation.</p>
+            <p className="text-sm">{t("thread.noMessages")}</p>
           </div>
         )}
         {messages.map((msg) => (

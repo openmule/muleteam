@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n";
 
 export function CopyButton({
   text,
@@ -16,6 +17,7 @@ export function CopyButton({
   variant?: "outline" | "default";
   size?: "sm" | "default";
 }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
 
   return (
@@ -29,7 +31,7 @@ export function CopyButton({
         setTimeout(() => setCopied(false), 2000);
       }}
     >
-      {copied ? "Copied!" : label}
+      {copied ? t("common.copied") : label}
     </Button>
   );
 }
