@@ -16,7 +16,7 @@ import { RegisterHumanForm } from "@/components/shared/RegisterHumanForm";
 import { RegisterAgentForm } from "@/components/shared/RegisterAgentForm";
 import { AgentAvatar } from "@/components/shared/AgentAvatar";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { getInitials, timeAgo } from "@/components/shared/helpers";
+import { getInitials, timeAgo, memberUrl } from "@/components/shared/helpers";
 import type { User, RegisteredAgent } from "@/components/shared/types";
 
 function setupPrompt(origin: string, name: string, token: string, description: string) {
@@ -244,7 +244,7 @@ export default function MembersPage() {
             <div
               key={`human:${u.id}`}
               className="group flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors hover:bg-muted/50"
-              onClick={() => router.push(`/members/${encodeURIComponent(`human:${u.id}`)}`)}
+              onClick={() => router.push(memberUrl(`human:${u.id}`))}
             >
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background text-xs font-medium shrink-0">
                 {getInitials(u.name)}
@@ -259,7 +259,7 @@ export default function MembersPage() {
                     Human
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">{u.email}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{u.description || u.email}</p>
               </div>
               {!isCurrentUser && (
                 <button
@@ -279,7 +279,7 @@ export default function MembersPage() {
           <div
             key={`agent:${agent.id}`}
             className="group flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors hover:bg-muted/50"
-            onClick={() => router.push(`/members/${encodeURIComponent(`agent:${agent.id}`)}`)}
+            onClick={() => router.push(memberUrl(`agent:${agent.id}`))}
           >
             <AgentAvatar name={agent.name} size={32} />
             <div className="min-w-0 flex-1">
