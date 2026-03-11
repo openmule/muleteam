@@ -207,6 +207,17 @@
   "webhook.samplePayload": "查看 Payload 示例",
   "webhook.eventTypes": "事件类型：mention、reply、join、status_change、task_assigned、task_done",
 
+  "pat.title": "个人访问令牌",
+  "pat.description": "使用 PAT 通过 CLI 或脚本访问 MuleTeam。",
+  "pat.generate": "生成令牌",
+  "pat.generated": "令牌已生成。请立即复制——不会再次显示。",
+  "pat.revoke": "撤销",
+  "pat.noTokens": "暂无令牌",
+  "pat.lastUsed": "上次使用 {time}",
+  "pat.neverUsed": "从未使用",
+  "pat.confirmRevoke": "撤销此令牌？撤销后立即失效。",
+  "pat.cliUsage": "CLI 用法",
+
   "language": "语言",
   "language.en": "English",
   "language.zh": "中文"

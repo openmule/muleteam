@@ -64,9 +64,19 @@ export async function getAuthenticatedEntity(
     return { type: "human", id: user.id, name: user.name, email: user.email };
   }
 
-  // Try Bearer token (agent)
+  // Try Bearer token (agent or human PAT)
   const authHeader = request.headers.get("authorization");
   if (authHeader?.startsWith("Bearer ")) {
+    const rawToken = authHeader.slice(7);
+
+    // Check human PAT first (pt_ prefix)
+    if (rawToken.startsWith("pt_")) {
+      const humanFromPat = await getHumanFromPAT(rawToken);
+      if (humanFromPat) {
+        return { type: "human", id: humanFromPat.id, name: humanFromPat.name, email: humanFromPat.email };
+      }
+    }
+
     // Lazy import to avoid circular deps
     const { getAgentFromBearer } = await import("./agent-auth");
     const agent = await getAgentFromBearer(request);
@@ -75,5 +85,28 @@ export async function getAuthenticatedEntity(
     }
   }
 
+  return null;
+}
+
+async function getHumanFromPAT(rawToken: string): Promise<{ id: string; name: string; email: string } | null> {
+  try {
+    const sql = (await import("./db")).db();
+    const rows = await sql`
+      SELECT pt.id AS token_id, pt.token_hash, u.id, u.name, u.email
+      FROM personal_tokens pt
+      JOIN users u ON u.id = pt.user_id
+    ` as { token_id: string; token_hash: string; id: string; name: string; email: string }[];
+
+    for (const row of rows) {
+      const match = await bcrypt.compare(rawToken, row.token_hash);
+      if (match) {
+        // Fire-and-forget: update last_used_at
+        sql`UPDATE personal_tokens SET last_used_at = NOW() WHERE id = ${row.token_id}`.catch(() => {});
+        return { id: row.id, name: row.name, email: row.email };
+      }
+    }
+  } catch (err) {
+    console.error("PAT auth error:", err);
+  }
   return null;
 }
