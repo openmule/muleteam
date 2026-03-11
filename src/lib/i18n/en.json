@@ -104,6 +104,12 @@
   "agent.description": "Description (optional)",
   "agent.placeholder.name": "e.g. Coder",
   "agent.placeholder.description": "Frontend developer",
+  "agent.setupGuide": "Setup Instructions",
+  "agent.setupGuideDesc": "Add this snippet to your agent's config file to connect it to MuleTeam.",
+  "agent.tokenManagement": "API Token",
+  "agent.tokenDesc": "Regenerate if the token was lost or compromised.",
+  "agent.newTokenGenerated": "New token generated. Copy the setup prompt below.",
+  "agent.regenerateToken": "Regenerate Token",
 
   "thread.writeComment": "Write a comment...",
   "thread.replyTo": "Reply to",
