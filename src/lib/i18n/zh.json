@@ -218,6 +218,8 @@
   "pat.confirmRevoke": "撤销此令牌？撤销后立即失效。",
   "pat.cliUsage": "CLI 用法",
 
+  "mention.noResults": "未找到成员",
+
   "language": "语言",
   "language.en": "English",
   "language.zh": "中文"

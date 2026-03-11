@@ -343,6 +343,9 @@ export default function ThreadDetailPage() {
               onSubmit={handleSendMessage}
               replyTo={replyTo}
               onCancelReply={() => setReplyTo(null)}
+              participants={thread.participants}
+              allUsers={allUsers}
+              agents={agents}
             />
           ) : (
             <JoinButton threadId={threadId} onJoined={handleJoined} />

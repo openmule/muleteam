@@ -4,6 +4,10 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useT } from "@/lib/i18n";
+import {
+  MentionAutocomplete,
+  type MentionMember,
+} from "@/components/shared/MentionAutocomplete";
 
 const MAX_IMAGES = 4;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -22,18 +26,40 @@ interface ReplyContext {
   body: string;
 }
 
+interface Participant {
+  id: string;
+  type: "human" | "agent";
+  name: string;
+}
+
+interface UserInfo {
+  id: string;
+  name: string;
+}
+
+interface RegisteredAgent {
+  id: string;
+  name: string;
+}
+
 export function CommentInput({
   threadId,
   onSubmit,
   disabled,
   replyTo,
   onCancelReply,
+  participants,
+  allUsers,
+  agents,
 }: {
   threadId: string;
   onSubmit: (body: string, replyTo?: string) => Promise<void>;
   disabled?: boolean;
   replyTo?: ReplyContext | null;
   onCancelReply?: () => void;
+  participants?: Participant[];
+  allUsers?: UserInfo[];
+  agents?: RegisteredAgent[];
 }) {
   const t = useT();
   const [input, setInput] = useState("");
@@ -44,6 +70,62 @@ export function CommentInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isMac = useIsMac();
+
+  // Mention autocomplete state
+  const [mentionVisible, setMentionVisible] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionIndex, setMentionIndex] = useState(0);
+  // Track the position in input where the `@` trigger starts
+  const mentionStartRef = useRef<number>(-1);
+
+  // Build deduplicated member list for mention autocomplete
+  const mentionMembers = useMemo<MentionMember[]>(() => {
+    const participantIds = new Set(
+      (participants ?? []).map((p) => p.id)
+    );
+    const seen = new Set<string>();
+    const members: MentionMember[] = [];
+
+    // Add participants first
+    for (const p of participants ?? []) {
+      if (seen.has(p.id)) continue;
+      seen.add(p.id);
+      members.push({
+        id: p.id,
+        name: p.name,
+        type: p.type,
+        isParticipant: true,
+      });
+    }
+
+    // Add all users (human)
+    for (const u of allUsers ?? []) {
+      const pid = `human:${u.id}`;
+      if (seen.has(pid)) continue;
+      seen.add(pid);
+      members.push({
+        id: pid,
+        name: u.name,
+        type: "human",
+        isParticipant: participantIds.has(pid),
+      });
+    }
+
+    // Add all agents
+    for (const a of agents ?? []) {
+      const pid = `agent:${a.id}`;
+      if (seen.has(pid)) continue;
+      seen.add(pid);
+      members.push({
+        id: pid,
+        name: a.name,
+        type: "agent",
+        isParticipant: participantIds.has(pid),
+      });
+    }
+
+    return members;
+  }, [participants, allUsers, agents]);
 
   // Focus textarea when replying
   useEffect(() => {
@@ -176,7 +258,130 @@ export function CommentInput({
     }
   };
 
+  // Extract mention query from cursor position in the input text
+  const detectMention = useCallback(
+    (text: string, cursorPos: number) => {
+      // Look backwards from cursor to find an `@` trigger
+      const textBeforeCursor = text.slice(0, cursorPos);
+      // Find the last `@` that is either at position 0 or preceded by a space/newline
+      const atIdx = textBeforeCursor.lastIndexOf("@");
+      if (atIdx === -1) {
+        setMentionVisible(false);
+        mentionStartRef.current = -1;
+        return;
+      }
+
+      // `@` must be at the start or preceded by whitespace
+      if (atIdx > 0 && !/\s/.test(textBeforeCursor[atIdx - 1])) {
+        setMentionVisible(false);
+        mentionStartRef.current = -1;
+        return;
+      }
+
+      const query = textBeforeCursor.slice(atIdx + 1);
+      // If the query contains a space, the mention is "complete" — dismiss
+      if (query.includes(" ") || query.includes("\n")) {
+        setMentionVisible(false);
+        mentionStartRef.current = -1;
+        return;
+      }
+
+      mentionStartRef.current = atIdx;
+      setMentionQuery(query);
+      setMentionIndex(0);
+      setMentionVisible(true);
+    },
+    []
+  );
+
+  const handleMentionSelect = useCallback(
+    (name: string) => {
+      const atIdx = mentionStartRef.current;
+      if (atIdx === -1) return;
+
+      const before = input.slice(0, atIdx);
+      const cursorPos = textareaRef.current?.selectionStart ?? input.length;
+      const after = input.slice(cursorPos);
+      const newText = `${before}@${name} ${after}`;
+      setInput(newText);
+      setMentionVisible(false);
+      mentionStartRef.current = -1;
+
+      // Restore cursor position after the inserted mention
+      const newCursorPos = atIdx + name.length + 2; // @Name + space
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+        textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+      });
+    },
+    [input]
+  );
+
+  // Get the filtered+sorted count to clamp mention index for keyboard nav
+  const getFilteredCount = useCallback(() => {
+    return mentionMembers.filter((m) =>
+      m.name.toLowerCase().includes(mentionQuery.toLowerCase())
+    ).length;
+  }, [mentionMembers, mentionQuery]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Mention autocomplete keyboard navigation
+    if (mentionVisible) {
+      const count = getFilteredCount();
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionIndex((prev) => (prev + 1) % Math.max(count, 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionIndex((prev) => (prev - 1 + Math.max(count, 1)) % Math.max(count, 1));
+        return;
+      }
+      if (e.key === "Enter" && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+        // Select the highlighted mention
+        if (count > 0) {
+          e.preventDefault();
+          // Get the sorted/filtered list to pick the right name
+          const filtered = mentionMembers
+            .filter((m) =>
+              m.name.toLowerCase().includes(mentionQuery.toLowerCase())
+            )
+            .sort((a, b) => {
+              if (a.isParticipant !== b.isParticipant)
+                return a.isParticipant ? -1 : 1;
+              return a.name.localeCompare(b.name);
+            });
+          if (filtered[mentionIndex]) {
+            handleMentionSelect(filtered[mentionIndex].name);
+          }
+          return;
+        }
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setMentionVisible(false);
+        mentionStartRef.current = -1;
+        return;
+      }
+      if (e.key === "Tab" && count > 0) {
+        e.preventDefault();
+        const filtered = mentionMembers
+          .filter((m) =>
+            m.name.toLowerCase().includes(mentionQuery.toLowerCase())
+          )
+          .sort((a, b) => {
+            if (a.isParticipant !== b.isParticipant)
+              return a.isParticipant ? -1 : 1;
+            return a.name.localeCompare(b.name);
+          });
+        if (filtered[mentionIndex]) {
+          handleMentionSelect(filtered[mentionIndex].name);
+        }
+        return;
+      }
+    }
+
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSend();
@@ -251,17 +456,35 @@ export function CommentInput({
           onChange={handleFileSelect}
         />
 
-        <Textarea
-          ref={textareaRef}
-          placeholder={replyTo ? t("thread.replyToPlaceholder").replace("{name}", replyTo.from_name) : t("thread.writeComment")}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          className="min-h-[44px] max-h-[120px] resize-none text-sm"
-          rows={1}
-          disabled={disabled}
-        />
+        <div className="relative flex-1">
+          <MentionAutocomplete
+            members={mentionMembers}
+            query={mentionQuery}
+            visible={mentionVisible}
+            selectedIndex={mentionIndex}
+            onSelect={handleMentionSelect}
+            onHover={setMentionIndex}
+          />
+          <Textarea
+            ref={textareaRef}
+            placeholder={replyTo ? t("thread.replyToPlaceholder").replace("{name}", replyTo.from_name) : t("thread.writeComment")}
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              detectMention(e.target.value, e.target.selectionStart ?? e.target.value.length);
+            }}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            onClick={(e) => {
+              // Re-detect mention on click (cursor might have moved)
+              const target = e.target as HTMLTextAreaElement;
+              detectMention(target.value, target.selectionStart ?? target.value.length);
+            }}
+            className="min-h-[44px] max-h-[120px] resize-none text-sm"
+            rows={1}
+            disabled={disabled}
+          />
+        </div>
         <Button
           onClick={handleSend}
           disabled={sending || !hasContent || disabled}
