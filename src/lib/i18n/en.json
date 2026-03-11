@@ -36,6 +36,11 @@
   "common.failedToLoad": "Failed to load file",
   "files.preview": "Preview",
   "files.source": "Source",
+  "files.title": "Files",
+  "files.storageUsed": "{used} / {limit} used",
+  "files.storageUnlimited": "{used} used",
+  "files.noFiles": "No files yet. Upload files in threads to see them here.",
+  "files.threadFiles": "{count} files",
 
   "home.forYou": "For You",
   "home.threads": "Threads",
