@@ -288,20 +288,27 @@ export function listWorkspaceFiles(threadId: string): WorkspaceFile[] {
   const workspaceDir = path.join(REPO_BASE, "threads", threadId, "workspace");
   if (!fs.existsSync(workspaceDir)) return [];
 
-  return fs.readdirSync(workspaceDir)
-    .filter(f => {
-      const stat = fs.statSync(path.join(workspaceDir, f));
-      return stat.isFile();
-    })
-    .map(f => {
-      const stat = fs.statSync(path.join(workspaceDir, f));
-      return {
-        name: f,
-        size: stat.size,
-        modified: stat.mtime.toISOString(),
-      };
-    })
-    .sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime());
+  const results: WorkspaceFile[] = [];
+
+  function walk(dir: string, prefix: string) {
+    for (const entry of fs.readdirSync(dir)) {
+      const fullPath = path.join(dir, entry);
+      const stat = fs.statSync(fullPath);
+      const relativeName = prefix ? `${prefix}/${entry}` : entry;
+      if (stat.isDirectory()) {
+        walk(fullPath, relativeName);
+      } else if (stat.isFile()) {
+        results.push({
+          name: relativeName,
+          size: stat.size,
+          modified: stat.mtime.toISOString(),
+        });
+      }
+    }
+  }
+
+  walk(workspaceDir, "");
+  return results.sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime());
 }
 
 export function readWorkspaceFile(threadId: string, filename: string): string | null {
@@ -309,6 +316,13 @@ export function readWorkspaceFile(threadId: string, filename: string): string | 
   const filePath = resolveWorkspacePath(threadId, filename);
   if (!fs.existsSync(filePath)) return null;
   return fs.readFileSync(filePath, "utf-8");
+}
+
+export function readWorkspaceBinary(threadId: string, filename: string): Buffer | null {
+  initRepo();
+  const filePath = resolveWorkspacePath(threadId, filename);
+  if (!fs.existsSync(filePath)) return null;
+  return fs.readFileSync(filePath);
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -325,6 +339,21 @@ export async function writeWorkspaceFile(threadId: string, filename: string, con
 
   await withGitLock(() => {
     gitCommit(`${author} wrote workspace/${filename}`, author, `${author.replace(/\s+/g, "-").toLowerCase()}@muleteam.local`);
+  });
+}
+
+export async function writeWorkspaceBinary(threadId: string, filename: string, data: Buffer, author: string): Promise<void> {
+  if (data.length > MAX_FILE_SIZE) {
+    throw new Error("File size exceeds 10MB limit");
+  }
+  initRepo();
+  const filePath = resolveWorkspacePath(threadId, filename);
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(filePath, data);
+
+  await withGitLock(() => {
+    gitCommit(`${author} uploaded workspace/${filename}`, author, `${author.replace(/\s+/g, "-").toLowerCase()}@muleteam.local`);
   });
 }
 
