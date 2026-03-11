@@ -6,6 +6,7 @@ import { useT } from "@/lib/i18n";
 import { MarkdownBody } from "./MarkdownBody";
 
 const isMarkdown = (name: string) => /\.(md|mdx|markdown)$/i.test(name);
+const isImage = (name: string) => /\.(png|jpg|jpeg|gif|webp)$/i.test(name);
 
 export function FileViewer({
   threadId,
@@ -21,7 +22,15 @@ export function FileViewer({
   const [loading, setLoading] = useState(true);
   const [showSource, setShowSource] = useState(!isMarkdown(filename));
 
+  const imageUrl = isImage(filename)
+    ? `/api/threads/${threadId}/workspace/${encodeURIComponent(filename)}`
+    : null;
+
   useEffect(() => {
+    if (imageUrl) {
+      setLoading(false);
+      return;
+    }
     async function load() {
       try {
         const res = await fetch(
@@ -36,7 +45,7 @@ export function FileViewer({
       }
     }
     load();
-  }, [threadId, filename]);
+  }, [threadId, filename, imageUrl]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -70,6 +79,8 @@ export function FileViewer({
         <div className="flex-1 overflow-auto p-4">
           {loading ? (
             <p className="text-sm text-muted-foreground animate-pulse">{t("common.loading")}</p>
+          ) : imageUrl ? (
+            <img src={imageUrl} alt={filename} className="max-w-full max-h-[60vh] object-contain mx-auto" />
           ) : content !== null ? (
             !showSource && isMarkdown(filename) ? (
               <MarkdownBody body={content} />
