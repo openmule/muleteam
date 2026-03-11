@@ -1,3 +1,8 @@
+/** Convert a display name to a CLI-safe slug (lowercase + hyphens). */
+function slugify(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 /**
  * Generates the setup prompt for registering a MuleTeam agent (Claude Code).
  * Single source of truth — used by both the members page and the agent profile page.
@@ -7,7 +12,7 @@ export function setupPrompt(origin: string, name: string, token: string, descrip
 
 1. Run this command to install the CLI and save credentials:
 \`\`\`bash
-mkdir -p ~/.local/bin && curl -sL ${origin}/cli/muleteam -o ~/.local/bin/muleteam && chmod +x ~/.local/bin/muleteam && export PATH="$HOME/.local/bin:$PATH" && MULETEAM_URL=${origin} MULETEAM_TOKEN=${token} muleteam setup "${name}"
+mkdir -p ~/.local/bin && curl -sL ${origin}/cli/muleteam -o ~/.local/bin/muleteam && chmod +x ~/.local/bin/muleteam && export PATH="$HOME/.local/bin:$PATH" && MULETEAM_URL=${origin} MULETEAM_TOKEN=${token} muleteam setup ${slugify(name)}
 \`\`\`
 
 2. Add the following MuleTeam section to the project's CLAUDE.md. If CLAUDE.md already exists, merge it naturally into the existing content (don't duplicate headers or overwrite other instructions). If it doesn't exist, create it.
@@ -34,7 +39,7 @@ Run \`muleteam help\` for all available commands.
 - \`muleteam task-done <id> <task-id>\` — Mark an action item as done
 
 ## Tips
-- Use \`muleteam --as ${name}\` to switch identity when multiple agents share a machine
+- Use \`muleteam --as ${slugify(name)}\` to switch identity when multiple agents share a machine
 - Use \`/loop 10m\` inside Claude Code to auto-poll for new activity every 10 minutes
 \`\`\``;
 }
@@ -49,7 +54,7 @@ export function openCodeSetupPrompt(origin: string, name: string, token: string,
 
 1. Run this command to install the CLI and save credentials:
 \`\`\`bash
-mkdir -p ~/.local/bin && curl -sL ${origin}/cli/muleteam -o ~/.local/bin/muleteam && chmod +x ~/.local/bin/muleteam && export PATH="$HOME/.local/bin:$PATH" && MULETEAM_URL=${origin} MULETEAM_TOKEN=${token} muleteam setup "${name}"
+mkdir -p ~/.local/bin && curl -sL ${origin}/cli/muleteam -o ~/.local/bin/muleteam && chmod +x ~/.local/bin/muleteam && export PATH="$HOME/.local/bin:$PATH" && MULETEAM_URL=${origin} MULETEAM_TOKEN=${token} muleteam setup ${slugify(name)}
 \`\`\`
 
 2. Add the following MuleTeam section to the project's AGENTS.md. If AGENTS.md already exists, merge it naturally into the existing content (don't duplicate headers or overwrite other instructions). If it doesn't exist, create it.
@@ -76,7 +81,7 @@ Run \`muleteam help\` for all available commands.
 - \`muleteam task-done <id> <task-id>\` — Mark an action item as done
 
 ## Tips
-- Use \`muleteam --as ${name}\` to switch identity when multiple agents share a machine
+- Use \`muleteam --as ${slugify(name)}\` to switch identity when multiple agents share a machine
 - Use \`opencode run "muleteam poll"\` for one-shot polling or set up external cron
 \`\`\``;
 }
@@ -90,7 +95,7 @@ export function openClawSetupPrompt(origin: string, name: string, token: string,
 
 1. Run this command to install the CLI and save credentials:
 \`\`\`bash
-mkdir -p ~/.local/bin && curl -sL ${origin}/cli/muleteam -o ~/.local/bin/muleteam && chmod +x ~/.local/bin/muleteam && export PATH="$HOME/.local/bin:$PATH" && MULETEAM_URL=${origin} MULETEAM_TOKEN=${token} muleteam setup "${name}"
+mkdir -p ~/.local/bin && curl -sL ${origin}/cli/muleteam -o ~/.local/bin/muleteam && chmod +x ~/.local/bin/muleteam && export PATH="$HOME/.local/bin:$PATH" && MULETEAM_URL=${origin} MULETEAM_TOKEN=${token} muleteam setup ${slugify(name)}
 \`\`\`
 
 2. Create the skill file at \`~/.openclaw/skills/muleteam/SKILL.md\`:
@@ -118,7 +123,7 @@ You are @${name} on MuleTeam${description ? ` — ${description}` : ""}. Use the
 - Complete task: \`muleteam task-done <id> <task-id>\`
 
 ## Tips
-- Use \`muleteam --as ${name}\` for multi-agent machines
+- Use \`muleteam --as ${slugify(name)}\` for multi-agent machines
 \`\`\`
 
 3. Add a cron job for auto-polling:
@@ -154,7 +159,7 @@ Run \`muleteam help\` for all available commands.
 - \`muleteam task-done <id> <task-id>\` — Mark an action item as done
 
 ## Tips
-- Use \`muleteam --as ${name}\` to switch identity when multiple agents share a machine
+- Use \`muleteam --as ${slugify(name)}\` to switch identity when multiple agents share a machine
 - Use \`/loop 10m\` inside Claude Code to auto-poll for new activity every 10 minutes`;
 }
 
@@ -185,7 +190,7 @@ Run \`muleteam help\` for all available commands.
 - \`muleteam task-done <id> <task-id>\` — Mark an action item as done
 
 ## Tips
-- Use \`muleteam --as ${name}\` to switch identity when multiple agents share a machine
+- Use \`muleteam --as ${slugify(name)}\` to switch identity when multiple agents share a machine
 - Use \`opencode run "muleteam poll"\` for one-shot polling or set up external cron`;
 }
 
@@ -216,5 +221,5 @@ You are @${name} on MuleTeam${description ? ` \u2014 ${description}` : ""}. Use 
 - Complete task: \`muleteam task-done <id> <task-id>\`
 
 ## Tips
-- Use \`muleteam --as ${name}\` for multi-agent machines`;
+- Use \`muleteam --as ${slugify(name)}\` for multi-agent machines`;
 }
