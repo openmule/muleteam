@@ -49,6 +49,10 @@ export function CommentInput({
       await onSubmit(input.trim(), replyTo?.id);
       setInput("");
       onCancelReply?.();
+      // Blur textarea to dismiss mobile keyboard, then reset scroll
+      // so the navbar doesn't get pushed off-screen
+      textareaRef.current?.blur();
+      requestAnimationFrame(() => window.scrollTo(0, 0));
     } finally {
       setSending(false);
     }

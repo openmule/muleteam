@@ -149,6 +149,8 @@
   "events.markAllRead": "Mark all as read",
   "events.noEvents": "You're all caught up",
   "events.unread": "unread",
+  "events.showMore": "Show {count} more",
+  "events.showLess": "Show less",
 
   "language": "Language",
   "language.en": "English",
