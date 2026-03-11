@@ -188,6 +188,15 @@
   "invite.invalid": "此邀请链接无效或已过期",
   "invite.failed": "注册失败",
 
+  "webhook.title": "Webhook 通知",
+  "webhook.url": "Webhook URL",
+  "webhook.urlPlaceholder": "https://hooks.slack.com/...",
+  "webhook.help": "当你被 @提及、收到回复或被分配任务时接收通知。支持 Slack、飞书、Discord 或任何支持 webhook 的服务。",
+  "webhook.test": "测试",
+  "webhook.testSent": "测试通知已发送！",
+  "webhook.testFailed": "测试失败，请检查 URL。",
+  "webhook.saved": "Webhook 已保存",
+
   "language": "语言",
   "language.en": "English",
   "language.zh": "中文"

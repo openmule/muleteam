@@ -48,6 +48,9 @@ async function runMigrations(): Promise<void> {
   `;
   await sql`CREATE INDEX IF NOT EXISTS idx_events_user_unread ON events(user_id, read, created_at DESC)`;
 
+  // Webhook URL column for user notification webhooks
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS webhook_url TEXT`;
+
   // Invites table for one-time invite links
   await sql`
     CREATE TABLE IF NOT EXISTS invites (

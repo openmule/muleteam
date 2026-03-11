@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import type { Participant, ActionItem } from "@/lib/git-storage";
+import { sendWebhook, buildSummary, type WebhookPayload } from "@/lib/webhook";
 
 interface MessageLike {
   id: string;
@@ -10,6 +11,62 @@ interface MessageLike {
 
 function generateId(): string {
   return Math.random().toString(36).slice(2, 14);
+}
+
+/** Resolve the public URL for a thread. */
+function threadUrl(threadId: string): string {
+  const base = process.env.NEXT_PUBLIC_URL
+    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+    || "https://team.oreasono.com";
+  return `${base}/thread/${threadId}`;
+}
+
+/**
+ * Look up a user's webhook_url by their participant-style ID (e.g. "human:abc123").
+ * Only human users can have webhooks — agents are skipped.
+ */
+async function getUserWebhookUrl(participantId: string): Promise<string | null> {
+  if (!participantId.startsWith("human:")) return null;
+  const rawId = participantId.slice("human:".length);
+  try {
+    const sql = db();
+    const rows = (await sql`
+      SELECT webhook_url FROM users WHERE id = ${rawId}
+    `) as { webhook_url: string | null }[];
+    return rows[0]?.webhook_url ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fire-and-forget: look up user's webhook_url, and if set, send the webhook.
+ * Never blocks the caller.
+ */
+function dispatchWebhook(
+  userId: string,
+  event: WebhookPayload["event"],
+  threadId: string,
+  threadTitle: string,
+  actorName: string,
+  body?: string | null
+): void {
+  // Run entirely in the background — never block the caller
+  getUserWebhookUrl(userId).then((url) => {
+    if (!url) return;
+    const payload: WebhookPayload = {
+      event,
+      thread_id: threadId,
+      thread_title: threadTitle,
+      actor: actorName,
+      summary: buildSummary(event, actorName, threadTitle, body),
+      url: threadUrl(threadId),
+      timestamp: new Date().toISOString(),
+    };
+    sendWebhook(url, payload);
+  }).catch(() => {
+    // Silently ignore — webhook is best-effort
+  });
 }
 
 /**
@@ -55,6 +112,7 @@ export async function emitMentionEvents(
         INSERT INTO events (id, user_id, type, thread_id, thread_title, message_id, actor_id, actor_name, body)
         VALUES (${id}, ${userId}, ${"mention"}, ${threadId}, ${threadTitle}, ${message.id}, ${message.from}, ${message.from_name}, ${message.body})
       `;
+      dispatchWebhook(userId, "mention", threadId, threadTitle, message.from_name, message.body);
     }
   } catch (err) {
     console.error("Failed to emit mention events:", err);
@@ -81,6 +139,7 @@ export async function emitReplyEvent(
       INSERT INTO events (id, user_id, type, thread_id, thread_title, message_id, actor_id, actor_name, body)
       VALUES (${id}, ${originalMessage.from}, ${"reply"}, ${threadId}, ${threadTitle}, ${message.id}, ${message.from}, ${message.from_name}, ${message.body})
     `;
+    dispatchWebhook(originalMessage.from, "reply", threadId, threadTitle, message.from_name, message.body);
   } catch (err) {
     console.error("Failed to emit reply event:", err);
   }
@@ -104,6 +163,7 @@ export async function emitJoinEvent(
       INSERT INTO events (id, user_id, type, thread_id, thread_title, message_id, actor_id, actor_name, body)
       VALUES (${id}, ${addedId}, ${"join"}, ${threadId}, ${threadTitle}, ${null}, ${actorId}, ${actorName}, ${null})
     `;
+    dispatchWebhook(addedId, "join", threadId, threadTitle, actorName);
   } catch (err) {
     console.error("Failed to emit join event:", err);
   }
@@ -130,6 +190,7 @@ export async function emitStatusChangeEvent(
         INSERT INTO events (id, user_id, type, thread_id, thread_title, message_id, actor_id, actor_name, body)
         VALUES (${id}, ${userId}, ${"status_change"}, ${threadId}, ${threadTitle}, ${null}, ${actorId}, ${actorName}, ${newStatus})
       `;
+      dispatchWebhook(userId, "status_change", threadId, threadTitle, actorName, newStatus);
     }
   } catch (err) {
     console.error("Failed to emit status change events:", err);
@@ -156,6 +217,7 @@ export async function emitTaskAssignedEvent(
       INSERT INTO events (id, user_id, type, thread_id, thread_title, message_id, actor_id, actor_name, body)
       VALUES (${id}, ${task.assignee}, ${"task_assigned"}, ${threadId}, ${threadTitle}, ${null}, ${actorId}, ${actorName}, ${task.description})
     `;
+    dispatchWebhook(task.assignee!, "task_assigned", threadId, threadTitle, actorName, task.description);
   } catch (err) {
     console.error("Failed to emit task assigned event:", err);
   }
@@ -182,6 +244,7 @@ export async function emitTaskDoneEvent(
       INSERT INTO events (id, user_id, type, thread_id, thread_title, message_id, actor_id, actor_name, body)
       VALUES (${id}, ${task.created_by}, ${"task_done"}, ${threadId}, ${threadTitle}, ${null}, ${actorId}, ${actorName}, ${task.description})
     `;
+    dispatchWebhook(task.created_by!, "task_done", threadId, threadTitle, actorName, task.description);
   } catch (err) {
     console.error("Failed to emit task done event:", err);
   }
