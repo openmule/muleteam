@@ -32,15 +32,32 @@ export function verifyToken(token: string): UserPayload | null {
 
 export async function getUser(
   request: Request
-): Promise<UserPayload | null> {
+): Promise<(UserPayload & { team_role?: "owner" | "member" }) | null> {
   const cookieHeader = request.headers.get("cookie");
   if (!cookieHeader) return null;
 
+  // Check standard session cookie first
   const match = cookieHeader.match(/(?:^|;\s*)token=([^;]*)/);
-  if (!match) return null;
+  if (match) {
+    const result = verifyToken(match[1]);
+    if (result) return result;
+  }
 
-  const token = match[1];
-  return verifyToken(token);
+  // Check platform JWT cookie (if PLATFORM_JWT_SECRET is configured)
+  const platformSecret = process.env.PLATFORM_JWT_SECRET;
+  if (platformSecret) {
+    const platformMatch = cookieHeader.match(/(?:^|;\s*)platform_token=([^;]*)/);
+    if (platformMatch) {
+      try {
+        const payload = jwt.verify(platformMatch[1], platformSecret) as UserPayload & { team_role?: "owner" | "member" };
+        return payload;
+      } catch {
+        // Invalid platform token — fall through
+      }
+    }
+  }
+
+  return null;
 }
 
 // Unified auth: returns user payload OR agent info from Bearer token
@@ -63,7 +80,8 @@ export async function getAuthenticatedEntity(
   // Try cookie auth first (human user)
   const user = await getUser(request);
   if (user) {
-    const teamRole = await getTeamRole(user.id);
+    // If the JWT already contains team_role (e.g. from platform), use it directly
+    const teamRole = user.team_role || await getTeamRole(user.id);
     return { type: "human", id: user.id, name: user.name, email: user.email, team_role: teamRole };
   }
 
