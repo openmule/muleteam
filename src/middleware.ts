@@ -16,11 +16,12 @@ export const config = {
     /*
      * Match all paths except:
      * - /login
+     * - /invite/* (public invite registration)
      * - /api/* (API routes handle their own auth)
      * - /_next/* (Next.js internals)
      * - /favicon.ico
      * - /cli/* (CLI script downloads)
      */
-    "/((?!login|api/|_next/|favicon\\.ico|cli/).*)",
+    "/((?!login|invite/|api/|_next/|favicon\\.ico|cli/).*)",
   ],
 };
