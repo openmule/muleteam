@@ -188,6 +188,15 @@
   "invite.invalid": "This invite link is invalid or has expired",
   "invite.failed": "Registration failed",
 
+  "webhook.title": "Webhook Notifications",
+  "webhook.url": "Webhook URL",
+  "webhook.urlPlaceholder": "https://hooks.slack.com/...",
+  "webhook.help": "Receive notifications when you're mentioned, replied to, or assigned tasks. Works with Slack, Feishu, Discord, or any webhook-compatible service.",
+  "webhook.test": "Test",
+  "webhook.testSent": "Test notification sent!",
+  "webhook.testFailed": "Test failed. Check your URL.",
+  "webhook.saved": "Webhook saved",
+
   "language": "Language",
   "language.en": "English",
   "language.zh": "Chinese"

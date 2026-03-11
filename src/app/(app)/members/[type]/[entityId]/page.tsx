@@ -11,6 +11,7 @@ import { setupPrompt, openCodeSetupPrompt, openClawSetupPrompt, claudeMdSnippet,
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { useT } from "@/lib/i18n";
 import { timeAgo, memberUrl } from "@/components/shared/helpers";
+import { Input } from "@/components/ui/input";
 import type { User, RegisteredAgent, ThreadMeta, ChannelMeta } from "@/components/shared/types";
 
 export default function MemberDetailPage() {
@@ -37,6 +38,10 @@ export default function MemberDetailPage() {
   const [setupTab, setSetupTab] = useState<"claude" | "opencode" | "openclaw">("claude");
   const [snippetTab, setSnippetTab] = useState<"claude" | "opencode" | "openclaw">("claude");
   const [confirmRegenerate, setConfirmRegenerate] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookDraft, setWebhookDraft] = useState("");
+  const [webhookLoading, setWebhookLoading] = useState(false);
+  const [webhookMsg, setWebhookMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const t = useT();
 
   useEffect(() => {
@@ -61,6 +66,16 @@ export default function MemberDetailPage() {
           const data = await usersRes.json();
           const found = (data.users ?? []).find((u: User) => u.id === entityId);
           if (found) setMemberUser(found);
+        }
+        // Fetch webhook URL for own profile
+        if (currentUser?.id === entityId) {
+          const webhookRes = await fetch("/api/auth/me/webhook");
+          if (webhookRes.ok) {
+            const data = await webhookRes.json();
+            const url = data.webhook_url ?? "";
+            setWebhookUrl(url);
+            setWebhookDraft(url);
+          }
         }
       }
       setLoading(false);
@@ -409,6 +424,86 @@ export default function MemberDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Webhook Notifications — own profile only */}
+        {isOwnProfile && (
+          <div className="rounded-md border border-border p-4 mb-8">
+            <h2 className="text-sm font-semibold mb-1">{t("webhook.title")}</h2>
+            <p className="text-xs text-muted-foreground mb-3">{t("webhook.help")}</p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="url"
+                placeholder={t("webhook.urlPlaceholder")}
+                value={webhookDraft}
+                onChange={(e) => {
+                  setWebhookDraft(e.target.value);
+                  setWebhookMsg(null);
+                }}
+                className="flex-1 text-sm"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={webhookLoading || webhookDraft === webhookUrl}
+                onClick={async () => {
+                  setWebhookLoading(true);
+                  setWebhookMsg(null);
+                  try {
+                    const res = await fetch("/api/auth/me/webhook", {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ webhook_url: webhookDraft }),
+                    });
+                    if (res.ok) {
+                      const data = await res.json();
+                      const saved = data.webhook_url ?? "";
+                      setWebhookUrl(saved);
+                      setWebhookDraft(saved);
+                      setWebhookMsg({ type: "success", text: t("webhook.saved") });
+                    } else {
+                      const data = await res.json().catch(() => ({}));
+                      setWebhookMsg({ type: "error", text: data.error || "Failed to save" });
+                    }
+                  } catch {
+                    setWebhookMsg({ type: "error", text: "Failed to save" });
+                  } finally {
+                    setWebhookLoading(false);
+                  }
+                }}
+              >
+                {t("common.save")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={webhookLoading || !webhookUrl}
+                onClick={async () => {
+                  setWebhookLoading(true);
+                  setWebhookMsg(null);
+                  try {
+                    const res = await fetch("/api/auth/me/webhook", { method: "POST" });
+                    if (res.ok) {
+                      setWebhookMsg({ type: "success", text: t("webhook.testSent") });
+                    } else {
+                      setWebhookMsg({ type: "error", text: t("webhook.testFailed") });
+                    }
+                  } catch {
+                    setWebhookMsg({ type: "error", text: t("webhook.testFailed") });
+                  } finally {
+                    setWebhookLoading(false);
+                  }
+                }}
+              >
+                {t("webhook.test")}
+              </Button>
+            </div>
+            {webhookMsg && (
+              <p className={`text-xs mt-2 ${webhookMsg.type === "success" ? "text-green-600" : "text-destructive"}`}>
+                {webhookMsg.text}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Channels */}
         <div className="mb-8">
