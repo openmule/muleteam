@@ -125,6 +125,9 @@ export default function MemberDetailPage() {
           <MemberAvatar type="agent" name={memberAgent.name} size={48} />
           <div>
             <h1 className="text-xl font-semibold">@{memberAgent.name}</h1>
+            <p className="text-xs text-muted-foreground font-mono mt-0.5">
+              {memberAgent.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}
+            </p>
             {memberAgent.description && (
               <p className="text-sm text-muted-foreground mt-0.5">{memberAgent.description}</p>
             )}
@@ -155,19 +158,67 @@ export default function MemberDetailPage() {
           )}
         </div>
 
-        {/* Token management + Setup */}
+        {/* Setup Instructions (always visible) */}
+        <div className="rounded-md border border-border p-4 mb-8">
+          <h2 className="text-sm font-semibold mb-1">{t("agent.setupGuide")}</h2>
+          <p className="text-xs text-muted-foreground mb-3">{t("agent.setupGuideDesc")}</p>
+          <div className="flex gap-1 mb-3">
+            {(["claude", "opencode", "openclaw"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setSnippetTab(tab)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  snippetTab === tab
+                    ? "bg-foreground text-background"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab === "claude" ? t("members.tabClaudeCode") : tab === "opencode" ? t("members.tabOpenCode") : t("members.tabOpenClaw")}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs font-medium mb-2">
+            {snippetTab === "claude"
+              ? "CLAUDE.md"
+              : snippetTab === "opencode"
+              ? "AGENTS.md"
+              : "SKILL.md"}
+          </p>
+          <div className="rounded bg-muted p-3">
+            <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed">
+              {snippetTab === "claude"
+                ? claudeMdSnippet(memberAgent.name, memberAgent.description)
+                : snippetTab === "opencode"
+                ? openCodeSnippet(memberAgent.name, memberAgent.description)
+                : openClawSkillSnippet(memberAgent.name, memberAgent.description)}
+            </pre>
+          </div>
+          <CopyButton
+            className="w-full mt-2"
+            label={snippetTab === "claude" ? "Copy CLAUDE.md snippet" : snippetTab === "opencode" ? "Copy AGENTS.md snippet" : "Copy SKILL.md snippet"}
+            text={
+              snippetTab === "claude"
+                ? claudeMdSnippet(memberAgent.name, memberAgent.description)
+                : snippetTab === "opencode"
+                ? openCodeSnippet(memberAgent.name, memberAgent.description)
+                : openClawSkillSnippet(memberAgent.name, memberAgent.description)
+            }
+          />
+        </div>
+
+        {/* Token Management */}
         <div className="rounded-md border border-border p-4 mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">API Token</p>
+              <h2 className="text-sm font-semibold">{t("agent.tokenManagement")}</h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {newToken ? "New token generated. Copy the setup prompt below." : "Regenerate if the token was lost or compromised."}
+                {newToken ? t("agent.newTokenGenerated") : t("agent.tokenDesc")}
               </p>
             </div>
             {!newToken && (
               <>
                 <Button variant="outline" size="sm" onClick={() => setConfirmRegenerate(true)} disabled={regenerating}>
-                  {regenerating ? "Regenerating..." : "Regenerate Token"}
+                  {regenerating ? "..." : t("agent.regenerateToken")}
                 </Button>
                 <ConfirmDialog
                   open={confirmRegenerate}
@@ -203,12 +254,12 @@ export default function MemberDetailPage() {
                             : "bg-muted text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        {tab === "claude" ? "Claude Code" : tab === "opencode" ? "OpenCode" : "OpenClaw"}
+                        {tab === "claude" ? t("members.tabClaudeCode") : tab === "opencode" ? t("members.tabOpenCode") : t("members.tabOpenClaw")}
                       </button>
                     ))}
                   </div>
                   <p className="text-xs font-medium">
-                    {setupTab === "claude" ? "Paste into Claude Code to set up:" : setupTab === "opencode" ? "Paste into OpenCode to set up:" : "Paste into OpenClaw to set up:"}
+                    {setupTab === "claude" ? t("members.pasteSetupPrompt") : setupTab === "opencode" ? t("members.pasteOpenCode") : t("members.pasteOpenClaw")}
                   </p>
                   <div className="rounded bg-muted p-2 max-h-48 overflow-y-auto">
                     <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed break-all">
@@ -217,62 +268,18 @@ export default function MemberDetailPage() {
                   </div>
                   <CopyButton
                     className="w-full"
-                    label="Copy setup prompt"
+                    label={t("members.copySetupPrompt")}
                     text={setupTexts[setupTab]}
                   />
                 </div>
                 <div className="rounded bg-muted/50 border border-border p-2">
                   <p className="text-[11px] text-muted-foreground">
-                    Token: <code className="font-mono text-foreground break-all">{newToken}</code>
+                    {t("members.token")}: <code className="font-mono text-foreground break-all">{newToken}</code>
                   </p>
                 </div>
               </div>
             );
           })()}
-        </div>
-
-        {/* Config snippet (always visible) */}
-        <div className="rounded-md border border-border p-4 mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium">
-              {snippetTab === "claude" ? "CLAUDE.md Snippet" : snippetTab === "opencode" ? "AGENTS.md Snippet" : "SKILL.md Snippet"}
-            </p>
-          </div>
-          <div className="flex gap-1 mb-3">
-            {(["claude", "opencode", "openclaw"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setSnippetTab(tab)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  snippetTab === tab
-                    ? "bg-foreground text-background"
-                    : "bg-muted text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {tab === "claude" ? "CLAUDE.md" : tab === "opencode" ? "AGENTS.md" : "SKILL.md"}
-              </button>
-            ))}
-          </div>
-          <div className="rounded bg-muted p-3">
-            <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed">
-              {snippetTab === "claude"
-                ? claudeMdSnippet(memberAgent.name, memberAgent.description)
-                : snippetTab === "opencode"
-                ? openCodeSnippet(memberAgent.name, memberAgent.description)
-                : openClawSkillSnippet(memberAgent.name, memberAgent.description)}
-            </pre>
-          </div>
-          <CopyButton
-            className="w-full mt-2"
-            label={snippetTab === "claude" ? "Copy CLAUDE.md snippet" : snippetTab === "opencode" ? "Copy AGENTS.md snippet" : "Copy SKILL.md snippet"}
-            text={
-              snippetTab === "claude"
-                ? claudeMdSnippet(memberAgent.name, memberAgent.description)
-                : snippetTab === "opencode"
-                ? openCodeSnippet(memberAgent.name, memberAgent.description)
-                : openClawSkillSnippet(memberAgent.name, memberAgent.description)
-            }
-          />
         </div>
 
         {/* Channels */}

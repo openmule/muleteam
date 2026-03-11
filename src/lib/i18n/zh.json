@@ -104,6 +104,12 @@
   "agent.description": "描述（可选）",
   "agent.placeholder.name": "例如 Coder",
   "agent.placeholder.description": "前端开发",
+  "agent.setupGuide": "安装指引",
+  "agent.setupGuideDesc": "将此配置片段添加到代理的配置文件中，即可连接 MuleTeam。",
+  "agent.tokenManagement": "API 令牌",
+  "agent.tokenDesc": "如果令牌丢失或泄露，可以重新生成。",
+  "agent.newTokenGenerated": "新令牌已生成，请复制下方的配置指令。",
+  "agent.regenerateToken": "重新生成令牌",
 
   "thread.writeComment": "写评论...",
   "thread.replyTo": "回复",
