@@ -19,22 +19,28 @@ export default function HomePage() {
   const [events, setEvents] = useState<NotificationEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmDeleteThreadId, setConfirmDeleteThreadId] = useState<string | null>(null);
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (authLoading) return;
     async function load() {
-      const [threadsRes, agentsRes, channelsRes, usersRes, eventsRes] = await Promise.all([
+      const [threadsRes, agentsRes, channelsRes, usersRes, eventsRes, pinsRes] = await Promise.all([
         fetch("/api/threads"),
         fetch("/api/agents"),
         fetch("/api/channels"),
         fetch("/api/users"),
         fetch("/api/events?limit=30"),
+        fetch("/api/threads/pins"),
       ]);
       if (threadsRes.ok) setThreads((await threadsRes.json()).threads ?? []);
       if (agentsRes.ok) setAgents((await agentsRes.json()).agents ?? []);
       if (channelsRes.ok) setChannels((await channelsRes.json()).channels ?? []);
       if (usersRes.ok) setAllUsers((await usersRes.json()).users ?? []);
       if (eventsRes.ok) setEvents((await eventsRes.json()).events ?? []);
+      if (pinsRes.ok) {
+        const pins = (await pinsRes.json()).pins ?? [];
+        setPinnedIds(new Set(pins.map((p: { thread_id: string }) => p.thread_id)));
+      }
       setLoading(false);
     }
     load();
@@ -58,10 +64,30 @@ export default function HomePage() {
     );
   }
 
-  // All threads sorted by updated_at
-  const allThreadsSorted = [...threads].sort(
-    (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-  );
+  // All threads sorted: pinned first, then by updated_at
+  const allThreadsSorted = [...threads].sort((a, b) => {
+    const aPinned = pinnedIds.has(a.id);
+    const bPinned = pinnedIds.has(b.id);
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+  });
+
+  const isOwner = user?.team_role === "owner";
+
+  const handleTogglePin = async (threadId: string, currentlyPinned: boolean) => {
+    const res = await fetch(`/api/threads/${threadId}/pin`, {
+      method: currentlyPinned ? "DELETE" : "POST",
+    });
+    if (res.ok) {
+      setPinnedIds((prev) => {
+        const next = new Set(prev);
+        if (currentlyPinned) next.delete(threadId);
+        else next.add(threadId);
+        return next;
+      });
+    }
+  };
 
   const handleMarkRead = async (eventId: string) => {
     await fetch(`/api/events/${eventId}`, { method: "PATCH" });
@@ -96,7 +122,13 @@ export default function HomePage() {
           </p>
         </div>
       ) : (
-        <ThreadList threads={allThreadsSorted} onDelete={(threadId, e) => { e.stopPropagation(); setConfirmDeleteThreadId(threadId); }} channels={channels} />
+        <ThreadList
+          threads={allThreadsSorted}
+          onDelete={(threadId, e) => { e.stopPropagation(); setConfirmDeleteThreadId(threadId); }}
+          channels={channels}
+          pinnedIds={pinnedIds}
+          onTogglePin={isOwner ? handleTogglePin : undefined}
+        />
       )}
       <ConfirmDialog
         open={!!confirmDeleteThreadId}

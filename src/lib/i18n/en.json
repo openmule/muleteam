@@ -181,6 +181,10 @@
   "channels.threadCount": "{count} threads",
   "channels.failedToCreate": "Failed to create channel",
 
+  "pin.pin": "Pin",
+  "pin.unpin": "Unpin",
+  "pin.pinned": "Pinned",
+
   "events.mentionedYou": "{actor} mentioned you in \"{thread}\"",
   "events.repliedToYou": "{actor} replied to you in \"{thread}\"",
   "events.addedYou": "{actor} added you to \"{thread}\"",

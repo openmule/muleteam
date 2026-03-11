@@ -11,10 +11,14 @@ export function ThreadList({
   threads,
   onDelete,
   channels,
+  pinnedIds,
+  onTogglePin,
 }: {
   threads: ThreadMeta[];
   onDelete?: (threadId: string, e: React.MouseEvent) => void;
   channels?: ChannelMeta[];
+  pinnedIds?: Set<string>;
+  onTogglePin?: (threadId: string, pinned: boolean) => void;
 }) {
   const router = useRouter();
   const t = useT();
@@ -35,6 +39,9 @@ export function ThreadList({
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
+                {pinnedIds?.has(thread.id) && (
+                  <svg className="w-3.5 h-3.5 text-muted-foreground shrink-0" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M16 2l-4 4-5 3-3-1-2 2 5 5-4 6 6-4 5 5 2-2-1-3 3-5 4-4V2z"/></svg>
+                )}
                 <span className="text-sm font-medium">{thread.title}</span>
                 {channel && (
                   <span className="inline-flex h-5 items-center rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground shrink-0">
@@ -56,6 +63,15 @@ export function ThreadList({
                 <span className="text-[11px] text-muted-foreground">+{thread.participants.length - 4}</span>
               )}
             </div>
+            {onTogglePin && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onTogglePin(thread.id, !!pinnedIds?.has(thread.id)); }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-foreground"
+                title={pinnedIds?.has(thread.id) ? t("pin.unpin") : t("pin.pin")}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill={pinnedIds?.has(thread.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 2l-4 4-5 3-3-1-2 2 5 5-4 6 6-4 5 5 2-2-1-3 3-5 4-4V2z"/></svg>
+              </button>
+            )}
             {onDelete && (
               <button
                 onClick={(e) => onDelete(thread.id, e)}
