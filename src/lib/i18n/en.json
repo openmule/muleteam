@@ -218,6 +218,8 @@
   "pat.confirmRevoke": "Revoke this token? It will stop working immediately.",
   "pat.cliUsage": "CLI usage",
 
+  "mention.noResults": "No members found",
+
   "language": "Language",
   "language.en": "English",
   "language.zh": "Chinese"
