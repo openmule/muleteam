@@ -10,7 +10,7 @@ import { WorkspaceLinks } from "@/components/thread/WorkspaceLinks";
 import { ParticipantsList } from "@/components/thread/ParticipantsList";
 import { ActionItems } from "@/components/thread/ActionItems";
 import { GitHistory } from "@/components/thread/GitHistory";
-import { JoinButton } from "@/components/thread/JoinButton";
+import { JoinButton, LeaveButton } from "@/components/thread/JoinButton";
 import { MobileDetailSheet } from "@/components/thread/MobileDetailSheet";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useT } from "@/lib/i18n";
@@ -237,6 +237,11 @@ export default function ThreadDetailPage() {
     fetchMessages();
   };
 
+  const handleLeft = () => {
+    fetchThread();
+    fetchMessages();
+  };
+
   if (!thread) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -316,6 +321,9 @@ export default function ThreadDetailPage() {
             >
               {t("common.reopen")}
             </Button>
+          )}
+          {isMember && (
+            <LeaveButton threadId={threadId} onLeft={handleLeft} />
           )}
         </div>
       </header>
