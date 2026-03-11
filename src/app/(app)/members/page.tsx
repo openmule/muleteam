@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/layout/AuthProvider";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +23,18 @@ import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { timeAgo, memberUrl } from "@/components/shared/helpers";
 import { useT } from "@/lib/i18n";
 import type { User, RegisteredAgent } from "@/components/shared/types";
+
+interface Invite {
+  token: string;
+  created_by: string;
+  creator_name: string | null;
+  note: string | null;
+  expires_at: string;
+  used_by: string | null;
+  used_at: string | null;
+  status: string;
+  created_at: string;
+}
 
 export default function MembersPage() {
   const router = useRouter();
@@ -41,15 +55,25 @@ export default function MembersPage() {
   const [confirmDeleteAgent, setConfirmDeleteAgent] = useState<{ id: string; name: string } | null>(null);
   const [confirmDeleteHuman, setConfirmDeleteHuman] = useState<{ id: string; name: string } | null>(null);
 
+  // Invite member
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteNote, setInviteNote] = useState("");
+  const [inviteGenerating, setInviteGenerating] = useState(false);
+  const [inviteResult, setInviteResult] = useState<{ token: string; expires_at: string } | null>(null);
+  const [invites, setInvites] = useState<Invite[]>([]);
+  const [invitesExpanded, setInvitesExpanded] = useState(false);
+
   useEffect(() => {
     if (authLoading) return;
     async function load() {
-      const [usersRes, agentsRes] = await Promise.all([
+      const [usersRes, agentsRes, invitesRes] = await Promise.all([
         fetch("/api/users"),
         fetch("/api/agents"),
+        fetch("/api/invites"),
       ]);
       if (usersRes.ok) setAllUsers((await usersRes.json()).users ?? []);
       if (agentsRes.ok) setAgents((await agentsRes.json()).agents ?? []);
+      if (invitesRes.ok) setInvites((await invitesRes.json()).invites ?? []);
       setLoading(false);
     }
     load();
@@ -65,6 +89,11 @@ export default function MembersPage() {
     if (res.ok) setAllUsers((await res.json()).users ?? []);
   };
 
+  const fetchInvites = async () => {
+    const res = await fetch("/api/invites");
+    if (res.ok) setInvites((await res.json()).invites ?? []);
+  };
+
   const handleDeleteAgent = async (agentId: string) => {
     const res = await fetch(`/api/agents/${agentId}`, { method: "DELETE" });
     if (res.ok) setAgents((prev) => prev.filter((a) => a.id !== agentId));
@@ -73,6 +102,29 @@ export default function MembersPage() {
   const handleDeleteHuman = async (userId: string) => {
     const res = await fetch(`/api/users/${userId}`, { method: "DELETE" });
     if (res.ok) setAllUsers((prev) => prev.filter((u) => u.id !== userId));
+  };
+
+  const handleGenerateInvite = async () => {
+    setInviteGenerating(true);
+    try {
+      const res = await fetch("/api/invites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: inviteNote.trim() || undefined }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setInviteResult(data);
+        fetchInvites();
+      }
+    } finally {
+      setInviteGenerating(false);
+    }
+  };
+
+  const handleRevokeInvite = async (token: string) => {
+    const res = await fetch(`/api/invites/${token}`, { method: "DELETE" });
+    if (res.ok) fetchInvites();
   };
 
   if (authLoading || loading) {
@@ -85,6 +137,26 @@ export default function MembersPage() {
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
+  const statusBadge = (status: string) => {
+    const styles: Record<string, string> = {
+      pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+      used: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+      expired: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+      revoked: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    };
+    const labels: Record<string, string> = {
+      pending: t("members.inviteStatusPending"),
+      used: t("members.inviteStatusUsed"),
+      expired: t("members.inviteStatusExpired"),
+      revoked: t("members.inviteStatusRevoked"),
+    };
+    return (
+      <span className={`inline-flex h-5 items-center rounded px-1.5 text-[10px] font-medium ${styles[status] ?? styles.expired}`}>
+        {labels[status] ?? status}
+      </span>
+    );
+  };
+
   return (
     <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10">
       <div className="flex items-center justify-between mb-6">
@@ -92,6 +164,67 @@ export default function MembersPage() {
           {t("members.title")} ({allUsers.length + agents.length})
         </h1>
         <div className="flex items-center gap-2">
+          {/* Invite Member */}
+          <Dialog open={inviteOpen} onOpenChange={(open) => {
+            setInviteOpen(open);
+            if (!open) {
+              setInviteResult(null);
+              setInviteNote("");
+            }
+          }}>
+            <DialogTrigger render={<Button variant="outline" size="sm" />}>
+              <span className="hidden sm:inline">{t("members.inviteMember")}</span>
+              <span className="sm:hidden">{t("members.mobileInvite")}</span>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>{t("members.inviteTitle")}</DialogTitle>
+              </DialogHeader>
+              {inviteResult ? (
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-2">
+                    <Label>{t("members.inviteLink")}</Label>
+                    <div className="rounded-md bg-muted p-3">
+                      <code className="text-xs font-mono break-all">{origin}/invite/{inviteResult.token}</code>
+                    </div>
+                  </div>
+                  <CopyButton
+                    className="w-full"
+                    variant="outline"
+                    size="default"
+                    label={t("members.copyLink")}
+                    text={`${origin}/invite/${inviteResult.token}`}
+                  />
+                  <p className="text-xs text-muted-foreground text-center">
+                    {t("members.inviteExpires").replace("{time}", "7 days")}
+                  </p>
+                  <Button className="w-full" onClick={() => {
+                    setInviteOpen(false);
+                    setInviteResult(null);
+                    setInviteNote("");
+                  }}>
+                    {t("common.done")}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-2">
+                    <Label>{t("members.inviteNote")}</Label>
+                    <Input
+                      placeholder={t("members.inviteNotePlaceholder")}
+                      value={inviteNote}
+                      onChange={(e) => setInviteNote(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                  <Button className="w-full" onClick={handleGenerateInvite} disabled={inviteGenerating}>
+                    {inviteGenerating ? t("common.creating") : t("members.generateLink")}
+                  </Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
           {/* Register Human */}
           <Dialog open={registerHumanOpen} onOpenChange={(open) => {
             setRegisterHumanOpen(open);
@@ -311,6 +444,81 @@ export default function MembersPage() {
           </div>
         )}
       </div>
+
+      {/* Invite Links Section */}
+      <div className="mt-8">
+        <button
+          onClick={() => setInvitesExpanded(!invitesExpanded)}
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`transition-transform ${invitesExpanded ? "rotate-90" : ""}`}
+          >
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+          {t("members.inviteLinks")} ({invites.length})
+        </button>
+
+        {invitesExpanded && (
+          <div className="mt-3 divide-y divide-border rounded-md border border-border overflow-y-auto">
+            {invites.length === 0 ? (
+              <div className="px-4 py-6 text-center">
+                <p className="text-sm text-muted-foreground">{t("members.noInvites")}</p>
+              </div>
+            ) : (
+              invites.map((inv) => (
+                <div key={inv.token} className="flex items-center gap-3 px-3 sm:px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {statusBadge(inv.status)}
+                      {inv.note && <span className="text-xs text-muted-foreground truncate">{inv.note}</span>}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                      <span>{inv.creator_name ?? "Unknown"}</span>
+                      <span>&middot;</span>
+                      <span>{timeAgo(inv.created_at)}</span>
+                      {inv.status === "pending" && (
+                        <>
+                          <span>&middot;</span>
+                          <span>{t("members.inviteExpires").replace("{time}", timeAgo(inv.expires_at).replace(" ago", ""))}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {inv.status === "pending" && (
+                      <>
+                        <CopyButton
+                          label={t("members.copyLink")}
+                          text={`${origin}/invite/${inv.token}`}
+                          size="sm"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleRevokeInvite(inv.token)}
+                        >
+                          {t("members.revokeInvite")}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
       <ConfirmDialog
         open={!!confirmDeleteAgent}
         onOpenChange={(open) => { if (!open) setConfirmDeleteAgent(null); }}

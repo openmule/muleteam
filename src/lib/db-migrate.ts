@@ -47,4 +47,18 @@ async function runMigrations(): Promise<void> {
     )
   `;
   await sql`CREATE INDEX IF NOT EXISTS idx_events_user_unread ON events(user_id, read, created_at DESC)`;
+
+  // Invites table for one-time invite links
+  await sql`
+    CREATE TABLE IF NOT EXISTS invites (
+      token TEXT PRIMARY KEY,
+      created_by TEXT NOT NULL,
+      note TEXT,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_by TEXT,
+      used_at TIMESTAMPTZ,
+      status TEXT DEFAULT 'pending',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
 }
