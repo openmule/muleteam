@@ -1,10 +1,15 @@
 import { neon } from "@neondatabase/serverless";
+import { getDatabaseUrl } from "./tenant-context";
 
-let _sql: ReturnType<typeof neon> | null = null;
+// Cache connections by URL to avoid re-creating for the same tenant
+const connectionCache = new Map<string, ReturnType<typeof neon>>();
 
 export function db() {
-  if (!_sql) {
-    _sql = neon(process.env.DATABASE_URL!);
+  const url = getDatabaseUrl();
+  let sql = connectionCache.get(url);
+  if (!sql) {
+    sql = neon(url);
+    connectionCache.set(url, sql);
   }
-  return _sql;
+  return sql;
 }
