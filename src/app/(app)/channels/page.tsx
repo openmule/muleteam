@@ -151,8 +151,8 @@ export default function ChannelsPage() {
             const isExpanded = expandedChannels.has(channel.id);
             return (
               <div key={channel.id} className="rounded-md border border-border">
-                <button
-                  className="flex items-center justify-between w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+                <div
+                  className="group flex items-center justify-between w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors cursor-pointer"
                   onClick={() => toggleChannel(channel.id)}
                 >
                   <div className="flex items-center gap-3">
@@ -171,18 +171,17 @@ export default function ChannelsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      className="text-xs text-muted-foreground hover:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setConfirmDeleteChannelId(channel.id);
-                      }}
-                    >
-                      {t("common.delete")}
-                    </button>
-                  </div>
-                </button>
+                  <button
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-destructive shrink-0"
+                    title={t("common.delete")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmDeleteChannelId(channel.id);
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                  </button>
+                </div>
 
                 {isExpanded && (
                   <div className="border-t border-border">
