@@ -181,6 +181,33 @@ export function joinThread(threadId: string, participant: Participant): void {
   gitCommit(`${participant.name} joined thread: ${threadId}`, "MuleTeam System", "system@muleteam.local");
 }
 
+// Leave thread — remove participant and log activity
+export function removeThreadParticipant(threadId: string, participantId: string): void {
+  const meta = getThread(threadId);
+  if (!meta) throw new Error("Thread not found");
+
+  const participant = meta.participants.find(p => p.id === participantId);
+  if (!participant) return; // Not a participant, nothing to do
+
+  meta.participants = meta.participants.filter(p => p.id !== participantId);
+  meta.updated_at = new Date().toISOString();
+  fs.writeFileSync(path.join(REPO_BASE(),"threads", threadId, "meta.json"), JSON.stringify(meta, null, 2));
+
+  // Add activity message
+  const message: Message = {
+    id: `msg_leave_${Date.now()}`,
+    ts: Date.now(),
+    from: participant.id,
+    from_name: participant.name,
+    type: "activity",
+    body: `${participant.name} left the thread`,
+  };
+  const messagesPath = path.join(REPO_BASE(),"threads", threadId, "messages.jsonl");
+  fs.appendFileSync(messagesPath, JSON.stringify(message) + "\n");
+
+  gitCommit(`${participant.name} left thread: ${threadId}`, "MuleTeam System", "system@muleteam.local");
+}
+
 // Check if a user/agent is a participant (direct or via group)
 export function isParticipant(threadId: string, userId: string): boolean {
   const meta = getThread(threadId);

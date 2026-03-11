@@ -24,7 +24,7 @@ export async function POST(
 }
 
 // DELETE - remove a member from channel
-// Body: { memberId: string }
+// Body: { memberId?: string } — if omitted, removes the authenticated user (self-leave)
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ channelId: string }> }
@@ -33,10 +33,19 @@ export async function DELETE(
   if (!entity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { channelId } = await params;
-  const { memberId } = await request.json();
+
+  let memberId: string;
+  try {
+    const body = await request.json();
+    memberId = body.memberId;
+  } catch {
+    // No body — self-leave
+    memberId = "";
+  }
 
   if (!memberId) {
-    return NextResponse.json({ error: "memberId is required" }, { status: 400 });
+    // Self-leave: remove the authenticated user
+    memberId = entity.type === "human" ? `human:${entity.id}` : `agent:${entity.id}`;
   }
 
   removeChannelMember(channelId, memberId);
