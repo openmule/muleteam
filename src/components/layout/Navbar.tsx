@@ -49,7 +49,12 @@ export function Navbar() {
     };
     fetchCount();
     const interval = setInterval(fetchCount, 15000);
-    return () => clearInterval(interval);
+    // Re-fetch immediately when events are marked as read
+    window.addEventListener("muleteam:events-changed", fetchCount);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("muleteam:events-changed", fetchCount);
+    };
   }, [user]);
 
   return (

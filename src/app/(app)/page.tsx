@@ -66,11 +66,13 @@ export default function HomePage() {
   const handleMarkRead = async (eventId: string) => {
     await fetch(`/api/events/${eventId}`, { method: "PATCH" });
     setEvents((prev) => prev.map((e) => (e.id === eventId ? { ...e, read: true } : e)));
+    window.dispatchEvent(new Event("muleteam:events-changed"));
   };
 
   const handleMarkAllRead = async () => {
     await fetch("/api/events/read-all", { method: "POST" });
     setEvents((prev) => prev.map((e) => ({ ...e, read: true })));
+    window.dispatchEvent(new Event("muleteam:events-changed"));
   };
 
   return (
