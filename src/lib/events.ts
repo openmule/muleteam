@@ -99,10 +99,14 @@ export async function emitMentionEvents(
   threadId: string,
   threadTitle: string,
   message: MessageLike,
-  participants: Participant[]
+  participants: Participant[],
+  excludeIds?: string[]
 ): Promise<void> {
   try {
-    const mentionedIds = parseMentions(message.body, participants, message.from);
+    let mentionedIds = parseMentions(message.body, participants, message.from);
+    if (excludeIds?.length) {
+      mentionedIds = mentionedIds.filter((id) => !excludeIds.includes(id));
+    }
     if (mentionedIds.length === 0) return;
 
     const sql = db();
