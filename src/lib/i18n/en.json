@@ -34,6 +34,8 @@
   "common.preview": "Preview",
   "common.openPreview": "Open preview",
   "common.failedToLoad": "Failed to load file",
+  "files.preview": "Preview",
+  "files.source": "Source",
 
   "home.forYou": "For You",
   "home.threads": "Threads",

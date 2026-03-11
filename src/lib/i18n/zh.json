@@ -34,6 +34,8 @@
   "common.preview": "预览",
   "common.openPreview": "打开预览",
   "common.failedToLoad": "文件加载失败",
+  "files.preview": "预览",
+  "files.source": "源文件",
 
   "home.forYou": "我参与的",
   "home.threads": "所有话题",
