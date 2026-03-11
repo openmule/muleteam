@@ -74,6 +74,15 @@ async function runMigrations(): Promise<void> {
     AND NOT EXISTS (SELECT 1 FROM users WHERE team_role = 'owner')
   `;
 
+  // Thread pins (team-level, owner-only)
+  await sql`
+    CREATE TABLE IF NOT EXISTS thread_pins (
+      thread_id TEXT PRIMARY KEY,
+      pinned_at TIMESTAMPTZ DEFAULT NOW(),
+      pinned_by TEXT NOT NULL
+    )
+  `;
+
   // Personal access tokens for human users (CLI / script access)
   await sql`
     CREATE TABLE IF NOT EXISTS personal_tokens (
