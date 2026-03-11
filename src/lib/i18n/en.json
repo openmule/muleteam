@@ -202,6 +202,8 @@
   "webhook.testSent": "Test notification sent!",
   "webhook.testFailed": "Test failed. Check your URL.",
   "webhook.saved": "Webhook saved",
+  "webhook.samplePayload": "View sample payload",
+  "webhook.eventTypes": "Event types: mention, reply, join, status_change, task_assigned, task_done",
 
   "language": "Language",
   "language.en": "English",
