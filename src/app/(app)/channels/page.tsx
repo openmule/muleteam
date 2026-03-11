@@ -13,6 +13,7 @@ import {
 import { ThreadList } from "@/components/shared/ThreadList";
 import { NewThreadDialog } from "@/components/shared/NewThreadDialog";
 import { CreateChannelForm } from "@/components/shared/CreateChannelForm";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { timeAgo } from "@/components/shared/helpers";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { useT } from "@/lib/i18n";
@@ -30,6 +31,8 @@ export default function ChannelsPage() {
   const [expandedChannels, setExpandedChannels] = useState<Set<string>>(new Set());
   const [addingMemberTo, setAddingMemberTo] = useState<string | null>(null);
   const [memberAdding, setMemberAdding] = useState(false);
+  const [confirmDeleteChannelId, setConfirmDeleteChannelId] = useState<string | null>(null);
+  const [confirmDeleteThreadId, setConfirmDeleteThreadId] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -77,7 +80,6 @@ export default function ChannelsPage() {
   };
 
   const handleDeleteChannel = async (channelId: string) => {
-    if (!confirm(t("channels.confirmDelete"))) return;
     const res = await fetch(`/api/channels/${channelId}`, { method: "DELETE" });
     if (res.ok) {
       setChannels((prev) => prev.filter((p) => p.id !== channelId));
@@ -85,9 +87,7 @@ export default function ChannelsPage() {
     }
   };
 
-  const handleDeleteThread = async (threadId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm(t("home.confirmDeleteThread"))) return;
+  const handleDeleteThread = async (threadId: string) => {
     const res = await fetch(`/api/threads/${threadId}`, { method: "DELETE" });
     if (res.ok) setThreads((prev) => prev.filter((t) => t.id !== threadId));
   };
@@ -176,7 +176,7 @@ export default function ChannelsPage() {
                       className="text-xs text-muted-foreground hover:text-destructive"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteChannel(channel.id);
+                        setConfirmDeleteChannelId(channel.id);
                       }}
                     >
                       {t("common.delete")}
@@ -264,7 +264,7 @@ export default function ChannelsPage() {
                         <p className="text-xs text-muted-foreground">{t("channels.noThreads")}</p>
                       </div>
                     ) : (
-                      <ThreadList threads={channelThreads} onDelete={handleDeleteThread} />
+                      <ThreadList threads={channelThreads} onDelete={(threadId, e) => { e.stopPropagation(); setConfirmDeleteThreadId(threadId); }} />
                     )}
                   </div>
                 )}
@@ -273,6 +273,30 @@ export default function ChannelsPage() {
           })}
         </div>
       )}
+      <ConfirmDialog
+        open={!!confirmDeleteChannelId}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteChannelId(null); }}
+        title={t("channels.confirmDelete")}
+        variant="destructive"
+        onConfirm={async () => {
+          if (confirmDeleteChannelId) {
+            await handleDeleteChannel(confirmDeleteChannelId);
+          }
+          setConfirmDeleteChannelId(null);
+        }}
+      />
+      <ConfirmDialog
+        open={!!confirmDeleteThreadId}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteThreadId(null); }}
+        title={t("home.confirmDeleteThread")}
+        variant="destructive"
+        onConfirm={async () => {
+          if (confirmDeleteThreadId) {
+            await handleDeleteThread(confirmDeleteThreadId);
+          }
+          setConfirmDeleteThreadId(null);
+        }}
+      />
     </main>
   );
 }

@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { RegisterHumanForm } from "@/components/shared/RegisterHumanForm";
 import { RegisterAgentForm } from "@/components/shared/RegisterAgentForm";
 import { CopyButton } from "@/components/shared/CopyButton";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { setupPrompt, openCodeSetupPrompt, openClawSetupPrompt } from "@/components/shared/setupPrompt";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { timeAgo, memberUrl } from "@/components/shared/helpers";
@@ -37,6 +38,8 @@ export default function MembersPage() {
   const [registerAgentOpen, setRegisterAgentOpen] = useState(false);
   const [registerAgentResult, setRegisterAgentResult] = useState<{ name: string; token: string; description: string } | null>(null);
   const [setupTab, setSetupTab] = useState<"claude" | "opencode" | "openclaw">("claude");
+  const [confirmDeleteAgent, setConfirmDeleteAgent] = useState<{ id: string; name: string } | null>(null);
+  const [confirmDeleteHuman, setConfirmDeleteHuman] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -62,16 +65,12 @@ export default function MembersPage() {
     if (res.ok) setAllUsers((await res.json()).users ?? []);
   };
 
-  const handleDeleteAgent = async (agentId: string, agentName: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm(t("members.confirmDeleteAgent").replace("{name}", agentName))) return;
+  const handleDeleteAgent = async (agentId: string) => {
     const res = await fetch(`/api/agents/${agentId}`, { method: "DELETE" });
     if (res.ok) setAgents((prev) => prev.filter((a) => a.id !== agentId));
   };
 
-  const handleDeleteHuman = async (userId: string, userName: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm(t("members.confirmDeleteHuman").replace("{name}", userName))) return;
+  const handleDeleteHuman = async (userId: string) => {
     const res = await fetch(`/api/users/${userId}`, { method: "DELETE" });
     if (res.ok) setAllUsers((prev) => prev.filter((u) => u.id !== userId));
   };
@@ -262,7 +261,7 @@ export default function MembersPage() {
               </div>
               {!isCurrentUser && (
                 <button
-                  onClick={(e) => handleDeleteHuman(u.id, u.name, e)}
+                  onClick={(e) => { e.stopPropagation(); setConfirmDeleteHuman({ id: u.id, name: u.name }); }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-destructive shrink-0"
                   title={t("common.delete")}
                 >
@@ -297,7 +296,7 @@ export default function MembersPage() {
               </div>
             </div>
             <button
-              onClick={(e) => handleDeleteAgent(agent.id, agent.name, e)}
+              onClick={(e) => { e.stopPropagation(); setConfirmDeleteAgent({ id: agent.id, name: agent.name }); }}
               className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-destructive shrink-0"
               title={t("common.delete")}
             >
@@ -312,6 +311,30 @@ export default function MembersPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={!!confirmDeleteAgent}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteAgent(null); }}
+        title={t("members.confirmDeleteAgent").replace("{name}", confirmDeleteAgent?.name ?? "")}
+        variant="destructive"
+        onConfirm={async () => {
+          if (confirmDeleteAgent) {
+            await handleDeleteAgent(confirmDeleteAgent.id);
+          }
+          setConfirmDeleteAgent(null);
+        }}
+      />
+      <ConfirmDialog
+        open={!!confirmDeleteHuman}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteHuman(null); }}
+        title={t("members.confirmDeleteHuman").replace("{name}", confirmDeleteHuman?.name ?? "")}
+        variant="destructive"
+        onConfirm={async () => {
+          if (confirmDeleteHuman) {
+            await handleDeleteHuman(confirmDeleteHuman.id);
+          }
+          setConfirmDeleteHuman(null);
+        }}
+      />
     </main>
   );
 }

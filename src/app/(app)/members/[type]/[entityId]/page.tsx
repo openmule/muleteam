@@ -6,8 +6,10 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/layout/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/shared/CopyButton";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { setupPrompt, openCodeSetupPrompt, openClawSetupPrompt, claudeMdSnippet, openCodeSnippet, openClawSkillSnippet } from "@/components/shared/setupPrompt";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
+import { useT } from "@/lib/i18n";
 import { timeAgo, memberUrl } from "@/components/shared/helpers";
 import type { User, RegisteredAgent, ThreadMeta, ChannelMeta } from "@/components/shared/types";
 
@@ -34,6 +36,8 @@ export default function MemberDetailPage() {
   const [savingDescription, setSavingDescription] = useState(false);
   const [setupTab, setSetupTab] = useState<"claude" | "opencode" | "openclaw">("claude");
   const [snippetTab, setSnippetTab] = useState<"claude" | "opencode" | "openclaw">("claude");
+  const [confirmRegenerate, setConfirmRegenerate] = useState(false);
+  const t = useT();
 
   useEffect(() => {
     if (authLoading) return;
@@ -66,7 +70,6 @@ export default function MemberDetailPage() {
 
   const handleRegenerateToken = async () => {
     if (!memberAgent) return;
-    if (!confirm(`Regenerate token for @${memberAgent.name}? The current token will be invalidated immediately.`)) return;
     setRegenerating(true);
     try {
       const res = await fetch(`/api/agents/${memberAgent.id}/regenerate-token`, { method: "POST" });
@@ -147,9 +150,21 @@ export default function MemberDetailPage() {
               </p>
             </div>
             {!newToken && (
-              <Button variant="outline" size="sm" onClick={handleRegenerateToken} disabled={regenerating}>
-                {regenerating ? "Regenerating..." : "Regenerate Token"}
-              </Button>
+              <>
+                <Button variant="outline" size="sm" onClick={() => setConfirmRegenerate(true)} disabled={regenerating}>
+                  {regenerating ? "Regenerating..." : "Regenerate Token"}
+                </Button>
+                <ConfirmDialog
+                  open={confirmRegenerate}
+                  onOpenChange={setConfirmRegenerate}
+                  title={t("members.confirmRegenerateToken").replace("{name}", memberAgent.name)}
+                  variant="destructive"
+                  onConfirm={async () => {
+                    setConfirmRegenerate(false);
+                    await handleRegenerateToken();
+                  }}
+                />
+              </>
             )}
           </div>
           {newToken && (() => {
