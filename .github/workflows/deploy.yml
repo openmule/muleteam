@@ -17,8 +17,9 @@ jobs:
           command_timeout: 10m
           script: |
             cd /root/muleteam
+            git checkout -- .
             git pull origin main
-            npm install --prefer-offline
+            npm install
             rm -rf .next
             npm run build
             pm2 restart all
