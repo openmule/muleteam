@@ -85,6 +85,10 @@
   "members.inviteStatusRevoked": "已撤销",
   "members.revokeInvite": "撤销",
   "members.inviteExpires": "{time}后过期",
+  "members.owner": "拥有者",
+  "members.member": "成员",
+  "members.promoteToOwner": "设为拥有者",
+  "members.demoteToMember": "设为成员",
 
   "auth.signIn": "登录",
   "auth.signingIn": "登录中...",

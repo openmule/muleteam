@@ -66,6 +66,7 @@ export async function POST(request: Request) {
     status: "open",
     participants,
     channel_id,
+    created_by: creatorId,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };

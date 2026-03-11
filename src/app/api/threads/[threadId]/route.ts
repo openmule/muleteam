@@ -56,7 +56,7 @@ export async function PATCH(
   return NextResponse.json({ thread });
 }
 
-// DELETE - delete thread
+// DELETE - delete thread (creator or owner only)
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ threadId: string }> }
@@ -65,8 +65,15 @@ export async function DELETE(
   if (!entity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { threadId } = await params;
-  const deleted = deleteThread(threadId);
-  if (!deleted) return NextResponse.json({ error: "Thread not found" }, { status: 404 });
+  const thread = getThread(threadId);
+  if (!thread) return NextResponse.json({ error: "Thread not found" }, { status: 404 });
 
+  // Check permission: owner can delete any thread, members only their own
+  const participantId = entity.type === "human" ? `human:${entity.id}` : `agent:${entity.id}`;
+  if (entity.team_role !== "owner" && thread.created_by !== participantId) {
+    return NextResponse.json({ error: "Only the thread creator or an owner can delete this thread" }, { status: 403 });
+  }
+
+  deleteThread(threadId);
   return NextResponse.json({ ok: true });
 }

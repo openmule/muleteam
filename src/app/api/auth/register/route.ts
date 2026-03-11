@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hashPassword, getUser } from "@/lib/auth";
+import { ensureMigrations } from "@/lib/db-migrate";
 
 export async function POST(request: Request) {
   try {
@@ -42,11 +43,17 @@ export async function POST(request: Request) {
 
     const passwordHash = await hashPassword(password);
     const invitedBy = inviter ? JSON.stringify({ id: inviter.id, name: inviter.name }) : null;
+
+    // First user becomes owner automatically
+    await ensureMigrations();
+    const existingUsers = await sql`SELECT COUNT(*)::int as count FROM users` as { count: number }[];
+    const teamRole = existingUsers[0].count === 0 ? "owner" : "member";
+
     const result = (await sql`
-      INSERT INTO users (email, password_hash, name, invited_by)
-      VALUES (${email}, ${passwordHash}, ${name}, ${invitedBy}::jsonb)
-      RETURNING id, email, name
-    `) as { id: string; email: string; name: string }[];
+      INSERT INTO users (email, password_hash, name, invited_by, team_role)
+      VALUES (${email}, ${passwordHash}, ${name}, ${invitedBy}::jsonb, ${teamRole})
+      RETURNING id, email, name, team_role
+    `) as { id: string; email: string; name: string; team_role: string }[];
 
     const user = result[0];
 

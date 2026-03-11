@@ -7,6 +7,7 @@ export interface User {
   description?: string;
   created_at?: string;
   invited_by?: { id: string; name: string };
+  team_role?: "owner" | "member";
 }
 
 export interface Participant {
@@ -23,6 +24,7 @@ export interface ThreadMeta {
   labels?: string[];
   participants: Participant[];
   channel_id?: string;
+  created_by?: string;
   created_at: string;
   updated_at: string;
 }
@@ -42,6 +44,7 @@ export interface ChannelMeta {
   name: string;
   description?: string;
   members: Participant[];
+  created_by?: string;
   created_at: string;
   updated_at: string;
 }

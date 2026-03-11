@@ -65,6 +65,15 @@ async function runMigrations(): Promise<void> {
     )
   `;
 
+  // Team role for human users (owner vs member)
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS team_role TEXT DEFAULT 'member'`;
+  // Auto-promote the first user to owner if no owner exists
+  await sql`
+    UPDATE users SET team_role = 'owner'
+    WHERE id = (SELECT id FROM users ORDER BY created_at ASC LIMIT 1)
+    AND NOT EXISTS (SELECT 1 FROM users WHERE team_role = 'owner')
+  `;
+
   // Personal access tokens for human users (CLI / script access)
   await sql`
     CREATE TABLE IF NOT EXISTS personal_tokens (
