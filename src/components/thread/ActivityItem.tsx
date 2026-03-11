@@ -16,6 +16,28 @@ interface Message {
   reply_to?: string;
 }
 
+// Deterministic username color based on participantId hash
+const USERNAME_COLORS = [
+  "text-red-600 dark:text-red-400",
+  "text-blue-600 dark:text-blue-400",
+  "text-green-600 dark:text-green-400",
+  "text-purple-600 dark:text-purple-400",
+  "text-orange-600 dark:text-orange-400",
+  "text-teal-600 dark:text-teal-400",
+  "text-pink-600 dark:text-pink-400",
+  "text-indigo-600 dark:text-indigo-400",
+  "text-cyan-600 dark:text-cyan-400",
+  "text-amber-600 dark:text-amber-400",
+];
+
+function getUsernameColor(participantId: string): string {
+  let hash = 0;
+  for (let i = 0; i < participantId.length; i++) {
+    hash = ((hash << 5) - hash + participantId.charCodeAt(i)) | 0;
+  }
+  return USERNAME_COLORS[Math.abs(hash) % USERNAME_COLORS.length];
+}
+
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
   const mins = Math.floor(diff / 60000);
@@ -167,7 +189,7 @@ export function ActivityItem({
 
       {/* Author header */}
       <div className="flex items-baseline gap-2 mb-1">
-        <Link href={memberUrl(message.from)} className="text-sm font-medium hover:underline">
+        <Link href={memberUrl(message.from)} className={`text-sm font-medium hover:underline ${getUsernameColor(message.from)}`}>
           {isAgent ? `@${message.from_name}` : message.from_name}
         </Link>
         <span className="text-xs text-muted-foreground">{timeAgo(message.ts)}</span>

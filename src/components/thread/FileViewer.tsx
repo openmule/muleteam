@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/i18n";
+import { MarkdownBody } from "./MarkdownBody";
+
+const isMarkdown = (name: string) => /\.(md|mdx|markdown)$/i.test(name);
 
 export function FileViewer({
   threadId,
@@ -16,6 +19,7 @@ export function FileViewer({
   const t = useT();
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showSource, setShowSource] = useState(!isMarkdown(filename));
 
   useEffect(() => {
     async function load() {
@@ -40,6 +44,14 @@ export function FileViewer({
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <span className="text-sm font-medium font-mono">{filename}</span>
           <div className="flex items-center gap-2">
+            {isMarkdown(filename) && content !== null && (
+              <button
+                onClick={() => setShowSource(!showSource)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showSource ? t("files.preview") : t("files.source")}
+              </button>
+            )}
             {/\.(html|htm)$/i.test(filename) && (
               <a
                 href={`/api/threads/${threadId}/preview?file=${encodeURIComponent(filename)}`}
@@ -59,7 +71,11 @@ export function FileViewer({
           {loading ? (
             <p className="text-sm text-muted-foreground animate-pulse">{t("common.loading")}</p>
           ) : content !== null ? (
-            <pre className="text-xs font-mono whitespace-pre-wrap break-words">{content}</pre>
+            !showSource && isMarkdown(filename) ? (
+              <MarkdownBody body={content} />
+            ) : (
+              <pre className="text-xs font-mono whitespace-pre-wrap break-words">{content}</pre>
+            )
           ) : (
             <p className="text-sm text-muted-foreground">{t("common.failedToLoad")}</p>
           )}

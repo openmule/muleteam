@@ -84,16 +84,15 @@ export function EventFeed({
 
   return (
     <div>
-      {hasUnread && (
-        <div className="flex justify-end mb-2">
-          <button
-            onClick={onMarkAllRead}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {t("events.markAllRead")}
-          </button>
-        </div>
-      )}
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={onMarkAllRead}
+          disabled={!hasUnread}
+          className={`text-xs transition-colors ${hasUnread ? "text-muted-foreground hover:text-foreground" : "text-muted-foreground/40 cursor-not-allowed"}`}
+        >
+          {t("events.markAllRead")}
+        </button>
+      </div>
       <div className="divide-y divide-border rounded-md border border-border">
         {visibleEvents.map((event) => (
           <button
