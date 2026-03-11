@@ -17,9 +17,11 @@ interface Message {
 }
 
 export function ActivityFeed({
+  threadId,
   messages,
   onReply,
 }: {
+  threadId: string;
   messages: Message[];
   onReply?: (messageId: string) => void;
 }) {
@@ -73,6 +75,7 @@ export function ActivityFeed({
           <ActivityItem
             key={msg.id}
             message={msg}
+            threadId={threadId}
             replyTarget={msg.reply_to ? messageMap.get(msg.reply_to) : undefined}
             onReply={onReply}
           />

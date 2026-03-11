@@ -112,6 +112,10 @@
   "thread.confirmClose": "Close this thread? No new messages can be posted after closing.",
   "thread.closeThread": "Close Thread",
   "thread.details": "Details",
+  "thread.attachImage": "Attach image",
+  "thread.maxImages": "Maximum {count} images",
+  "thread.imageTooLarge": "Image must be under {size}",
+  "thread.unsupportedFormat": "Supported formats: JPG, PNG, GIF, WebP",
 
   "sidebar.files": "Files",
   "sidebar.links": "Links",

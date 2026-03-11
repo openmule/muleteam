@@ -112,6 +112,10 @@
   "thread.confirmClose": "确定关闭此话题？关闭后将不能发送新消息。",
   "thread.closeThread": "关闭话题",
   "thread.details": "\u8BE6\u60C5",
+  "thread.attachImage": "添加图片",
+  "thread.maxImages": "最多 {count} 张图片",
+  "thread.imageTooLarge": "图片大小不能超过 {size}",
+  "thread.unsupportedFormat": "支持格式：JPG、PNG、GIF、WebP",
 
   "sidebar.files": "文件",
   "sidebar.links": "链接",

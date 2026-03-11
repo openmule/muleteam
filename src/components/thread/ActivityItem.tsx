@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { memberUrl } from "@/components/shared/helpers";
 
@@ -24,12 +25,97 @@ function timeAgo(ts: number): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+// Regex to match ![image](path) patterns for inline images
+const IMAGE_PATTERN = /!\[image\]\(([^)]+)\)/g;
+
+function parseBodyWithImages(body: string, threadId: string): { textParts: string[]; imagePaths: string[] } {
+  const textParts: string[] = [];
+  const imagePaths: string[] = [];
+  let lastIndex = 0;
+
+  const regex = new RegExp(IMAGE_PATTERN.source, "g");
+  let match;
+  while ((match = regex.exec(body)) !== null) {
+    textParts.push(body.slice(lastIndex, match.index));
+    imagePaths.push(match[1]);
+    lastIndex = match.index + match[0].length;
+  }
+  textParts.push(body.slice(lastIndex));
+
+  return { textParts, imagePaths };
+}
+
+function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 cursor-pointer"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white/80 hover:text-white text-2xl z-10"
+      >
+        &times;
+      </button>
+      <img
+        src={src}
+        alt={alt}
+        className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
+}
+
+function InlineImages({ paths, threadId }: { paths: string[]; threadId: string }) {
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
+  if (paths.length === 0) return null;
+
+  const gridClass = paths.length === 1
+    ? "grid-cols-1 max-w-xs"
+    : "grid-cols-2 max-w-sm";
+
+  return (
+    <>
+      <div className={`grid gap-1.5 mt-2 ${gridClass}`}>
+        {paths.map((p, i) => {
+          const src = `/api/threads/${threadId}/workspace/${p}`;
+          return (
+            <button
+              key={i}
+              className="relative overflow-hidden rounded-md border border-border hover:border-foreground/30 transition-colors"
+              onClick={() => setLightboxSrc(src)}
+            >
+              <img
+                src={src}
+                alt={`Image ${i + 1}`}
+                className="w-full h-auto max-h-48 object-cover"
+                loading="lazy"
+              />
+            </button>
+          );
+        })}
+      </div>
+      {lightboxSrc && (
+        <ImageLightbox
+          src={lightboxSrc}
+          alt="Full size image"
+          onClose={() => setLightboxSrc(null)}
+        />
+      )}
+    </>
+  );
+}
+
 export function ActivityItem({
   message,
+  threadId,
   replyTarget,
   onReply,
 }: {
   message: Message;
+  threadId: string;
   replyTarget?: Message;
   onReply?: (messageId: string) => void;
 }) {
@@ -51,9 +137,18 @@ export function ActivityItem({
 
   // Artifact messages
   const isArtifact = message.type === "artifact";
-  const displayBody = isArtifact
+  const rawBody = isArtifact
     ? message.body.replace(/```html\n[\s\S]*?```/g, "").trim()
     : message.body;
+
+  // Parse out image references
+  const { textParts, imagePaths } = useMemo(
+    () => parseBodyWithImages(rawBody, threadId),
+    [rawBody, threadId]
+  );
+
+  // Reconstruct text body without image markdown
+  const displayBody = textParts.join("").trim();
 
   return (
     <div className="py-4 group/item">
@@ -86,9 +181,23 @@ export function ActivityItem({
       </div>
 
       {/* Body */}
-      <div className="text-sm text-foreground/90 whitespace-pre-wrap break-words">
-        {displayBody || "(Generated artifact — see workspace)"}
-      </div>
+      {displayBody && (
+        <div className="text-sm text-foreground/90 whitespace-pre-wrap break-words">
+          {displayBody || "(Generated artifact — see workspace)"}
+        </div>
+      )}
+
+      {/* No text and no images — show artifact fallback */}
+      {!displayBody && imagePaths.length === 0 && isArtifact && (
+        <div className="text-sm text-foreground/90 whitespace-pre-wrap break-words">
+          (Generated artifact — see workspace)
+        </div>
+      )}
+
+      {/* Inline images */}
+      {imagePaths.length > 0 && (
+        <InlineImages paths={imagePaths} threadId={threadId} />
+      )}
 
       {/* Artifact version badge */}
       {isArtifact && message.artifact_version && (

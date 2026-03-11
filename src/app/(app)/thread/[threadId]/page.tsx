@@ -334,11 +334,12 @@ export default function ThreadDetailPage() {
           )}
 
           {/* Messages */}
-          <ActivityFeed messages={messages} onReply={isMember ? handleReply : undefined} />
+          <ActivityFeed threadId={threadId} messages={messages} onReply={isMember ? handleReply : undefined} />
 
           {/* Comment input or Join button */}
           {isMember ? (
             <CommentInput
+              threadId={threadId}
               onSubmit={handleSendMessage}
               replyTo={replyTo}
               onCancelReply={() => setReplyTo(null)}

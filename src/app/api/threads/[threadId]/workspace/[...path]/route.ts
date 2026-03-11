@@ -1,6 +1,24 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedEntity } from "@/lib/auth";
-import { readWorkspaceFile, writeWorkspaceFile, deleteWorkspaceFile, isParticipant } from "@/lib/git-storage";
+import { readWorkspaceFile, readWorkspaceBinary, writeWorkspaceFile, deleteWorkspaceFile, isParticipant } from "@/lib/git-storage";
+
+const BINARY_EXTENSIONS: Record<string, string> = {
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+};
+
+function isBinaryFile(filePath: string): boolean {
+  const ext = filePath.slice(filePath.lastIndexOf(".")).toLowerCase();
+  return ext in BINARY_EXTENSIONS;
+}
+
+function getMimeType(filePath: string): string {
+  const ext = filePath.slice(filePath.lastIndexOf(".")).toLowerCase();
+  return BINARY_EXTENSIONS[ext] || "application/octet-stream";
+}
 
 // GET — read a workspace file (open to all authenticated users)
 export async function GET(
@@ -14,6 +32,17 @@ export async function GET(
   const filePath = pathSegments.join("/");
 
   try {
+    if (isBinaryFile(filePath)) {
+      const data = readWorkspaceBinary(threadId, filePath);
+      if (data === null) return NextResponse.json({ error: "File not found" }, { status: 404 });
+      return new NextResponse(new Uint8Array(data), {
+        headers: {
+          "Content-Type": getMimeType(filePath),
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
+      });
+    }
+
     const content = readWorkspaceFile(threadId, filePath);
     if (content === null) return NextResponse.json({ error: "File not found" }, { status: 404 });
     return NextResponse.json({ content, path: filePath });
