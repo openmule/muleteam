@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { timeAgo } from "@/components/shared/helpers";
 import type { NotificationEvent } from "@/components/shared/types";
+
+const COLLAPSED_LIMIT = 5;
 
 const TYPE_ICONS: Record<NotificationEvent["type"], string> = {
   mention: "@",
@@ -62,8 +65,11 @@ export function EventFeed({
 }) {
   const router = useRouter();
   const t = useT();
+  const [expanded, setExpanded] = useState(false);
 
   const hasUnread = events.some((e) => !e.read);
+  const visibleEvents = expanded ? events : events.slice(0, COLLAPSED_LIMIT);
+  const hasMore = events.length > COLLAPSED_LIMIT;
 
   if (events.length === 0) {
     return (
@@ -89,12 +95,12 @@ export function EventFeed({
         </div>
       )}
       <div className="divide-y divide-border rounded-md border border-border">
-        {events.map((event) => (
+        {visibleEvents.map((event) => (
           <button
             key={event.id}
             onClick={() => {
               if (!event.read) onMarkRead(event.id);
-              router.push(`/threads/${event.thread_id}`);
+              router.push(`/thread/${event.thread_id}`);
             }}
             className="flex items-start gap-3 w-full px-3 py-2.5 text-left hover:bg-muted/50 transition-colors"
           >
@@ -129,6 +135,16 @@ export function EventFeed({
           </button>
         ))}
       </div>
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="mt-2 w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+        >
+          {expanded
+            ? t("events.showLess")
+            : t("events.showMore").replace("{count}", String(events.length - COLLAPSED_LIMIT))}
+        </button>
+      )}
     </div>
   );
 }
