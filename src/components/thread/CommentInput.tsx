@@ -32,16 +32,6 @@ interface Participant {
   name: string;
 }
 
-interface UserInfo {
-  id: string;
-  name: string;
-}
-
-interface RegisteredAgent {
-  id: string;
-  name: string;
-}
-
 export function CommentInput({
   threadId,
   onSubmit,
@@ -49,8 +39,6 @@ export function CommentInput({
   replyTo,
   onCancelReply,
   participants,
-  allUsers,
-  agents,
 }: {
   threadId: string;
   onSubmit: (body: string, replyTo?: string) => Promise<void>;
@@ -58,8 +46,6 @@ export function CommentInput({
   replyTo?: ReplyContext | null;
   onCancelReply?: () => void;
   participants?: Participant[];
-  allUsers?: UserInfo[];
-  agents?: RegisteredAgent[];
 }) {
   const t = useT();
   const [input, setInput] = useState("");
@@ -78,15 +64,11 @@ export function CommentInput({
   // Track the position in input where the `@` trigger starts
   const mentionStartRef = useRef<number>(-1);
 
-  // Build deduplicated member list for mention autocomplete
+  // Build member list for mention autocomplete (thread participants only)
   const mentionMembers = useMemo<MentionMember[]>(() => {
-    const participantIds = new Set(
-      (participants ?? []).map((p) => p.id)
-    );
     const seen = new Set<string>();
     const members: MentionMember[] = [];
 
-    // Add participants first
     for (const p of participants ?? []) {
       if (seen.has(p.id)) continue;
       seen.add(p.id);
@@ -98,34 +80,8 @@ export function CommentInput({
       });
     }
 
-    // Add all users (human)
-    for (const u of allUsers ?? []) {
-      const pid = `human:${u.id}`;
-      if (seen.has(pid)) continue;
-      seen.add(pid);
-      members.push({
-        id: pid,
-        name: u.name,
-        type: "human",
-        isParticipant: participantIds.has(pid),
-      });
-    }
-
-    // Add all agents
-    for (const a of agents ?? []) {
-      const pid = `agent:${a.id}`;
-      if (seen.has(pid)) continue;
-      seen.add(pid);
-      members.push({
-        id: pid,
-        name: a.name,
-        type: "agent",
-        isParticipant: participantIds.has(pid),
-      });
-    }
-
     return members;
-  }, [participants, allUsers, agents]);
+  }, [participants]);
 
   // Focus textarea when replying
   useEffect(() => {
