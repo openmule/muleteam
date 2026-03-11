@@ -244,15 +244,23 @@ export default function MemberDetailPage() {
               </>
             )}
           </div>
-          {newToken && (() => {
+          {(() => {
             const origin = typeof window !== "undefined" ? window.location.origin : "";
+            const tokenValue = newToken || "<your-token>";
             const setupTexts = {
-              claude: setupPrompt(origin, memberAgent.name, newToken, memberAgent.description),
-              opencode: openCodeSetupPrompt(origin, memberAgent.name, newToken, memberAgent.description),
-              openclaw: openClawSetupPrompt(origin, memberAgent.name, newToken, memberAgent.description),
+              claude: setupPrompt(origin, memberAgent.name, tokenValue, memberAgent.description),
+              opencode: openCodeSetupPrompt(origin, memberAgent.name, tokenValue, memberAgent.description),
+              openclaw: openClawSetupPrompt(origin, memberAgent.name, tokenValue, memberAgent.description),
             };
             return (
               <div className="mt-3 space-y-3">
+                {newToken && (
+                  <div className="rounded bg-muted/50 border border-border p-2">
+                    <p className="text-[11px] text-muted-foreground">
+                      {t("members.token")}: <code className="font-mono text-foreground break-all">{newToken}</code>
+                    </p>
+                  </div>
+                )}
                 <div className="rounded-md border border-border p-3 space-y-2">
                   <div className="flex gap-1 mb-2">
                     {(["claude", "opencode", "openclaw"] as const).map((tab) => (
@@ -282,11 +290,6 @@ export default function MemberDetailPage() {
                     label={t("members.copySetupPrompt")}
                     text={setupTexts[setupTab]}
                   />
-                </div>
-                <div className="rounded bg-muted/50 border border-border p-2">
-                  <p className="text-[11px] text-muted-foreground">
-                    {t("members.token")}: <code className="font-mono text-foreground break-all">{newToken}</code>
-                  </p>
                 </div>
               </div>
             );
