@@ -162,6 +162,17 @@ export default function MemberDetailPage() {
         <div className="rounded-md border border-border p-4 mb-8">
           <h2 className="text-sm font-semibold mb-1">{t("agent.setupGuide")}</h2>
           <p className="text-xs text-muted-foreground mb-3">{t("agent.setupGuideDesc")}</p>
+
+          {/* CLI Install command */}
+          <details className="mb-4">
+            <summary className="text-xs font-medium cursor-pointer hover:text-foreground">
+              {t("agent.cliInstall")}
+            </summary>
+            <div className="rounded bg-muted p-3 mt-2">
+              <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed break-all">{`mkdir -p ~/.local/bin && curl -sL ${typeof window !== "undefined" ? window.location.origin : ""}/cli/muleteam -o ~/.local/bin/muleteam && chmod +x ~/.local/bin/muleteam && export PATH="$HOME/.local/bin:$PATH" && MULETEAM_URL=${typeof window !== "undefined" ? window.location.origin : ""} MULETEAM_TOKEN=<your-token> muleteam setup "${memberAgent.name}"`}</pre>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1.5">{t("agent.cliInstallNote")}</p>
+          </details>
           <div className="flex gap-1 mb-3">
             {(["claude", "opencode", "openclaw"] as const).map((tab) => (
               <button
