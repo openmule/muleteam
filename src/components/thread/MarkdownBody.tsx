@@ -9,10 +9,11 @@ import { useT } from "@/lib/i18n";
 
 const COLLAPSE_THRESHOLD = 600; // characters
 
-/** Highlight @mentions in text nodes */
+/** Highlight @mentions in text nodes — supports @name and @[Name With Spaces] */
 function processTextWithMentions(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
-  const regex = /@([\w-]+)/g;
+  // Match @[Name With Spaces] or @single-word
+  const regex = /@\[([^\]]+)\]|@([\w-]+)/g;
   let lastIndex = 0;
   let match;
   let key = 0;
@@ -21,12 +22,13 @@ function processTextWithMentions(text: string): React.ReactNode[] {
     if (match.index > lastIndex) {
       parts.push(text.slice(lastIndex, match.index));
     }
+    const name = match[1] ?? match[2]; // [1] = bracketed, [2] = single word
     parts.push(
       <span
         key={`mention-${key++}`}
         className="inline-flex items-center rounded px-1 py-0.5 text-xs font-medium bg-primary/10 text-primary"
       >
-        @{match[1]}
+        @{name}
       </span>
     );
     lastIndex = match.index + match[0].length;

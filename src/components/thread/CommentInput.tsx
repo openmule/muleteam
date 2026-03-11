@@ -258,13 +258,14 @@ export function CommentInput({
       const before = input.slice(0, atIdx);
       const cursorPos = textareaRef.current?.selectionStart ?? input.length;
       const after = input.slice(cursorPos);
-      const newText = `${before}@${name} ${after}`;
+      const mention = name.includes(" ") ? `@[${name}]` : `@${name}`;
+      const newText = `${before}${mention} ${after}`;
       setInput(newText);
       setMentionVisible(false);
       mentionStartRef.current = -1;
 
       // Restore cursor position after the inserted mention
-      const newCursorPos = atIdx + name.length + 2; // @Name + space
+      const newCursorPos = atIdx + mention.length + 1; // mention + space
       requestAnimationFrame(() => {
         textareaRef.current?.focus();
         textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
