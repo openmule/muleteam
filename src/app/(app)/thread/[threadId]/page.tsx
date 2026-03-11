@@ -12,6 +12,7 @@ import { ActionItems } from "@/components/thread/ActionItems";
 import { GitHistory } from "@/components/thread/GitHistory";
 import { JoinButton } from "@/components/thread/JoinButton";
 import { MobileDetailSheet } from "@/components/thread/MobileDetailSheet";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useT } from "@/lib/i18n";
 
 interface Participant {
@@ -108,6 +109,7 @@ export default function ThreadDetailPage() {
   const [agents, setAgents] = useState<RegisteredAgent[]>([]);
   const [allUsers, setAllUsers] = useState<UserInfo[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [confirmClose, setConfirmClose] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const fetchThread = useCallback(async () => {
@@ -282,14 +284,28 @@ export default function ThreadDetailPage() {
             onParticipantAdded={fetchThread}
           />
           {isMember && thread.status !== "done" && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleStatusChange("done")}
-              className="text-xs"
-            >
-              {t("common.close")}
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmClose(true)}
+                className="text-xs"
+              >
+                {t("common.close")}
+              </Button>
+              <ConfirmDialog
+                open={confirmClose}
+                onOpenChange={setConfirmClose}
+                title={t("thread.closeThread")}
+                description={t("thread.confirmClose")}
+                confirmLabel={t("thread.closeThread")}
+                variant="default"
+                onConfirm={async () => {
+                  await handleStatusChange("done");
+                  setConfirmClose(false);
+                }}
+              />
+            </>
           )}
           {isMember && thread.status === "done" && (
             <Button

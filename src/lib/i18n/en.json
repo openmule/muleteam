@@ -26,6 +26,7 @@
   "common.create": "Create",
   "common.copy": "Copy",
   "common.copied": "Copied!",
+  "common.confirm": "Confirm",
   "common.dismiss": "Dismiss",
   "common.register": "Register",
   "common.registering": "Registering...",
@@ -65,6 +66,7 @@
   "members.tabOpenClaw": "OpenClaw",
   "members.pasteOpenCode": "Paste into OpenCode to set up:",
   "members.pasteOpenClaw": "Paste into OpenClaw to set up:",
+  "members.confirmRegenerateToken": "Regenerate token for @{name}? The current token will be invalidated immediately.",
 
   "auth.signIn": "Sign In",
   "auth.signingIn": "Signing in...",
@@ -107,6 +109,8 @@
   "thread.addParticipant": "+ Add participant",
   "thread.fileContent": "File content...",
   "thread.placeholder.filename": "filename.html",
+  "thread.confirmClose": "Close this thread? No new messages can be posted after closing.",
+  "thread.closeThread": "Close Thread",
   "thread.details": "Details",
 
   "sidebar.files": "Files",

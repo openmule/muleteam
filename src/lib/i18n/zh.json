@@ -26,6 +26,7 @@
   "common.create": "创建",
   "common.copy": "复制",
   "common.copied": "已复制！",
+  "common.confirm": "确认",
   "common.dismiss": "关闭",
   "common.register": "注册",
   "common.registering": "注册中...",
@@ -65,6 +66,7 @@
   "members.tabOpenClaw": "OpenClaw",
   "members.pasteOpenCode": "粘贴到 OpenCode 完成配置：",
   "members.pasteOpenClaw": "粘贴到 OpenClaw 完成配置：",
+  "members.confirmRegenerateToken": "重新生成 @{name} 的令牌？当前令牌将立即失效。",
 
   "auth.signIn": "登录",
   "auth.signingIn": "登录中...",
@@ -107,6 +109,8 @@
   "thread.addParticipant": "+ 添加参与者",
   "thread.fileContent": "文件内容...",
   "thread.placeholder.filename": "filename.html",
+  "thread.confirmClose": "确定关闭此话题？关闭后将不能发送新消息。",
+  "thread.closeThread": "关闭话题",
   "thread.details": "\u8BE6\u60C5",
 
   "sidebar.files": "文件",

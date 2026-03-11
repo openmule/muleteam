@@ -5,6 +5,7 @@ import { useAuth } from "@/components/layout/AuthProvider";
 import { ThreadList } from "@/components/shared/ThreadList";
 import { NewThreadDialog } from "@/components/shared/NewThreadDialog";
 import { EventFeed } from "@/components/shared/EventFeed";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useT } from "@/lib/i18n";
 import type { ThreadMeta, RegisteredAgent, ChannelMeta, User, NotificationEvent } from "@/components/shared/types";
 
@@ -17,6 +18,7 @@ export default function HomePage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [events, setEvents] = useState<NotificationEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteThreadId, setConfirmDeleteThreadId] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -43,9 +45,7 @@ export default function HomePage() {
     if (res.ok) setThreads((await res.json()).threads ?? []);
   };
 
-  const handleDelete = async (threadId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm(t("home.confirmDeleteThread"))) return;
+  const handleDelete = async (threadId: string) => {
     const res = await fetch(`/api/threads/${threadId}`, { method: "DELETE" });
     if (res.ok) setThreads((prev) => prev.filter((t) => t.id !== threadId));
   };
@@ -94,8 +94,20 @@ export default function HomePage() {
           </p>
         </div>
       ) : (
-        <ThreadList threads={allThreadsSorted} onDelete={handleDelete} channels={channels} />
+        <ThreadList threads={allThreadsSorted} onDelete={(threadId, e) => { e.stopPropagation(); setConfirmDeleteThreadId(threadId); }} channels={channels} />
       )}
+      <ConfirmDialog
+        open={!!confirmDeleteThreadId}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteThreadId(null); }}
+        title={t("home.confirmDeleteThread")}
+        variant="destructive"
+        onConfirm={async () => {
+          if (confirmDeleteThreadId) {
+            await handleDelete(confirmDeleteThreadId);
+          }
+          setConfirmDeleteThreadId(null);
+        }}
+      />
     </main>
   );
 }
