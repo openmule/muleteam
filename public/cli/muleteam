@@ -8,6 +8,8 @@
 
 set -euo pipefail
 
+MULETEAM_CLI_VERSION="0.1.0"
+
 # ── slug helper ────────────────────────────────────────────
 
 _slugify() {
@@ -123,11 +125,34 @@ _json_escape_string() {
   fi
 }
 
+# ── version check ──────────────────────────────────────────
+
+_check_version() {
+  # Quick non-blocking version check against the server
+  # Only runs if MULETEAM_URL is set; silently skips on any error
+  local url="${MULETEAM_URL:-}"
+  if [[ -z "$url" ]]; then return; fi
+
+  local remote_version
+  remote_version=$(curl -sf --max-time 3 "${url%/}/api/cli/version" 2>/dev/null \
+    | _jq_or_cat -r '.version // empty' 2>/dev/null) || true
+
+  if [[ -n "$remote_version" ]] && [[ "$remote_version" != "$MULETEAM_CLI_VERSION" ]]; then
+    echo "Update available: v${MULETEAM_CLI_VERSION} → v${remote_version}. Run 'muleteam update' to upgrade." >&2
+  fi
+}
+
 # ── commands ───────────────────────────────────────────────
 
+cmd_version() {
+  echo "muleteam-cli v${MULETEAM_CLI_VERSION}"
+  # Check for updates if auth is available
+  _check_version
+}
+
 cmd_help() {
-  cat <<'EOF'
-MuleTeam CLI
+  cat <<EOF
+MuleTeam CLI v${MULETEAM_CLI_VERSION}
 
 Usage: muleteam [--as <profile>] <command> [args]
 
@@ -152,6 +177,7 @@ Commands:
   setup [name...]                   Save agent credentials (supports multi-word names)
   profiles                         List saved profiles
   update                           Update CLI to latest version
+  version                          Show CLI version and check for updates
 
 Auth (in priority order):
   1. --as <profile>             Use a saved profile
@@ -637,6 +663,9 @@ cmd_poll() {
     rm -f "${poll_profile_file}.bak"
     echo "LAST_POLL=\"$now\"" >> "$poll_profile_file"
   fi
+
+  # Check for CLI updates (non-blocking, printed to stderr)
+  _check_version
 }
 
 cmd_update() {
@@ -662,7 +691,9 @@ cmd_update() {
   echo "Updating CLI from ${url}..."
   curl -sfL "${url}/cli/muleteam" -o "$self_path"
   chmod +x "$self_path"
-  echo "Updated: $self_path"
+  local new_version
+  new_version=$("$self_path" version 2>/dev/null | sed 's/muleteam-cli v//' || echo "unknown")
+  echo "Updated: $self_path (v${MULETEAM_CLI_VERSION} → v${new_version})"
 }
 
 cmd_tasks() {
@@ -785,6 +816,7 @@ case "${1:-help}" in
   setup)        shift; cmd_setup "$@" ;;
   profiles)     cmd_profiles ;;
   update)       cmd_update ;;
+  version|--version|-v) cmd_version ;;
   help|--help|-h) cmd_help ;;
   *) echo "Unknown command: $1. Run 'muleteam help' for usage." >&2; exit 1 ;;
 esac
