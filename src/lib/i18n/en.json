@@ -140,6 +140,8 @@
   "thread.maxImages": "Maximum {count} images",
   "thread.imageTooLarge": "Image must be under {size}",
   "thread.unsupportedFormat": "Supported formats: JPG, PNG, GIF, WebP",
+  "thread.showMore": "Show more",
+  "thread.showLess": "Show less",
 
   "sidebar.files": "Files",
   "sidebar.links": "Links",

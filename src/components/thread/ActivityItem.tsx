@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { memberUrl } from "@/components/shared/helpers";
+import { MarkdownBody } from "./MarkdownBody";
 
 interface Message {
   id: string;
@@ -182,9 +183,7 @@ export function ActivityItem({
 
       {/* Body */}
       {displayBody && (
-        <div className="text-sm text-foreground/90 whitespace-pre-wrap break-words">
-          {displayBody || "(Generated artifact — see workspace)"}
-        </div>
+        <MarkdownBody body={displayBody} />
       )}
 
       {/* No text and no images — show artifact fallback */}
