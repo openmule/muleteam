@@ -8,6 +8,13 @@
 
 set -euo pipefail
 
+# ── slug helper ────────────────────────────────────────────
+
+_slugify() {
+  # Convert display name to a filesystem-safe slug: lowercase, spaces/special → hyphens, dedup, trim
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/--*/-/g; s/^-//; s/-$//'
+}
+
 # ── profile resolution ────────────────────────────────────
 
 _resolve_auth() {
@@ -22,9 +29,17 @@ _resolve_auth() {
     if [[ -f "$dir/CLAUDE.md" ]]; then
       local agent_name
       agent_name=$(sed -n 's/.*You are @\([^ ]*\).*/\1/p' "$dir/CLAUDE.md" 2>/dev/null | head -1) || true
-      if [[ -n "$agent_name" ]] && [[ -f "$HOME/.muleteam/$agent_name" ]]; then
-        source "$HOME/.muleteam/$agent_name"
-        return
+      if [[ -n "$agent_name" ]]; then
+        local slug
+        slug=$(_slugify "$agent_name")
+        # Try slug-based filename first, then legacy exact-name filename
+        if [[ -f "$HOME/.muleteam/$slug" ]]; then
+          source "$HOME/.muleteam/$slug"
+          return
+        elif [[ -f "$HOME/.muleteam/$agent_name" ]]; then
+          source "$HOME/.muleteam/$agent_name"
+          return
+        fi
       fi
       break
     fi
@@ -56,8 +71,13 @@ _require_auth() {
 
 if [[ "${1:-}" == "--as" ]]; then
   profile_name="${2:?Usage: muleteam --as <agent-name> <command>}"
-  profile_file="$HOME/.muleteam/$profile_name"
-  if [[ ! -f "$profile_file" ]]; then
+  profile_slug=$(_slugify "$profile_name")
+  # Try slug-based filename first, then legacy exact-name filename
+  if [[ -f "$HOME/.muleteam/$profile_slug" ]]; then
+    profile_file="$HOME/.muleteam/$profile_slug"
+  elif [[ -f "$HOME/.muleteam/$profile_name" ]]; then
+    profile_file="$HOME/.muleteam/$profile_name"
+  else
     echo "Profile '$profile_name' not found. Run 'muleteam setup' first." >&2
     exit 1
   fi
@@ -129,7 +149,7 @@ Commands:
   task-done <id> <task-id>         Mark a task as done
   history <id> [--limit N]        Show thread git history
   poll [--since TS] [--limit N]    Check for new activity (default: 10)
-  setup [name]                     Save agent credentials to a profile
+  setup [name...]                   Save agent credentials (supports multi-word names)
   profiles                         List saved profiles
   update                           Update CLI to latest version
 
@@ -149,9 +169,9 @@ cmd_setup() {
   local has_tty=false
   [[ -c /dev/tty ]] 2>/dev/null && has_tty=true
 
-  # Agent name: arg1, env var, or prompt
+  # Agent name: all positional args joined (supports spaces), or prompt
   if [[ -n "${1:-}" ]]; then
-    agent_name="$1"
+    agent_name="$*"
   elif $has_tty; then
     printf "Agent name: "
     read -r agent_name < /dev/tty
@@ -199,16 +219,19 @@ cmd_setup() {
 
   local config_dir="$HOME/.muleteam"
   mkdir -p "$config_dir"
-  local profile_file="$config_dir/$agent_name"
+  local slug
+  slug=$(_slugify "$agent_name")
+  local profile_file="$config_dir/$slug"
 
   cat > "$profile_file" <<CONF
+MULETEAM_NAME="$agent_name"
 MULETEAM_TOKEN="$agent_token"
 MULETEAM_URL="$server_url"
 CONF
   chmod 600 "$profile_file"
 
   echo ""
-  echo "Profile '$agent_name' saved to $profile_file"
+  echo "Profile '$agent_name' ($slug) saved to $profile_file"
 
   # Auto-verify connection
   echo ""
@@ -241,11 +264,15 @@ cmd_profiles() {
   echo "Saved profiles:"
   for f in "$config_dir"/*; do
     [[ -f "$f" ]] || continue
-    local name
-    name=$(basename "$f")
-    local url
+    local slug_name display_name url
+    slug_name=$(basename "$f")
+    display_name=$(grep '^MULETEAM_NAME=' "$f" 2>/dev/null | cut -d'"' -f2) || true
     url=$(grep MULETEAM_URL "$f" | cut -d'"' -f2)
-    printf "  %-20s %s\n" "$name" "$url"
+    if [[ -n "$display_name" ]] && [[ "$display_name" != "$slug_name" ]]; then
+      printf "  %-20s %-25s %s\n" "$slug_name" "$display_name" "$url"
+    else
+      printf "  %-20s %s\n" "$slug_name" "$url"
+    fi
   done
 }
 
@@ -515,11 +542,16 @@ cmd_poll() {
     if [[ -n "${MULETEAM_PROFILE_FILE:-}" ]]; then
       profile_file="$MULETEAM_PROFILE_FILE"
     elif [[ -n "$my_id" ]] && [[ -d "$HOME/.muleteam" ]]; then
-      # Try to find profile by agent name
-      local my_name
+      # Try to find profile by agent name (slug or legacy)
+      local my_name my_slug
       my_name=$(echo "$me" | _jq_or_cat -r '.name // empty' 2>/dev/null) || true
-      if [[ -n "$my_name" ]] && [[ -f "$HOME/.muleteam/$my_name" ]]; then
-        profile_file="$HOME/.muleteam/$my_name"
+      if [[ -n "$my_name" ]]; then
+        my_slug=$(_slugify "$my_name")
+        if [[ -f "$HOME/.muleteam/$my_slug" ]]; then
+          profile_file="$HOME/.muleteam/$my_slug"
+        elif [[ -f "$HOME/.muleteam/$my_name" ]]; then
+          profile_file="$HOME/.muleteam/$my_name"
+        fi
       fi
     fi
     if [[ -n "$profile_file" ]] && [[ -f "$profile_file" ]]; then
@@ -586,19 +618,24 @@ cmd_poll() {
   # Update LAST_POLL in profile
   local now
   now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  local profile_file=""
+  local poll_profile_file=""
   if [[ -n "$my_id" ]] && [[ -d "$HOME/.muleteam" ]]; then
-    local my_name
-    my_name=$(echo "$me" | _jq_or_cat -r '.name // empty' 2>/dev/null) || true
-    if [[ -n "$my_name" ]] && [[ -f "$HOME/.muleteam/$my_name" ]]; then
-      profile_file="$HOME/.muleteam/$my_name"
+    local poll_name poll_slug
+    poll_name=$(echo "$me" | _jq_or_cat -r '.name // empty' 2>/dev/null) || true
+    if [[ -n "$poll_name" ]]; then
+      poll_slug=$(_slugify "$poll_name")
+      if [[ -f "$HOME/.muleteam/$poll_slug" ]]; then
+        poll_profile_file="$HOME/.muleteam/$poll_slug"
+      elif [[ -f "$HOME/.muleteam/$poll_name" ]]; then
+        poll_profile_file="$HOME/.muleteam/$poll_name"
+      fi
     fi
   fi
-  if [[ -n "$profile_file" ]] && [[ -f "$profile_file" ]]; then
+  if [[ -n "$poll_profile_file" ]] && [[ -f "$poll_profile_file" ]]; then
     # Remove old LAST_POLL and append new one
-    sed -i.bak '/^LAST_POLL=/d' "$profile_file" 2>/dev/null || true
-    rm -f "${profile_file}.bak"
-    echo "LAST_POLL=\"$now\"" >> "$profile_file"
+    sed -i.bak '/^LAST_POLL=/d' "$poll_profile_file" 2>/dev/null || true
+    rm -f "${poll_profile_file}.bak"
+    echo "LAST_POLL=\"$now\"" >> "$poll_profile_file"
   fi
 }
 
