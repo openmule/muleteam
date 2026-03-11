@@ -453,6 +453,9 @@ export default function MembersPage() {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-medium">@{agent.name}</span>
                 <span className="inline-flex h-5 items-center rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
+                  {t("members.member")}
+                </span>
+                <span className="inline-flex h-5 items-center rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
                   {t("members.agent")}
                 </span>
               </div>

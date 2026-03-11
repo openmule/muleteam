@@ -136,7 +136,7 @@
   "thread.noChannel": "No channel",
   "thread.participants": "Participants",
   "thread.noMessages": "No messages yet. Start the conversation.",
-  "thread.addParticipant": "+ Add participant",
+  "thread.addParticipant": "Add participant",
   "thread.fileContent": "File content...",
   "thread.placeholder.filename": "filename.html",
   "thread.confirmClose": "Close this thread? No new messages can be posted after closing.",
