@@ -207,6 +207,17 @@
   "webhook.samplePayload": "View sample payload",
   "webhook.eventTypes": "Event types: mention, reply, join, status_change, task_assigned, task_done",
 
+  "pat.title": "Personal Access Token",
+  "pat.description": "Use PATs to access MuleTeam from the CLI or scripts.",
+  "pat.generate": "Generate Token",
+  "pat.generated": "Token generated. Copy it now — it won't be shown again.",
+  "pat.revoke": "Revoke",
+  "pat.noTokens": "No tokens yet",
+  "pat.lastUsed": "Last used {time}",
+  "pat.neverUsed": "Never used",
+  "pat.confirmRevoke": "Revoke this token? It will stop working immediately.",
+  "pat.cliUsage": "CLI usage",
+
   "language": "Language",
   "language.en": "English",
   "language.zh": "Chinese"

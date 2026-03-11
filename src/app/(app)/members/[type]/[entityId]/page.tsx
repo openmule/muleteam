@@ -42,6 +42,10 @@ export default function MemberDetailPage() {
   const [webhookDraft, setWebhookDraft] = useState("");
   const [webhookLoading, setWebhookLoading] = useState(false);
   const [webhookMsg, setWebhookMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [pats, setPats] = useState<{ id: string; name: string; created_at: string; last_used_at: string | null }[]>([]);
+  const [patGenerating, setPatGenerating] = useState(false);
+  const [newPatToken, setNewPatToken] = useState<string | null>(null);
+  const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
   const t = useT();
 
   useEffect(() => {
@@ -67,14 +71,21 @@ export default function MemberDetailPage() {
           const found = (data.users ?? []).find((u: User) => u.id === entityId);
           if (found) setMemberUser(found);
         }
-        // Fetch webhook URL for own profile
+        // Fetch webhook URL and PATs for own profile
         if (currentUser?.id === entityId) {
-          const webhookRes = await fetch("/api/auth/me/webhook");
+          const [webhookRes, patsRes] = await Promise.all([
+            fetch("/api/auth/me/webhook"),
+            fetch("/api/auth/me/tokens"),
+          ]);
           if (webhookRes.ok) {
             const data = await webhookRes.json();
             const url = data.webhook_url ?? "";
             setWebhookUrl(url);
             setWebhookDraft(url);
+          }
+          if (patsRes.ok) {
+            const data = await patsRes.json();
+            setPats(data.tokens ?? []);
           }
         }
       }
@@ -542,6 +553,107 @@ export default function MemberDetailPage() {
                 {t("webhook.eventTypes")}
               </p>
             </details>
+          </div>
+        )}
+
+        {/* Personal Access Tokens — own profile only */}
+        {isOwnProfile && (
+          <div className="rounded-md border border-border p-4 mb-8">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-sm font-semibold">{t("pat.title")}</h2>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={patGenerating}
+                onClick={async () => {
+                  setPatGenerating(true);
+                  setNewPatToken(null);
+                  try {
+                    const res = await fetch("/api/auth/me/tokens", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ name: "default" }),
+                    });
+                    if (res.ok) {
+                      const data = await res.json();
+                      setNewPatToken(data.token);
+                      // Refresh list
+                      const listRes = await fetch("/api/auth/me/tokens");
+                      if (listRes.ok) {
+                        const listData = await listRes.json();
+                        setPats(listData.tokens ?? []);
+                      }
+                    }
+                  } finally {
+                    setPatGenerating(false);
+                  }
+                }}
+              >
+                {patGenerating ? "..." : t("pat.generate")}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">{t("pat.description")}</p>
+
+            {newPatToken && (
+              <div className="rounded-md border border-border bg-muted/50 p-3 mb-3 space-y-2">
+                <p className="text-xs text-green-600 font-medium">{t("pat.generated")}</p>
+                <div className="rounded bg-muted p-2">
+                  <code className="text-[11px] font-mono break-all text-foreground">{newPatToken}</code>
+                </div>
+                <CopyButton className="w-full" label={t("common.copy")} text={newPatToken} />
+                <details className="mt-2">
+                  <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                    {t("pat.cliUsage")}
+                  </summary>
+                  <div className="rounded bg-muted p-2 mt-1">
+                    <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed break-all">{`MULETEAM_TOKEN=${newPatToken} muleteam setup ${currentUser?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ?? "your-name"}`}</pre>
+                  </div>
+                </details>
+              </div>
+            )}
+
+            {pats.length === 0 ? (
+              <p className="text-xs text-muted-foreground">{t("pat.noTokens")}</p>
+            ) : (
+              <div className="divide-y divide-border rounded-md border border-border">
+                {pats.map((pat) => (
+                  <div key={pat.id} className="flex items-center gap-3 px-3 py-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{pat.name}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {pat.last_used_at
+                          ? t("pat.lastUsed").replace("{time}", timeAgo(pat.last_used_at))
+                          : t("pat.neverUsed")}
+                        {" · "}
+                        {new Date(pat.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive text-xs"
+                      onClick={() => setConfirmRevokeId(pat.id)}
+                    >
+                      {t("pat.revoke")}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <ConfirmDialog
+              open={confirmRevokeId !== null}
+              onOpenChange={(open) => { if (!open) setConfirmRevokeId(null); }}
+              title={t("pat.confirmRevoke")}
+              variant="destructive"
+              onConfirm={async () => {
+                if (!confirmRevokeId) return;
+                const idToRevoke = confirmRevokeId;
+                setConfirmRevokeId(null);
+                await fetch(`/api/auth/me/tokens?id=${idToRevoke}`, { method: "DELETE" });
+                setPats((prev) => prev.filter((p) => p.id !== idToRevoke));
+              }}
+            />
           </div>
         )}
 
