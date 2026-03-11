@@ -66,9 +66,6 @@ async function runMigrations(): Promise<void> {
   `;
 
   // Personal access tokens for human users (CLI / script access)
-  // Drop and recreate: PR #36 created table with user_id TEXT (wrong type),
-  // PR #37 fixed to UUID but IF NOT EXISTS skipped it. Safe to drop — no PATs exist yet.
-  await sql`DROP TABLE IF EXISTS personal_tokens`;
   await sql`
     CREATE TABLE IF NOT EXISTS personal_tokens (
       id TEXT PRIMARY KEY,
