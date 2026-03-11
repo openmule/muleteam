@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { ensureMigrations } from "@/lib/db-migrate";
 import { getUser } from "@/lib/auth";
 
 export async function GET(request: Request) {
@@ -11,6 +12,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    await ensureMigrations();
     const sql = db();
     const tokens = await sql`
       SELECT id, name, created_at, last_used_at
@@ -40,6 +42,7 @@ export async function POST(request: Request) {
     const tokenHash = await bcrypt.hash(rawToken, 12);
     const id = Math.random().toString(36).slice(2, 14);
 
+    await ensureMigrations();
     const sql = db();
     await sql`
       INSERT INTO personal_tokens (id, user_id, name, token_hash)
@@ -66,6 +69,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Missing token id" }, { status: 400 });
     }
 
+    await ensureMigrations();
     const sql = db();
     await sql`
       DELETE FROM personal_tokens
