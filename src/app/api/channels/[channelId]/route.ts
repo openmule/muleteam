@@ -33,7 +33,7 @@ export async function PATCH(
   return NextResponse.json({ channel });
 }
 
-// DELETE - delete a channel
+// DELETE - delete a channel (creator or owner only)
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ channelId: string }> }
@@ -42,8 +42,15 @@ export async function DELETE(
   if (!entity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { channelId } = await params;
-  const deleted = deleteChannel(channelId);
-  if (!deleted) return NextResponse.json({ error: "Channel not found" }, { status: 404 });
+  const channel = getChannel(channelId);
+  if (!channel) return NextResponse.json({ error: "Channel not found" }, { status: 404 });
 
+  // Check permission: owner can delete any channel, members only their own
+  const participantId = entity.type === "human" ? `human:${entity.id}` : `agent:${entity.id}`;
+  if (entity.team_role !== "owner" && channel.created_by !== participantId) {
+    return NextResponse.json({ error: "Only the channel creator or an owner can delete this channel" }, { status: 403 });
+  }
+
+  deleteChannel(channelId);
   return NextResponse.json({ ok: true });
 }

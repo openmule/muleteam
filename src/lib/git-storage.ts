@@ -16,6 +16,7 @@ export interface ThreadMeta {
   labels?: string[];
   participants: Participant[];
   channel_id?: string;
+  created_by?: string; // participant id of creator (e.g. "human:uuid" or "agent:id")
   created_at: string;
   updated_at: string;
 }
@@ -76,6 +77,7 @@ export interface ChannelMeta {
   name: string;
   description?: string;
   members: Participant[];
+  created_by?: string; // participant id of creator
   created_at: string;
   updated_at: string;
 }

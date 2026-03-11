@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   description TEXT,
   avatar_url TEXT,
   role TEXT DEFAULT 'human' CHECK (role IN ('human', 'agent')),
+  team_role TEXT DEFAULT 'member',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

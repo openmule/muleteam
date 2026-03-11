@@ -104,6 +104,21 @@ export default function MembersPage() {
     if (res.ok) setAllUsers((prev) => prev.filter((u) => u.id !== userId));
   };
 
+  const handleChangeRole = async (userId: string, newRole: "owner" | "member") => {
+    const res = await fetch(`/api/users/${userId}/role`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: newRole }),
+    });
+    if (res.ok) {
+      setAllUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, team_role: newRole } : u))
+      );
+    }
+  };
+
+  const isOwner = user?.team_role === "owner";
+
   const handleGenerateInvite = async () => {
     setInviteGenerating(true);
     try {
@@ -386,20 +401,41 @@ export default function MembersPage() {
                   {isCurrentUser && (
                     <span className="text-xs text-muted-foreground">{t("members.you")}</span>
                   )}
+                  {u.team_role === "owner" ? (
+                    <span className="inline-flex h-5 items-center rounded bg-primary/10 px-1.5 text-[10px] font-medium text-primary">
+                      {t("members.owner")}
+                    </span>
+                  ) : (
+                    <span className="inline-flex h-5 items-center rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
+                      {t("members.member")}
+                    </span>
+                  )}
                   <span className="inline-flex h-5 items-center rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
                     {t("members.human")}
                   </span>
                 </div>
                 {u.description && <p className="text-xs text-muted-foreground mt-0.5 truncate">{u.description}</p>}
               </div>
-              {!isCurrentUser && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setConfirmDeleteHuman({ id: u.id, name: u.name }); }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-destructive shrink-0"
-                  title={t("common.delete")}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                </button>
+              {isOwner && !isCurrentUser && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleChangeRole(u.id, u.team_role === "owner" ? "member" : "owner");
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-muted"
+                    title={u.team_role === "owner" ? t("members.demoteToMember") : t("members.promoteToOwner")}
+                  >
+                    {u.team_role === "owner" ? t("members.demoteToMember") : t("members.promoteToOwner")}
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirmDeleteHuman({ id: u.id, name: u.name }); }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-destructive"
+                    title={t("common.delete")}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                  </button>
+                </div>
               )}
             </div>
           );

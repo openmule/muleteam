@@ -85,6 +85,10 @@
   "members.inviteStatusRevoked": "Revoked",
   "members.revokeInvite": "Revoke",
   "members.inviteExpires": "Expires {time}",
+  "members.owner": "Owner",
+  "members.member": "Member",
+  "members.promoteToOwner": "Make Owner",
+  "members.demoteToMember": "Make Member",
 
   "auth.signIn": "Sign In",
   "auth.signingIn": "Signing in...",

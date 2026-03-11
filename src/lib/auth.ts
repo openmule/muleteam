@@ -49,10 +49,12 @@ export type AuthResult = {
   id: string;
   name: string;
   email: string;
+  team_role: "owner" | "member";
 } | {
   type: "agent";
   id: string;
   name: string;
+  team_role: "member"; // agents are always members
 }
 
 export async function getAuthenticatedEntity(
@@ -61,7 +63,8 @@ export async function getAuthenticatedEntity(
   // Try cookie auth first (human user)
   const user = await getUser(request);
   if (user) {
-    return { type: "human", id: user.id, name: user.name, email: user.email };
+    const teamRole = await getTeamRole(user.id);
+    return { type: "human", id: user.id, name: user.name, email: user.email, team_role: teamRole };
   }
 
   // Try Bearer token (agent or human PAT)
@@ -73,7 +76,8 @@ export async function getAuthenticatedEntity(
     if (rawToken.startsWith("pt_")) {
       const humanFromPat = await getHumanFromPAT(rawToken);
       if (humanFromPat) {
-        return { type: "human", id: humanFromPat.id, name: humanFromPat.name, email: humanFromPat.email };
+        const teamRole = await getTeamRole(humanFromPat.id);
+        return { type: "human", id: humanFromPat.id, name: humanFromPat.name, email: humanFromPat.email, team_role: teamRole };
       }
     }
 
@@ -81,10 +85,29 @@ export async function getAuthenticatedEntity(
     const { getAgentFromBearer } = await import("./agent-auth");
     const agent = await getAgentFromBearer(request);
     if (agent) {
-      return { type: "agent", id: agent.id, name: agent.name };
+      return { type: "agent", id: agent.id, name: agent.name, team_role: "member" };
     }
   }
 
+  return null;
+}
+
+async function getTeamRole(userId: string): Promise<"owner" | "member"> {
+  try {
+    const sql = (await import("./db")).db();
+    const rows = await sql`SELECT team_role FROM users WHERE id = ${userId}` as { team_role: string | null }[];
+    if (rows.length > 0 && rows[0].team_role === "owner") return "owner";
+  } catch {
+    // Default to member on error
+  }
+  return "member";
+}
+
+/** Check if the authenticated entity is an owner. Returns 403 response if not. */
+export function requireOwner(entity: AuthResult): Response | null {
+  if (entity.team_role !== "owner") {
+    return Response.json({ error: "Owner access required" }, { status: 403 });
+  }
   return null;
 }
 

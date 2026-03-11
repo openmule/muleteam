@@ -23,11 +23,13 @@ export async function POST(request: Request) {
 
   const members: Participant[] = memberList || [];
 
+  const creatorId = entity.type === "human" ? `human:${entity.id}` : `agent:${entity.id}`;
   const channel: ChannelMeta = {
     id: nanoid(),
     name,
     description,
     members,
+    created_by: creatorId,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };

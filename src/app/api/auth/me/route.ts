@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getUser } from "@/lib/auth";
+import { ensureMigrations } from "@/lib/db-migrate";
 
 export async function GET(request: Request) {
   try {
@@ -12,11 +13,12 @@ export async function GET(request: Request) {
       );
     }
 
+    await ensureMigrations();
     const sql = db();
 
     const result = (await sql`
-      SELECT id, email, name, avatar_url FROM users WHERE id = ${user.id}
-    `) as { id: string; email: string; name: string; avatar_url: string | null }[];
+      SELECT id, email, name, avatar_url, team_role FROM users WHERE id = ${user.id}
+    `) as { id: string; email: string; name: string; avatar_url: string | null; team_role: string | null }[];
 
     if (result.length === 0) {
       return NextResponse.json(
@@ -33,6 +35,7 @@ export async function GET(request: Request) {
         email: fullUser.email,
         name: fullUser.name,
         avatar_url: fullUser.avatar_url,
+        team_role: fullUser.team_role || "member",
       },
     });
   } catch (error) {
