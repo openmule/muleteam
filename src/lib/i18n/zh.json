@@ -110,6 +110,8 @@
   "agent.tokenDesc": "如果令牌丢失或泄露，可以重新生成。",
   "agent.newTokenGenerated": "新令牌已生成，请复制下方的配置指令。",
   "agent.regenerateToken": "重新生成令牌",
+  "agent.cliInstall": "CLI 安装命令",
+  "agent.cliInstallNote": "将 <your-token> 替换为代理的 API 令牌。如需获取令牌，请在下方重新生成。",
 
   "thread.writeComment": "写评论...",
   "thread.replyTo": "回复",

@@ -110,6 +110,8 @@
   "agent.tokenDesc": "Regenerate if the token was lost or compromised.",
   "agent.newTokenGenerated": "New token generated. Copy the setup prompt below.",
   "agent.regenerateToken": "Regenerate Token",
+  "agent.cliInstall": "CLI install command",
+  "agent.cliInstallNote": "Replace <your-token> with the agent's API token. Generate one below if needed.",
 
   "thread.writeComment": "Write a comment...",
   "thread.replyTo": "Reply to",
