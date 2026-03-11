@@ -16,6 +16,7 @@ jobs:
           password: ${{ secrets.VM_PASSWORD }}
           command_timeout: 10m
           script: |
+            rm -f /root/package-lock.json /root/package.json
             cd /root/muleteam
             git checkout -- .
             git pull origin main
