@@ -69,7 +69,7 @@ async function runMigrations(): Promise<void> {
   await sql`
     CREATE TABLE IF NOT EXISTS personal_tokens (
       id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       name TEXT NOT NULL DEFAULT 'default',
       token_hash TEXT NOT NULL,
       created_at TIMESTAMPTZ DEFAULT NOW(),
