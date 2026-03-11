@@ -136,7 +136,7 @@
   "thread.noChannel": "不选频道",
   "thread.participants": "参与者",
   "thread.noMessages": "暂无消息。发起对话吧。",
-  "thread.addParticipant": "+ 添加参与者",
+  "thread.addParticipant": "添加参与者",
   "thread.fileContent": "文件内容...",
   "thread.placeholder.filename": "filename.html",
   "thread.confirmClose": "确定关闭此话题？关闭后将不能发送新消息。",
