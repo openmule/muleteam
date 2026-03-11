@@ -11,6 +11,7 @@ import { ParticipantsList } from "@/components/thread/ParticipantsList";
 import { ActionItems } from "@/components/thread/ActionItems";
 import { GitHistory } from "@/components/thread/GitHistory";
 import { JoinButton } from "@/components/thread/JoinButton";
+import { MobileDetailSheet } from "@/components/thread/MobileDetailSheet";
 import { useT } from "@/lib/i18n";
 
 interface Participant {
@@ -107,7 +108,6 @@ export default function ThreadDetailPage() {
   const [agents, setAgents] = useState<RegisteredAgent[]>([]);
   const [allUsers, setAllUsers] = useState<UserInfo[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [showSidebar, setShowSidebar] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const fetchThread = useCallback(async () => {
@@ -268,18 +268,19 @@ export default function ThreadDetailPage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {/* Mobile sidebar toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="md:hidden text-muted-foreground"
-            onClick={() => setShowSidebar(!showSidebar)}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <line x1="15" y1="3" x2="15" y2="21" />
-            </svg>
-          </Button>
+          {/* Mobile detail sheet trigger */}
+          <MobileDetailSheet
+            threadId={threadId}
+            tasks={tasks}
+            files={files}
+            participants={thread.participants}
+            agents={agents}
+            users={allUsers}
+            readOnly={!isMember}
+            onRefreshTasks={fetchTasks}
+            onRefreshFiles={fetchFiles}
+            onParticipantAdded={fetchThread}
+          />
           {isMember && thread.status !== "done" && (
             <Button
               variant="outline"
@@ -331,8 +332,8 @@ export default function ThreadDetailPage() {
           )}
         </div>
 
-        {/* Right: Workspace (sidebar) — hidden on mobile by default, toggled via button */}
-        <div className={`md:w-2/5 flex flex-col overflow-y-auto border-t md:border-t-0 border-border ${showSidebar ? "block" : "hidden md:flex"}`}>
+        {/* Right: Workspace (sidebar) — hidden on mobile, shown on md+ */}
+        <div className="hidden md:flex md:w-2/5 flex-col overflow-y-auto border-border">
           <WorkspaceFiles
             threadId={threadId}
             files={files}
