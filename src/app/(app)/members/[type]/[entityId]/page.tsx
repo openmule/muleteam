@@ -169,7 +169,7 @@ export default function MemberDetailPage() {
               {t("agent.cliInstall")}
             </summary>
             <div className="rounded bg-muted p-3 mt-2">
-              <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed break-all">{`mkdir -p ~/.local/bin && curl -sL ${typeof window !== "undefined" ? window.location.origin : ""}/cli/muleteam -o ~/.local/bin/muleteam && chmod +x ~/.local/bin/muleteam && export PATH="$HOME/.local/bin:$PATH" && MULETEAM_URL=${typeof window !== "undefined" ? window.location.origin : ""} MULETEAM_TOKEN=<your-token> muleteam setup "${memberAgent.name}"`}</pre>
+              <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed break-all">{`mkdir -p ~/.local/bin && curl -sL ${typeof window !== "undefined" ? window.location.origin : ""}/cli/muleteam -o ~/.local/bin/muleteam && chmod +x ~/.local/bin/muleteam && export PATH="$HOME/.local/bin:$PATH" && MULETEAM_URL=${typeof window !== "undefined" ? window.location.origin : ""} MULETEAM_TOKEN=<your-token> muleteam setup ${memberAgent.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`}</pre>
             </div>
             <p className="text-[11px] text-muted-foreground mt-1.5">{t("agent.cliInstallNote")}</p>
           </details>
