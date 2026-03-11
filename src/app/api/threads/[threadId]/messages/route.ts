@@ -55,15 +55,22 @@ export async function POST(
   // Fire-and-forget: emit notification events
   const threadMeta = getThread(threadId);
   if (threadMeta) {
-    emitMentionEvents(threadId, threadMeta.title, message, threadMeta.participants);
-
+    // If this is a reply, the original author gets a reply event — exclude them
+    // from mention events to avoid duplicate notifications for the same message.
+    let replyTargetId: string | undefined;
     if (reply_to) {
       const allMessages = getMessages(threadId);
       const originalMessage = allMessages.find((m) => m.id === reply_to);
       if (originalMessage) {
+        replyTargetId = originalMessage.from;
         emitReplyEvent(threadId, threadMeta.title, message, originalMessage);
       }
     }
+
+    emitMentionEvents(
+      threadId, threadMeta.title, message, threadMeta.participants,
+      replyTargetId ? [replyTargetId] : undefined
+    );
   }
 
   return NextResponse.json({ message }, { status: 201 });
