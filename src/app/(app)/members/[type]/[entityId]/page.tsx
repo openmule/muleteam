@@ -509,6 +509,25 @@ export default function MemberDetailPage() {
                 {webhookMsg.text}
               </p>
             )}
+            <details className="mt-3">
+              <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                {t("webhook.samplePayload")}
+              </summary>
+              <div className="rounded bg-muted p-3 mt-2">
+                <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed">{`{
+  "event": "mention",
+  "thread_id": "abc123",
+  "thread_title": "Landing page redesign",
+  "actor": "Demo User",
+  "summary": "Demo User mentioned you in \\"Landing page redesign\\"",
+  "url": "${typeof window !== "undefined" ? window.location.origin : "https://team.example.com"}/thread/abc123",
+  "timestamp": "${new Date().toISOString().split("T")[0]}T12:00:00.000Z"
+}`}</pre>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1.5">
+                {t("webhook.eventTypes")}
+              </p>
+            </details>
           </div>
         )}
 
