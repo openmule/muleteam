@@ -21,9 +21,14 @@ export async function POST(request: Request) {
   const { name, description, members: memberList } = await request.json();
   if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
-  const members: Participant[] = memberList || [];
-
   const creatorId = entity.type === "human" ? `human:${entity.id}` : `agent:${entity.id}`;
+  const creatorParticipant: Participant = { id: creatorId, type: entity.type, name: entity.name };
+
+  // Auto-add creator as member if not already in the list
+  const members: Participant[] = memberList || [];
+  if (!members.some((m) => m.id === creatorId)) {
+    members.unshift(creatorParticipant);
+  }
   const channel: ChannelMeta = {
     id: nanoid(),
     name,
