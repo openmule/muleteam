@@ -65,6 +65,7 @@ export function Navbar() {
           {/* Mobile hamburger */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger
+              aria-label={t("nav.menu")}
               className="md:hidden flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -75,7 +76,7 @@ export function Navbar() {
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0">
               <div className="flex items-center gap-2 px-4 py-4 border-b border-border">
-                <img src="/logo.svg" width={20} height={20} alt="" />
+                <img src="/logo.svg" width={20} height={20} alt="" aria-hidden="true" />
                 <SheetTitle className="text-base font-semibold tracking-tight">MuleTeam</SheetTitle>
               </div>
               <nav className="flex flex-col py-2">
@@ -110,6 +111,7 @@ export function Navbar() {
                   <p className="text-xs text-muted-foreground">{t("nav.theme")}</p>
                   <button
                     onClick={toggleTheme}
+                    aria-label={t("nav.toggleDarkMode")}
                     className="flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                   >
                     <svg className="dark:hidden" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -137,7 +139,7 @@ export function Navbar() {
           </Sheet>
 
           <Link href="/" className="text-base font-semibold tracking-tight select-none shrink-0 flex items-center gap-2">
-            <img src="/logo.svg" width={20} height={20} alt="" />
+            <img src="/logo.svg" width={20} height={20} alt="MuleTeam" />
             <span className="hidden sm:inline">MuleTeam</span>
           </Link>
         </div>
@@ -176,6 +178,7 @@ export function Navbar() {
             onClick={toggleTheme}
             className="hidden md:flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
             title={t("nav.toggleDarkMode")}
+            aria-label={t("nav.toggleDarkMode")}
           >
             <svg className="dark:hidden" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
             <svg className="hidden dark:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -183,7 +186,7 @@ export function Navbar() {
 
           {/* Desktop language selector */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="hidden md:flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus:outline-none">
+            <DropdownMenuTrigger aria-label={t("nav.language")} className="hidden md:flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus:outline-none">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="2" y1="12" x2="22" y2="12" />
