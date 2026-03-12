@@ -44,3 +44,33 @@ export function getRepoPath(): string {
   if (fromCtx) return fromCtx;
   return process.env.GIT_REPO_PATH || "";
 }
+
+/**
+ * Wrap an API route handler with tenant context from request headers.
+ * Reads x-team-slug and x-tenant-database-url, sets ALS so that
+ * getRepoPath() and getDatabaseUrl() return tenant-specific values.
+ *
+ * For self-hosted (no x-team-slug header), runs fn() without ALS override.
+ */
+export async function withTenantFromRequest<T>(request: Request, fn: () => T | Promise<T>): Promise<T> {
+  const slug = request.headers.get("x-team-slug");
+  const dbUrl = request.headers.get("x-tenant-database-url") || undefined;
+
+  if (!slug && !dbUrl) return fn();
+
+  const path = await import("path");
+  const fs = await import("fs");
+
+  let repoPath: string | undefined;
+  if (slug) {
+    const base = process.env.GIT_REPO_BASE || process.env.GIT_REPO_PATH || "";
+    if (base) {
+      repoPath = path.default.join(base, "tenants", slug);
+      if (!fs.default.existsSync(repoPath)) {
+        fs.default.mkdirSync(repoPath, { recursive: true });
+      }
+    }
+  }
+
+  return tenantStorage.run({ databaseUrl: dbUrl, repoPath }, fn);
+}
