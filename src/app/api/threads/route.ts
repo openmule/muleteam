@@ -3,7 +3,7 @@ import { getAuthenticatedEntity } from "@/lib/auth";
 import { createThread, listThreads, getAgentById, getChannel, type ThreadMeta } from "@/lib/git-storage";
 import { db } from "@/lib/db";
 import { nanoid } from "@/lib/utils";
-import { withTenantFromRequest, getRepoPath } from "@/lib/tenant-context";
+import { withTenantFromRequest } from "@/lib/tenant-context";
 
 // GET - list all threads
 export async function GET(request: Request) {
@@ -12,19 +12,7 @@ export async function GET(request: Request) {
     if (!entity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const threads = listThreads();
-    const response = NextResponse.json({ threads });
-
-    // Diagnostic: show which tenant context is active
-    const { getDatabaseUrl } = await import("@/lib/tenant-context");
-    try {
-      const dbUrl = await getDatabaseUrl();
-      // Only show host portion for security
-      const host = new URL(dbUrl).host;
-      response.headers.set("x-debug-db-host", host);
-    } catch { /* ignore */ }
-    response.headers.set("x-debug-repo-path", getRepoPath() || "(default)");
-
-    return response;
+    return NextResponse.json({ threads });
   });
 }
 
