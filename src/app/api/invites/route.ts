@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   await ensureMigrations();
-  const sql = db();
+  const sql = await db();
 
   const body = await request.json().catch(() => ({}));
   const note = body.note || null;
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   await ensureMigrations();
-  const sql = db();
+  const sql = await db();
 
   const rows = (await sql`
     SELECT i.token, i.created_by, i.note, i.expires_at, i.used_by, i.used_at, i.status, i.created_at,

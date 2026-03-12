@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   await ensureMigrations();
 
   const userId = `human:${user.id}`;
-  const sql = db();
+  const sql = await db();
 
   const result = (await sql`
     SELECT COUNT(*)::int AS unread FROM events

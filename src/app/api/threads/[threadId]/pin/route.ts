@@ -20,7 +20,7 @@ export async function POST(
   if (!thread) return NextResponse.json({ error: "Thread not found" }, { status: 404 });
 
   await ensureMigrations();
-  const sql = db();
+  const sql = await db();
   const pinnedBy = entity.type === "human" ? `human:${entity.id}` : `agent:${entity.id}`;
 
   await sql`
@@ -46,7 +46,7 @@ export async function DELETE(
   const { threadId } = await params;
 
   await ensureMigrations();
-  const sql = db();
+  const sql = await db();
   await sql`DELETE FROM thread_pins WHERE thread_id = ${threadId}`;
 
   return NextResponse.json({ ok: true });

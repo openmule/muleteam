@@ -20,7 +20,7 @@ export async function PATCH(
   const body = await request.json();
   const description = typeof body.description === "string" ? body.description.trim() : null;
 
-  const sql = db();
+  const sql = await db();
   await sql`UPDATE users SET description = ${description} WHERE id = ${userId}`;
 
   return NextResponse.json({ ok: true });
@@ -45,7 +45,7 @@ export async function DELETE(
   }
 
   await ensureMigrations();
-  const sql = db();
+  const sql = await db();
 
   // Cannot delete another owner
   const target = await sql`SELECT id, team_role FROM users WHERE id = ${userId}` as { id: string; team_role: string }[];

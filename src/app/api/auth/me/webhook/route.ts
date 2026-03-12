@@ -10,7 +10,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const sql = db();
+    const sql = await db();
     const result = (await sql`
       SELECT webhook_url FROM users WHERE id = ${user.id}
     `) as { webhook_url: string | null }[];
@@ -46,7 +46,7 @@ export async function PATCH(request: Request) {
       }
     }
 
-    const sql = db();
+    const sql = await db();
     const urlValue = webhookUrl && webhookUrl.length > 0 ? webhookUrl : null;
     await sql`UPDATE users SET webhook_url = ${urlValue} WHERE id = ${user.id}`;
 
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const sql = db();
+    const sql = await db();
     const result = (await sql`
       SELECT webhook_url FROM users WHERE id = ${user.id}
     `) as { webhook_url: string | null }[];

@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   await ensureMigrations();
 
   const userId = `human:${user.id}`;
-  const sql = db();
+  const sql = await db();
 
   await sql`
     UPDATE events SET read = true

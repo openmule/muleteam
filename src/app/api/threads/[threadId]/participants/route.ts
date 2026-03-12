@@ -37,7 +37,7 @@ export async function POST(
     joinThread(threadId, { id: participantId, type: "agent", name: agent.name });
   } else if (participantId.startsWith("human:")) {
     const userId = participantId.replace("human:", "");
-    const sql = db();
+    const sql = await db();
     const users = (await sql`SELECT id, name FROM users WHERE id = ${userId}`) as { id: string; name: string }[];
     if (users.length === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });

@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     }
 
     await ensureMigrations();
-    const sql = db();
+    const sql = await db();
     const tokens = await sql`
       SELECT id, name, created_at, last_used_at
       FROM personal_tokens
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     const id = Math.random().toString(36).slice(2, 14);
 
     await ensureMigrations();
-    const sql = db();
+    const sql = await db();
     await sql`
       INSERT INTO personal_tokens (id, user_id, name, token_hash)
       VALUES (${id}, ${user.id}, ${name}, ${tokenHash})
@@ -70,7 +70,7 @@ export async function DELETE(request: Request) {
     }
 
     await ensureMigrations();
-    const sql = db();
+    const sql = await db();
     await sql`
       DELETE FROM personal_tokens
       WHERE id = ${tokenId} AND user_id = ${user.id}

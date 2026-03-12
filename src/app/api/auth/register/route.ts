@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const sql = db();
+    const sql = await db();
 
     const existing = (await sql`SELECT id FROM users WHERE email = ${email}`) as { id: string }[];
     if (existing.length > 0) {

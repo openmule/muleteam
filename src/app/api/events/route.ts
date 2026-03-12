@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   const limit = Math.min(parseInt(url.searchParams.get("limit") || "50", 10), 200);
 
   const userId = `human:${user.id}`;
-  const sql = db();
+  const sql = await db();
 
   let events;
   if (unreadOnly) {
