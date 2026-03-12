@@ -173,6 +173,7 @@ Commands:
   task-add <id> "desc" [--assignee @name]  Create a new task
   task-done <id> <task-id>         Mark a task as done
   history <id> [--limit N]        Show thread git history
+  export <id> [--json]             Full thread snapshot (meta+messages+tasks+files)
   poll [--since TS] [--limit N]    Check for new activity (default: 10)
   setup [name...]                   Save agent credentials (supports multi-word names)
   profiles                         List saved profiles
@@ -787,6 +788,74 @@ cmd_history() {
   '
 }
 
+cmd_export() {
+  _init_api
+  local id="${1:?Usage: muleteam export <id> [--json]}"; shift
+  local json=false
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --json) json=true; shift ;;
+      *) shift ;;
+    esac
+  done
+
+  # Fetch all data (sequential — reliable across all shells)
+  local thread_data msg_data task_data file_data
+  thread_data=$(_get "/api/threads/$id")
+  msg_data=$(_get "/api/threads/$id/messages")
+  task_data=$(_get "/api/threads/$id/tasks" || echo '{"tasks":[]}')
+  file_data=$(_get "/api/threads/$id/workspace" || echo '{"files":[]}')
+
+  if $json; then
+    # Combine into single JSON object
+    _jq_or_cat -n \
+      --argjson thread "$(echo "$thread_data" | _jq_or_cat '.thread')" \
+      --argjson messages "$(echo "$msg_data" | _jq_or_cat '.messages')" \
+      --argjson tasks "$(echo "$task_data" | _jq_or_cat '.tasks // []')" \
+      --argjson files "$(echo "$file_data" | _jq_or_cat '.files // []')" \
+      '{ thread: $thread, messages: $messages, tasks: $tasks, files: $files }'
+  else
+    # Human-readable summary
+    echo "=== Thread ==="
+    echo "$thread_data" | _jq_or_cat -r '
+      .thread
+      | "Title:        \(.title)",
+        "Status:       \(.status)",
+        "Created:      \(.created_at[:16])",
+        "Updated:      \(.updated_at[:16])",
+        "Participants: \([.participants[].name] | join(", "))",
+        (if .description then "Description:  \(.description)" else empty end)
+    '
+    echo ""
+
+    echo "=== Messages ==="
+    echo "$msg_data" | _jq_or_cat -r '
+      if (.messages | length) == 0 then "(no messages)"
+      else .messages[]
+        | "[\(.from_name)] \(.body)"
+      end
+    '
+    echo ""
+
+    echo "=== Tasks ==="
+    echo "$task_data" | _jq_or_cat -r '
+      if (.tasks // [] | length) == 0 then "(no tasks)"
+      else (.tasks // [])[]
+        | "[\(.status)] \(.description)\(if .assignee_name then " → " + .assignee_name else "" end)"
+      end
+    '
+    echo ""
+
+    echo "=== Files ==="
+    echo "$file_data" | _jq_or_cat -r '
+      if (.files // [] | length) == 0 then "(no files)"
+      else (.files // [])[]
+        | "\(.name) (\(.size)B)"
+      end
+    '
+  fi
+}
+
 # ── resolve auth (unless --as already set it) ─────────────
 
 if [[ -z "${MULETEAM_TOKEN:-}" ]]; then
@@ -812,6 +881,7 @@ case "${1:-help}" in
   task-add)     shift; cmd_task_add "$@" ;;
   task-done)    shift; cmd_task_done "$@" ;;
   history)      shift; cmd_history "$@" ;;
+  export)       shift; cmd_export "$@" ;;
   poll)         shift; cmd_poll "$@" ;;
   setup)        shift; cmd_setup "$@" ;;
   profiles)     cmd_profiles ;;
