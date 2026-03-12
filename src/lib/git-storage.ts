@@ -632,11 +632,12 @@ export interface GitLogEntry {
 
 export function getThreadGitLog(threadId: string, limit = 20): GitLogEntry[] {
   initRepo();
+  const safeLimit = Math.max(1, Math.min(500, Math.floor(Number(limit)) || 20));
   const threadDir = path.join("threads", threadId);
   try {
     // Use %x00 as record separator and %x01 as field separator to handle multiline messages
     const log = execSync(
-      `git log --format="%x00%H%x01%h%x01%an%x01%aI%x01%B" -n ${limit} -- "${threadDir}"`,
+      `git log --format="%x00%H%x01%h%x01%an%x01%aI%x01%B" -n ${safeLimit} -- "${threadDir}"`,
       { cwd: REPO_BASE() }
     ).toString().trim();
     if (!log) return [];
