@@ -240,64 +240,7 @@ export default function MembersPage() {
             </DialogContent>
           </Dialog>
 
-          {/* Register Human */}
-          <Dialog open={registerHumanOpen} onOpenChange={(open) => {
-            setRegisterHumanOpen(open);
-            if (!open) setRegisterHumanResult(null);
-          }}>
-            <DialogTrigger render={<Button variant="outline" size="sm" />}>
-              <span className="hidden sm:inline">{t("members.registerHuman")}</span>
-              <span className="sm:hidden">{t("members.mobileHuman")}</span>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>{t("members.registerHumanTitle")}</DialogTitle>
-              </DialogHeader>
-              {registerHumanResult ? (
-                <div className="space-y-4 pt-2">
-                  <p className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">{registerHumanResult.name}</span> {t("members.humanRegistered")}
-                  </p>
-                  <div className="rounded-md bg-muted p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">{t("auth.name")}</span>
-                      <code className="text-xs font-mono">{registerHumanResult.name}</code>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">{t("auth.email")}</span>
-                      <code className="text-xs font-mono">{registerHumanResult.email}</code>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">{t("auth.password")}</span>
-                      <code className="text-xs font-mono">{registerHumanResult.password}</code>
-                    </div>
-                  </div>
-                  <CopyButton
-                    className="w-full"
-                    variant="outline"
-                    size="default"
-                    label={t("members.copyToClipboard")}
-                    text={`${t("auth.name")}: ${registerHumanResult.name}\n${t("auth.email")}: ${registerHumanResult.email}\n${t("auth.password")}: ${registerHumanResult.password}`}
-                  />
-                  <Button className="w-full" onClick={() => {
-                    setRegisterHumanOpen(false);
-                    setRegisterHumanResult(null);
-                  }}>
-                    {t("common.done")}
-                  </Button>
-                </div>
-              ) : (
-                <RegisterHumanForm
-                  onSuccess={(name, email, password) => {
-                    setRegisterHumanResult({ name, email, password });
-                    fetchUsers();
-                  }}
-                />
-              )}
-            </DialogContent>
-          </Dialog>
-
-          {/* Register Agent */}
+          {/* Hire Agent */}
           <Dialog open={registerAgentOpen} onOpenChange={(open) => {
             setRegisterAgentOpen(open);
             if (!open) setRegisterAgentResult(null);
