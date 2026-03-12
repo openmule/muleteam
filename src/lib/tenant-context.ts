@@ -53,8 +53,11 @@ export function getRepoPath(): string {
  * For self-hosted (no x-team-slug header), runs fn() without ALS override.
  */
 export async function withTenantFromRequest<T>(request: Request, fn: () => T | Promise<T>): Promise<T> {
-  const slug = request.headers.get("x-team-slug");
+  const rawSlug = request.headers.get("x-team-slug");
   const dbUrl = request.headers.get("x-tenant-database-url") || undefined;
+
+  // Validate slug to prevent path traversal
+  const slug = rawSlug && /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(rawSlug) ? rawSlug : null;
 
   if (!slug && !dbUrl) return fn();
 
