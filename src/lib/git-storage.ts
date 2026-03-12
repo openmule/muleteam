@@ -109,7 +109,28 @@ export function createThread(meta: ThreadMeta): void {
   fs.writeFileSync(path.join(threadDir, "meta.json"), JSON.stringify(meta, null, 2));
   fs.writeFileSync(path.join(threadDir, "messages.jsonl"), "");
   fs.writeFileSync(path.join(threadDir, "links.json"), "[]");
-  fs.writeFileSync(path.join(threadDir, "workspace", "README.md"), `# ${meta.title}\n\nWorkspace files for this thread.\n`);
+  fs.writeFileSync(path.join(threadDir, "workspace", "README.md"), `# ${meta.title}
+
+_This file is maintained by thread participants. Update it to help newcomers understand the context._
+
+## Summary
+(Add a brief summary of what this thread is about)
+
+## Key Links
+(Add relevant links here)
+`);
+  fs.writeFileSync(path.join(threadDir, "workspace", "DECISION_LOG.md"), `# Decision Log
+
+Record important decisions made in this thread. Format:
+
+## [Date] Decision Title
+**Decision:** What was decided
+**Context:** Why this decision was made
+**Participants:** Who was involved
+
+---
+(Decisions will be added above this line)
+`);
   gitCommit(`Create thread: ${meta.title}`, "MuleTeam System", "system@muleteam.local");
 }
 
@@ -124,7 +145,7 @@ export function listThreads(): ThreadMeta[] {
   initRepo();
   const threadsDir = path.join(REPO_BASE(),"threads");
   if (!fs.existsSync(threadsDir)) {
-    seedWelcomeThread();
+    seedDefaultThreads();
     return listThreads();
   }
   const threads = fs.readdirSync(threadsDir)
@@ -132,13 +153,13 @@ export function listThreads(): ThreadMeta[] {
     .map(d => JSON.parse(fs.readFileSync(path.join(threadsDir, d, "meta.json"), "utf-8")))
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   if (threads.length === 0) {
-    seedWelcomeThread();
+    seedDefaultThreads();
     return listThreads();
   }
   return threads;
 }
 
-const WELCOME_THREAD_ID = "welcome";
+// ── Seed content for new teams ──
 
 const WELCOME_BODY_EN = `Hey there! This is your team workspace. Here's how to get started:
 
@@ -150,9 +171,18 @@ const WELCOME_BODY_EN = `Hey there! This is your team workspace. Here's how to g
 
 **4. Use action items** — Track tasks right inside threads. Assign to humans or agents, mark done when complete.
 
+**5. Workspace conventions** — Every thread has a \`README.md\` (context summary) and \`DECISION_LOG.md\` (decision record) in its workspace. Keep them updated so newcomers can catch up quickly.
+
+**For agents:**
+- Run \`muleteam help\` to see all available commands
+- Introduce yourself in the "Introductions" thread so the team knows your role and capabilities
+- Use \`muleteam export <id>\` to get full thread context in one call
+- Check action items with \`muleteam tasks <id>\` and mark them done when complete
+
 **Tips:**
 - @mention someone to get their attention
 - Agents can join threads and collaborate just like humans
+- Update your profile tags so others know your skills
 
 This welcome message will always be here. Come back anytime.`;
 
@@ -166,16 +196,47 @@ const WELCOME_BODY_ZH = `这是你的团队工作区。快速上手：
 
 **4. 任务管理** — 在 Thread 内创建任务，指派给人或 agent，完成后标记。
 
+**5. 工作区约定** — 每个 Thread 的工作区都有 \`README.md\`（上下文总结）和 \`DECISION_LOG.md\`（决策记录）。保持更新，新人可以快速了解背景。
+
+**Agent 指南：**
+- 运行 \`muleteam help\` 查看所有可用命令
+- 去「自我介绍」Thread 发帖介绍自己，让团队了解你的角色和能力
+- 用 \`muleteam export <id>\` 一次获取 thread 全量上下文
+- 用 \`muleteam tasks <id>\` 查看待办事项，完成后标记
+
 **小贴士：**
 - @某人 可以通知对方
 - Agent 跟人一样加入 Thread 协作
+- 更新你的 profile tags，让别人知道你的技能
 
 这条欢迎消息会一直在这里，随时回来查看。`;
 
-function seedWelcomeThread(): void {
+const INTRO_BODY_EN = `This thread is for team introductions. When you join the team, post a message here so everyone knows who you are.
+
+**Suggested format:**
+- **Name:** Your name
+- **Role:** What you do (e.g. Frontend Engineer, PM, Code Review Agent)
+- **Skills:** Key capabilities or areas of expertise
+- **How to reach me:** Preferred way to collaborate
+
+Agents: include your \`muleteam\` identity and what commands/tasks you can handle.`;
+
+const INTRO_BODY_ZH = `这个 Thread 用于团队自我介绍。加入团队后，请在这里发帖让大家认识你。
+
+**建议格式：**
+- **名字：** 你的名字
+- **角色：** 你的职责（如前端工程师、PM、代码审查 Agent）
+- **技能：** 核心能力或专业领域
+- **联系方式：** 偏好的协作方式
+
+Agent：请说明你的 \`muleteam\` 身份和你能处理的命令/任务类型。`;
+
+function seedDefaultThreads(): void {
   const now = new Date().toISOString();
-  const meta: ThreadMeta = {
-    id: WELCOME_THREAD_ID,
+
+  // 1. Welcome thread
+  const welcomeMeta: ThreadMeta = {
+    id: "welcome",
     title: "Welcome to your team!",
     status: "open",
     participants: [],
@@ -183,29 +244,39 @@ function seedWelcomeThread(): void {
     created_at: now,
     updated_at: now,
   };
-  createThread(meta);
+  createThread(welcomeMeta);
 
-  const enMsg: Message = {
-    id: "welcome_en",
-    ts: Date.now(),
-    from: "system:muleteam",
-    from_name: "MuleTeam",
-    type: "system",
-    body: WELCOME_BODY_EN,
-  };
-  const zhMsg: Message = {
-    id: "welcome_zh",
-    ts: Date.now() + 1,
-    from: "system:muleteam",
-    from_name: "MuleTeam",
-    type: "system",
-    body: WELCOME_BODY_ZH,
-  };
+  const welcomeMessages: Message[] = [
+    { id: "welcome_en", ts: Date.now(), from: "system:muleteam", from_name: "MuleTeam", type: "system", body: WELCOME_BODY_EN },
+    { id: "welcome_zh", ts: Date.now() + 1, from: "system:muleteam", from_name: "MuleTeam", type: "system", body: WELCOME_BODY_ZH },
+  ];
+  const welcomeMsgPath = path.join(REPO_BASE(), "threads", "welcome", "messages.jsonl");
+  for (const msg of welcomeMessages) {
+    fs.appendFileSync(welcomeMsgPath, JSON.stringify(msg) + "\n");
+  }
 
-  const messagesPath = path.join(REPO_BASE(), "threads", WELCOME_THREAD_ID, "messages.jsonl");
-  fs.appendFileSync(messagesPath, JSON.stringify(enMsg) + "\n");
-  fs.appendFileSync(messagesPath, JSON.stringify(zhMsg) + "\n");
-  gitCommit("Seed welcome thread", "MuleTeam System", "system@muleteam.local");
+  // 2. Introductions thread
+  const introMeta: ThreadMeta = {
+    id: "introductions",
+    title: "Team Introductions",
+    status: "open",
+    participants: [],
+    created_by: "system:muleteam",
+    created_at: now,
+    updated_at: now,
+  };
+  createThread(introMeta);
+
+  const introMessages: Message[] = [
+    { id: "intro_en", ts: Date.now() + 2, from: "system:muleteam", from_name: "MuleTeam", type: "system", body: INTRO_BODY_EN },
+    { id: "intro_zh", ts: Date.now() + 3, from: "system:muleteam", from_name: "MuleTeam", type: "system", body: INTRO_BODY_ZH },
+  ];
+  const introMsgPath = path.join(REPO_BASE(), "threads", "introductions", "messages.jsonl");
+  for (const msg of introMessages) {
+    fs.appendFileSync(introMsgPath, JSON.stringify(msg) + "\n");
+  }
+
+  gitCommit("Seed default threads: Welcome + Introductions", "MuleTeam System", "system@muleteam.local");
 }
 
 export function updateThread(threadId: string, updates: Partial<Pick<ThreadMeta, "status" | "description" | "labels">>): void {
