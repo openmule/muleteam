@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 
     const url = new URL(request.url);
     const unreadOnly = url.searchParams.get("unread_only") === "true";
-    const limit = Math.min(parseInt(url.searchParams.get("limit") || "50", 10), 200);
+    const limit = Math.min(Math.max(1, parseInt(url.searchParams.get("limit") || "50", 10) || 50), 200);
 
     const userId = `human:${user.id}`;
     const sql = await db();

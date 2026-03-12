@@ -39,6 +39,11 @@ export async function POST(
 
     if (!url) return NextResponse.json({ error: "URL is required" }, { status: 400 });
 
+    // Only allow http/https URLs to prevent javascript: / data: XSS
+    if (typeof url !== "string" || !/^https?:\/\//i.test(url)) {
+      return NextResponse.json({ error: "Only http and https URLs are allowed" }, { status: 400 });
+    }
+
     const link: HyperlinkEntry = {
       id: `link_${nanoid()}`,
       url,
