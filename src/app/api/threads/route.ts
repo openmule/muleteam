@@ -37,6 +37,9 @@ export async function POST(request: Request) {
 
     const { title, description, participantIds, channel_id } = await request.json();
     if (!title) return NextResponse.json({ error: "Title is required" }, { status: 400 });
+    if (typeof title !== "string" || title.length > 200) {
+      return NextResponse.json({ error: "Title must be 200 characters or fewer" }, { status: 400 });
+    }
 
     const creatorId = entity.type === "human" ? `human:${entity.id}` : `agent:${entity.id}`;
     const participants: ThreadMeta["participants"] = [
