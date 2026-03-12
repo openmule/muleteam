@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedEntity } from "@/lib/auth";
 import { listThreads, listWorkspaceFiles } from "@/lib/git-storage";
+import { withTenantFromRequest } from "@/lib/tenant-context";
 
 export interface FileTreeNode {
   name: string;
@@ -45,37 +46,39 @@ function buildTree(files: { name: string; size: number; modified: string }[]): F
 
 // GET - list all files across all threads, grouped by thread
 export async function GET(request: Request) {
-  const entity = await getAuthenticatedEntity(request);
-  if (!entity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  return withTenantFromRequest(request, async () => {
+    const entity = await getAuthenticatedEntity(request);
+    if (!entity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const threads = listThreads();
-  const groups: ThreadFileGroup[] = [];
-  let totalSize = 0;
+    const threads = listThreads();
+    const groups: ThreadFileGroup[] = [];
+    let totalSize = 0;
 
-  for (const thread of threads) {
-    const files = listWorkspaceFiles(thread.id);
-    if (files.length === 0) continue;
+    for (const thread of threads) {
+      const files = listWorkspaceFiles(thread.id);
+      if (files.length === 0) continue;
 
-    const threadSize = files.reduce((sum, f) => sum + f.size, 0);
-    totalSize += threadSize;
+      const threadSize = files.reduce((sum, f) => sum + f.size, 0);
+      totalSize += threadSize;
 
-    groups.push({
-      thread_id: thread.id,
-      thread_title: thread.title,
-      total_size: threadSize,
-      updated_at: thread.updated_at,
-      tree: buildTree(files),
+      groups.push({
+        thread_id: thread.id,
+        thread_title: thread.title,
+        total_size: threadSize,
+        updated_at: thread.updated_at,
+        tree: buildTree(files),
+      });
+    }
+
+    // Sort by most recently updated thread first
+    groups.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+
+    const maxStorageMb = parseInt(process.env.MAX_STORAGE_MB || "0", 10) || 0; // 0 = unlimited
+
+    return NextResponse.json({
+      groups,
+      total_size: totalSize,
+      max_storage_bytes: maxStorageMb > 0 ? maxStorageMb * 1024 * 1024 : 0,
     });
-  }
-
-  // Sort by most recently updated thread first
-  groups.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-
-  const maxStorageMb = parseInt(process.env.MAX_STORAGE_MB || "0", 10) || 0; // 0 = unlimited
-
-  return NextResponse.json({
-    groups,
-    total_size: totalSize,
-    max_storage_bytes: maxStorageMb > 0 ? maxStorageMb * 1024 * 1024 : 0,
   });
 }

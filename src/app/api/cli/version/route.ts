@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { withTenantFromRequest } from "@/lib/tenant-context";
 
 // Extract CLI version from the shell script (source of truth)
 function getCliVersion(): string {
@@ -14,6 +15,8 @@ function getCliVersion(): string {
   }
 }
 
-export async function GET() {
-  return NextResponse.json({ version: getCliVersion() });
+export async function GET(request: Request) {
+  return withTenantFromRequest(request, async () => {
+    return NextResponse.json({ version: getCliVersion() });
+  });
 }
