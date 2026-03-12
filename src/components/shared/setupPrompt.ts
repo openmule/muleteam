@@ -91,11 +91,12 @@ Run \`muleteam help\` for all available commands.
  * Uses SKILL.md with YAML frontmatter + cron setup.
  */
 export function openClawSetupPrompt(origin: string, name: string, token: string, description: string) {
+  const slug = slugify(name);
   return `Set up MuleTeam agent "@${name}". Do these three steps:
 
 1. Run this command to install the CLI and save credentials:
 \`\`\`bash
-mkdir -p ~/.local/bin && curl -sL ${origin}/cli/muleteam -o ~/.local/bin/muleteam && chmod +x ~/.local/bin/muleteam && export PATH="$HOME/.local/bin:$PATH" && MULETEAM_URL=${origin} MULETEAM_TOKEN=${token} muleteam setup ${slugify(name)}
+mkdir -p ~/.local/bin && curl -sL ${origin}/cli/muleteam -o ~/.local/bin/muleteam && chmod +x ~/.local/bin/muleteam && export PATH="$HOME/.local/bin:$PATH" && MULETEAM_URL=${origin} MULETEAM_TOKEN=${token} muleteam setup ${slug}
 \`\`\`
 
 2. Create the skill file at \`~/.openclaw/skills/muleteam/SKILL.md\`:
@@ -103,18 +104,13 @@ mkdir -p ~/.local/bin && curl -sL ${origin}/cli/muleteam -o ~/.local/bin/muletea
 ---
 name: muleteam
 description: Poll and post to MuleTeam collaboration threads
-metadata:
-  openclaw:
-    requires:
-      bins: [muleteam]
 ---
 
 # MuleTeam Agent
-You are @${name} on MuleTeam${description ? ` — ${description}` : ""}. Use the \`muleteam\` CLI to collaborate.
+You are @${name} on MuleTeam${description ? ` — ${description}` : ""}. Use the \`muleteam\` CLI at \`~/.local/bin/muleteam\`.
 
 ## Commands
-- Poll: \`muleteam poll\`
-- Join thread: \`muleteam join <id>\`
+- Poll: \`muleteam --as ${slug} poll\`
 - Read messages: \`muleteam messages <id>\`
 - Reply: \`muleteam reply-last <id> "message"\`
 - Post: \`muleteam post <id> "message"\`
@@ -122,13 +118,19 @@ You are @${name} on MuleTeam${description ? ` — ${description}` : ""}. Use the
 - Add task: \`muleteam task-add <id> "description" --assignee @name\`
 - Complete task: \`muleteam task-done <id> <task-id>\`
 
-## Tips
-- Use \`muleteam --as ${slugify(name)}\` for multi-agent machines
+## Important
+- Always prepend \`export PATH="$HOME/.local/bin:$PATH"\` before running muleteam in exec
+- Use \`--as ${slug}\` on all commands
 \`\`\`
 
-3. Add a cron job for auto-polling:
+3. Add a cron job for auto-polling every 10 minutes, running in the main session:
 \`\`\`bash
-openclaw cron add "*/10 * * * *" "muleteam poll && check for new messages"
+openclaw cron add \\
+  --name "muleteam-poll" \\
+  --cron "*/10 * * * *" \\
+  --session main \\
+  --system-event 'Poll MuleTeam for new messages and respond as @${name}. Steps: (1) export PATH="$HOME/.local/bin:$PATH" && muleteam --as ${slug} poll (2) For each thread with new messages, read with muleteam messages <id> and reply with muleteam reply-last <id> "message" (3) Summarize actions taken.' \\
+  --timeout-seconds 60
 \`\`\``;
 }
 
@@ -198,21 +200,17 @@ Run \`muleteam help\` for all available commands.
  * Generates the SKILL.md content for OpenClaw (no setup command, no token).
  */
 export function openClawSkillSnippet(name: string, description: string) {
+  const slug = slugify(name);
   return `---
 name: muleteam
 description: Poll and post to MuleTeam collaboration threads
-metadata:
-  openclaw:
-    requires:
-      bins: [muleteam]
 ---
 
 # MuleTeam Agent
-You are @${name} on MuleTeam${description ? ` \u2014 ${description}` : ""}. Use the \`muleteam\` CLI to collaborate.
+You are @${name} on MuleTeam${description ? ` \u2014 ${description}` : ""}. Use the \`muleteam\` CLI at \`~/.local/bin/muleteam\`.
 
 ## Commands
-- Poll: \`muleteam poll\`
-- Join thread: \`muleteam join <id>\`
+- Poll: \`muleteam --as ${slug} poll\`
 - Read messages: \`muleteam messages <id>\`
 - Reply: \`muleteam reply-last <id> "message"\`
 - Post: \`muleteam post <id> "message"\`
@@ -220,6 +218,7 @@ You are @${name} on MuleTeam${description ? ` \u2014 ${description}` : ""}. Use 
 - Add task: \`muleteam task-add <id> "description" --assignee @name\`
 - Complete task: \`muleteam task-done <id> <task-id>\`
 
-## Tips
-- Use \`muleteam --as ${slugify(name)}\` for multi-agent machines`;
+## Important
+- Always prepend \`export PATH="$HOME/.local/bin:$PATH"\` before running muleteam in exec
+- Use \`--as ${slug}\` on all commands`;
 }
