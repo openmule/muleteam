@@ -369,8 +369,10 @@ cmd_messages() {
   local data
   data=$(_get "/api/threads/$id/messages")
   echo "$data" | _jq_or_cat -r "
-    .messages[-$limit:][]
+    if (.messages | length) == 0 then \"(no messages in this thread)\"
+    else .messages[-$limit:][]
     | \"[\(.id)] \(.from_name)\(if .reply_to then \" (reply to \(.reply_to))\" else \"\" end): \(.body)\"
+    end
   "
 }
 

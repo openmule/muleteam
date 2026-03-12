@@ -15,7 +15,9 @@ export async function GET(
     const thread = getThread(threadId);
     if (!thread) return NextResponse.json({ error: "Thread not found" }, { status: 404 });
 
-    const log = getThreadGitLog(threadId);
+    const url = new URL(request.url);
+    const limit = Math.min(Math.max(1, parseInt(url.searchParams.get("limit") || "20", 10) || 20), 500);
+    const log = getThreadGitLog(threadId, limit);
     return NextResponse.json({ log });
   });
 }
