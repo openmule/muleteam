@@ -8,6 +8,8 @@
   "nav.logOut": "退出登录",
   "nav.theme": "主题",
   "nav.toggleDarkMode": "切换深色模式",
+  "nav.menu": "菜单",
+  "nav.language": "语言",
 
   "common.loading": "加载中...",
   "common.cancel": "取消",

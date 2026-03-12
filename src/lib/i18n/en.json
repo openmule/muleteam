@@ -8,6 +8,8 @@
   "nav.logOut": "Log out",
   "nav.theme": "Theme",
   "nav.toggleDarkMode": "Toggle dark mode",
+  "nav.menu": "Menu",
+  "nav.language": "Language",
 
   "common.loading": "Loading...",
   "common.cancel": "Cancel",
