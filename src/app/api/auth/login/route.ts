@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const sql = db();
+    const sql = await db();
 
     const result = (await sql`
       SELECT id, email, name, password_hash FROM users WHERE email = ${email}

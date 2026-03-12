@@ -39,7 +39,7 @@ export async function getUser(
     const platformName = request.headers.get("x-platform-user-name") || "";
     // Look up the user by email in the tenant database
     try {
-      const sql = (await import("./db")).db();
+      const sql = await (await import("./db")).db();
       const rows = await sql`SELECT id, email, name, team_role FROM users WHERE email = ${platformEmail} LIMIT 1` as { id: string; email: string; name: string; team_role: string | null }[];
       if (rows.length > 0) {
         return { id: rows[0].id, email: rows[0].email, name: rows[0].name, team_role: (rows[0].team_role as "owner" | "member") || "member" };
@@ -138,7 +138,7 @@ export async function getAuthenticatedEntity(
 
 async function getTeamRole(userId: string): Promise<"owner" | "member"> {
   try {
-    const sql = (await import("./db")).db();
+    const sql = await (await import("./db")).db();
     const rows = await sql`SELECT team_role FROM users WHERE id = ${userId}` as { team_role: string | null }[];
     if (rows.length > 0 && rows[0].team_role === "owner") return "owner";
   } catch {
@@ -157,7 +157,7 @@ export function requireOwner(entity: AuthResult): Response | null {
 
 async function getHumanFromPAT(rawToken: string): Promise<{ id: string; name: string; email: string } | null> {
   try {
-    const sql = (await import("./db")).db();
+    const sql = await (await import("./db")).db();
     const rows = await sql`
       SELECT pt.id AS token_id, pt.token_hash, u.id, u.name, u.email
       FROM personal_tokens pt

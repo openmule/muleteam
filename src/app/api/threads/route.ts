@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   }
 
   // Add other participants
-  const sql = db();
+  const sql = await db();
   for (const pid of (participantIds || [])) {
     if (participants.some(p => p.id === pid)) continue;
     if (pid.startsWith("agent:")) {

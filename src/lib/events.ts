@@ -29,7 +29,7 @@ async function getUserWebhookUrl(participantId: string): Promise<string | null> 
   if (!participantId.startsWith("human:")) return null;
   const rawId = participantId.slice("human:".length);
   try {
-    const sql = db();
+    const sql = await db();
     const rows = (await sql`
       SELECT webhook_url FROM users WHERE id = ${rawId}
     `) as { webhook_url: string | null }[];
@@ -109,7 +109,7 @@ export async function emitMentionEvents(
     }
     if (mentionedIds.length === 0) return;
 
-    const sql = db();
+    const sql = await db();
     for (const userId of mentionedIds) {
       const id = generateId();
       await sql`
@@ -137,7 +137,7 @@ export async function emitReplyEvent(
     // Don't notify if replying to yourself
     if (originalMessage.from === message.from) return;
 
-    const sql = db();
+    const sql = await db();
     const id = generateId();
     await sql`
       INSERT INTO events (id, user_id, type, thread_id, thread_title, message_id, actor_id, actor_name, body)
@@ -161,7 +161,7 @@ export async function emitJoinEvent(
   actorName: string
 ): Promise<void> {
   try {
-    const sql = db();
+    const sql = await db();
     const id = generateId();
     await sql`
       INSERT INTO events (id, user_id, type, thread_id, thread_title, message_id, actor_id, actor_name, body)
@@ -186,7 +186,7 @@ export async function emitStatusChangeEvent(
   participantIds: string[]
 ): Promise<void> {
   try {
-    const sql = db();
+    const sql = await db();
     for (const userId of participantIds) {
       if (userId === actorId) continue;
       const id = generateId();
@@ -215,7 +215,7 @@ export async function emitTaskAssignedEvent(
   try {
     if (!task.assignee || task.assignee === actorId) return;
 
-    const sql = db();
+    const sql = await db();
     const id = generateId();
     await sql`
       INSERT INTO events (id, user_id, type, thread_id, thread_title, message_id, actor_id, actor_name, body)
@@ -242,7 +242,7 @@ export async function emitTaskDoneEvent(
   try {
     if (task.created_by === actorId) return;
 
-    const sql = db();
+    const sql = await db();
     const id = generateId();
     await sql`
       INSERT INTO events (id, user_id, type, thread_id, thread_title, message_id, actor_id, actor_name, body)

@@ -15,7 +15,7 @@ export async function PATCH(
 
   const { eventId } = await params;
   const userId = `human:${user.id}`;
-  const sql = db();
+  const sql = await db();
 
   await sql`
     UPDATE events SET read = true

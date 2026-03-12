@@ -10,7 +10,7 @@ export async function POST(
   try {
     const { token } = await params;
     await ensureMigrations();
-    const sql = db();
+    const sql = await db();
 
     // Validate the invite token
     const invites = (await sql`

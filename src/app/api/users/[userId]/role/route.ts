@@ -31,7 +31,7 @@ export async function PATCH(
   }
 
   await ensureMigrations();
-  const sql = db();
+  const sql = await db();
 
   // Verify target user exists
   const target = await sql`SELECT id, team_role FROM users WHERE id = ${userId}` as { id: string; team_role: string }[];

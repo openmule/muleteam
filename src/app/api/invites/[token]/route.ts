@@ -10,7 +10,7 @@ export async function GET(
 ) {
   const { token } = await params;
   await ensureMigrations();
-  const sql = db();
+  const sql = await db();
 
   const rows = (await sql`
     SELECT token, note, expires_at, status, created_at
@@ -43,7 +43,7 @@ export async function DELETE(
 
   const { token } = await params;
   await ensureMigrations();
-  const sql = db();
+  const sql = await db();
 
   await sql`UPDATE invites SET status = 'revoked' WHERE token = ${token} AND status = 'pending'`;
 

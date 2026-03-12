@@ -24,7 +24,7 @@ export async function ensureMigrations(): Promise<void> {
 }
 
 async function runMigrations(): Promise<void> {
-  const sql = db();
+  const sql = await db();
 
   // Each statement is idempotent (IF NOT EXISTS) — safe to re-run.
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS description TEXT`;

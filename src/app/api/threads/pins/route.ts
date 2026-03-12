@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   if (!entity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   await ensureMigrations();
-  const sql = db();
+  const sql = await db();
   const rows = await sql`
     SELECT thread_id, pinned_at, pinned_by
     FROM thread_pins

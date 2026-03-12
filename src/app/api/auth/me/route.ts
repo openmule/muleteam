@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     }
 
     await ensureMigrations();
-    const sql = db();
+    const sql = await db();
 
     const result = (await sql`
       SELECT id, email, name, avatar_url, team_role FROM users WHERE id = ${user.id}
