@@ -123,11 +123,89 @@ export function getThread(threadId: string): ThreadMeta | null {
 export function listThreads(): ThreadMeta[] {
   initRepo();
   const threadsDir = path.join(REPO_BASE(),"threads");
-  if (!fs.existsSync(threadsDir)) return [];
-  return fs.readdirSync(threadsDir)
+  if (!fs.existsSync(threadsDir)) {
+    seedWelcomeThread();
+    return listThreads();
+  }
+  const threads = fs.readdirSync(threadsDir)
     .filter(d => fs.existsSync(path.join(threadsDir, d, "meta.json")))
     .map(d => JSON.parse(fs.readFileSync(path.join(threadsDir, d, "meta.json"), "utf-8")))
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+  if (threads.length === 0) {
+    seedWelcomeThread();
+    return listThreads();
+  }
+  return threads;
+}
+
+const WELCOME_THREAD_ID = "welcome";
+
+const WELCOME_BODY_EN = `Hey there! This is your team workspace. Here's how to get started:
+
+**1. Create a thread** — Threads are your team's conversations. Click "+ New Thread" to start one. Think of it like a meeting room: topic-focused, with everyone who needs to be there.
+
+**2. Invite your team** — Go to Members → "Invite Member" to bring in humans. For AI agents, click "+ Hire Agent".
+
+**3. Add files** — Each thread has a workspace for shared files. Upload docs, images, or let agents create artifacts.
+
+**4. Use action items** — Track tasks right inside threads. Assign to humans or agents, mark done when complete.
+
+**Tips:**
+- @mention someone to get their attention
+- Agents can join threads and collaborate just like humans
+
+This welcome message will always be here. Come back anytime.`;
+
+const WELCOME_BODY_ZH = `这是你的团队工作区。快速上手：
+
+**1. 创建 Thread** — Thread 是团队的对话空间。点击 "+" 创建一个。把它想象成会议室：围绕主题，相关的人都在。
+
+**2. 邀请团队** — 进入成员页面，点「邀请成员」加人，点「+ 雇佣代理」加 AI agent。
+
+**3. 共享文件** — 每个 Thread 都有工作区，可以上传文档、图片，agent 也可以在里面创建内容。
+
+**4. 任务管理** — 在 Thread 内创建任务，指派给人或 agent，完成后标记。
+
+**小贴士：**
+- @某人 可以通知对方
+- Agent 跟人一样加入 Thread 协作
+
+这条欢迎消息会一直在这里，随时回来查看。`;
+
+function seedWelcomeThread(): void {
+  const now = new Date().toISOString();
+  const meta: ThreadMeta = {
+    id: WELCOME_THREAD_ID,
+    title: "Welcome to your team!",
+    status: "open",
+    participants: [],
+    created_by: "system:muleteam",
+    created_at: now,
+    updated_at: now,
+  };
+  createThread(meta);
+
+  const enMsg: Message = {
+    id: "welcome_en",
+    ts: Date.now(),
+    from: "system:muleteam",
+    from_name: "MuleTeam",
+    type: "system",
+    body: WELCOME_BODY_EN,
+  };
+  const zhMsg: Message = {
+    id: "welcome_zh",
+    ts: Date.now() + 1,
+    from: "system:muleteam",
+    from_name: "MuleTeam",
+    type: "system",
+    body: WELCOME_BODY_ZH,
+  };
+
+  const messagesPath = path.join(REPO_BASE(), "threads", WELCOME_THREAD_ID, "messages.jsonl");
+  fs.appendFileSync(messagesPath, JSON.stringify(enMsg) + "\n");
+  fs.appendFileSync(messagesPath, JSON.stringify(zhMsg) + "\n");
+  gitCommit("Seed welcome thread", "MuleTeam System", "system@muleteam.local");
 }
 
 export function updateThread(threadId: string, updates: Partial<Pick<ThreadMeta, "status" | "description" | "labels">>): void {
