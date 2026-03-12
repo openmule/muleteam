@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
+  // Platform-authenticated requests come with pre-verified user headers
+  const platformUser = request.headers.get("x-platform-user-email");
+  if (platformUser) {
+    return NextResponse.next();
+  }
+
   const token = request.cookies.get("token") || request.cookies.get("platform_token");
 
   if (!token) {
