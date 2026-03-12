@@ -33,6 +33,32 @@ export function verifyToken(token: string): UserPayload | null {
 export async function getUser(
   request: Request
 ): Promise<(UserPayload & { team_role?: "owner" | "member" }) | null> {
+  // Check platform proxy headers first (set by platform middleware after JWT verification)
+  const platformEmail = request.headers.get("x-platform-user-email");
+  if (platformEmail) {
+    const platformName = request.headers.get("x-platform-user-name") || "";
+    // Look up the user by email in the tenant database
+    try {
+      const sql = (await import("./db")).db();
+      const rows = await sql`SELECT id, email, name, team_role FROM users WHERE email = ${platformEmail} LIMIT 1` as { id: string; email: string; name: string; team_role: string | null }[];
+      if (rows.length > 0) {
+        return { id: rows[0].id, email: rows[0].email, name: rows[0].name, team_role: (rows[0].team_role as "owner" | "member") || "member" };
+      }
+      // User not yet in tenant DB — auto-create from platform context
+      const created = await sql`
+        INSERT INTO users (email, password_hash, name, role, team_role)
+        VALUES (${platformEmail}, 'platform-oauth-user', ${platformName || 'Team Member'}, 'human', 'member')
+        ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
+        RETURNING id, email, name, team_role
+      ` as { id: string; email: string; name: string; team_role: string | null }[];
+      if (created.length > 0) {
+        return { id: created[0].id, email: created[0].email, name: created[0].name, team_role: (created[0].team_role as "owner" | "member") || "member" };
+      }
+    } catch (err) {
+      console.error("Platform user lookup error:", err);
+    }
+  }
+
   const cookieHeader = request.headers.get("cookie");
   if (!cookieHeader) return null;
 
