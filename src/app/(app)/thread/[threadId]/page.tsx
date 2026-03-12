@@ -220,7 +220,8 @@ export default function ThreadDetailPage() {
       body: JSON.stringify({ body, reply_to: replyToId }),
     });
     setReplyTo(null);
-    await fetchMessages();
+    // Don't block on refetch — input clears immediately after POST succeeds
+    fetchMessages();
   };
 
   const handleStatusChange = async (newStatus: string) => {
