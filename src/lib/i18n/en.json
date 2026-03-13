@@ -4,6 +4,7 @@
   "nav.members": "Members",
   "nav.files": "Files",
   "nav.docs": "Docs",
+  "nav.settings": "Settings",
   "nav.myProfile": "My Profile",
   "nav.logOut": "Log out",
   "nav.theme": "Theme",
@@ -242,6 +243,17 @@
   "pat.neverUsed": "Never used",
   "pat.confirmRevoke": "Revoke this token? It will stop working immediately.",
   "pat.cliUsage": "CLI usage",
+
+  "settings.title": "Settings",
+  "settings.teamInfo": "Team",
+  "settings.teamName": "Team Name",
+  "settings.members": "Members",
+  "settings.planAndBilling": "Plan & Billing",
+  "settings.currentPlan": "Current plan",
+  "settings.freePlan": "Free",
+  "settings.freePlanDesc": "Unlimited members and threads. Upgrade for advanced features.",
+  "settings.upgrade": "Upgrade",
+  "settings.account": "Account",
 
   "mention.noResults": "No members found",
 
