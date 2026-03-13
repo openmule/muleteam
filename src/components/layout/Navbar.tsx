@@ -42,7 +42,9 @@ export function Navbar() {
   const [teamInfo, setTeamInfo] = useState<{ slug: string; teamsUrl: string } | null>(null);
 
   // Detect platform subdomain (e.g. test-team.themule.team)
+  // Only active when NEXT_PUBLIC_PLATFORM_MODE=true (set by muleteam-ai platform)
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_PLATFORM_MODE !== "true") return;
     const { hostname, protocol, port } = window.location;
     const parts = hostname.split(".");
     if (parts.length >= 3) {
