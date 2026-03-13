@@ -39,6 +39,21 @@ export function Navbar() {
   const { toggle: toggleTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [teamInfo, setTeamInfo] = useState<{ slug: string; teamsUrl: string } | null>(null);
+
+  // Detect platform subdomain (e.g. test-team.themule.team)
+  useEffect(() => {
+    const { hostname, protocol, port } = window.location;
+    const parts = hostname.split(".");
+    if (parts.length >= 3) {
+      const slug = parts[0];
+      if (slug !== "www" && slug !== "api") {
+        const rootDomain = parts.slice(1).join(".");
+        const portSuffix = port && port !== "443" && port !== "80" ? `:${port}` : "";
+        setTeamInfo({ slug, teamsUrl: `${protocol}//${rootDomain}${portSuffix}/teams` });
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -106,6 +121,17 @@ export function Navbar() {
                   );
                 })}
               </nav>
+              {/* Switch Team in mobile menu */}
+              {teamInfo && (
+                <div className="border-t border-border">
+                  <a
+                    href={teamInfo.teamsUrl}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  >
+                    {t("nav.switchTeam")}
+                  </a>
+                </div>
+              )}
               {/* Theme + Language in mobile menu */}
               <div className="border-t border-border px-4 py-3">
                 <div className="flex items-center justify-between mb-3">
@@ -143,6 +169,18 @@ export function Navbar() {
             <img src="/logo.svg" width={20} height={20} alt="MuleTeam" />
             <span className="hidden sm:inline">MuleTeam</span>
           </Link>
+          {teamInfo && (
+            <>
+              <span className="text-muted-foreground/50 hidden sm:inline">/</span>
+              <a
+                href={teamInfo.teamsUrl}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors hidden sm:inline truncate max-w-[120px]"
+                title={t("nav.switchTeam")}
+              >
+                {teamInfo.slug}
+              </a>
+            </>
+          )}
         </div>
 
         {/* Center: Navigation (desktop only) */}
@@ -223,6 +261,11 @@ export function Navbar() {
                 <DropdownMenuItem onClick={() => router.push(memberUrl(`human:${user.id}`))}>
                   {t("nav.myProfile")}
                 </DropdownMenuItem>
+                {teamInfo && (
+                  <DropdownMenuItem onClick={() => { window.location.href = teamInfo.teamsUrl; }}>
+                    {t("nav.switchTeam")}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout} className="text-destructive">
                   {t("nav.logOut")}
