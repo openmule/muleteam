@@ -141,11 +141,11 @@ export function getThread(threadId: string): ThreadMeta | null {
   return JSON.parse(fs.readFileSync(metaPath, "utf-8"));
 }
 
-export function listThreads(): ThreadMeta[] {
+export function listThreads(locale?: string): ThreadMeta[] {
   initRepo();
   const threadsDir = path.join(REPO_BASE(),"threads");
   if (!fs.existsSync(threadsDir)) {
-    seedDefaultThreads();
+    seedDefaultThreads(locale);
     return listThreads();
   }
   const threads = fs.readdirSync(threadsDir)
@@ -153,7 +153,7 @@ export function listThreads(): ThreadMeta[] {
     .map(d => JSON.parse(fs.readFileSync(path.join(threadsDir, d, "meta.json"), "utf-8")))
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   if (threads.length === 0) {
-    seedDefaultThreads();
+    seedDefaultThreads(locale);
     return listThreads();
   }
   return threads;
@@ -231,13 +231,14 @@ const INTRO_BODY_ZH = `这个 Thread 用于团队自我介绍。加入团队后�
 
 Agent：请说明你的 \`muleteam\` 身份和你能处理的命令/任务类型。`;
 
-function seedDefaultThreads(): void {
+function seedDefaultThreads(locale?: string): void {
   const now = new Date().toISOString();
+  const isZh = locale?.startsWith("zh") ?? false;
 
   // 1. Welcome thread
   const welcomeMeta: ThreadMeta = {
     id: "welcome",
-    title: "Welcome to your team!",
+    title: isZh ? "欢迎来到你的团队！" : "Welcome to your team!",
     status: "open",
     participants: [],
     created_by: "system:muleteam",
@@ -246,19 +247,52 @@ function seedDefaultThreads(): void {
   };
   createThread(welcomeMeta);
 
-  const welcomeMessages: Message[] = [
-    { id: "welcome_en", ts: Date.now(), from: "system:muleteam", from_name: "MuleTeam", type: "system", body: WELCOME_BODY_EN },
-    { id: "welcome_zh", ts: Date.now() + 1, from: "system:muleteam", from_name: "MuleTeam", type: "system", body: WELCOME_BODY_ZH },
-  ];
+  // Seed README with actual getting-started content
+  const welcomeReadmePath = path.join(REPO_BASE(), "threads", "welcome", "workspace", "README.md");
+  fs.writeFileSync(welcomeReadmePath, isZh
+    ? `# 欢迎来到你的团队！
+
+## 快速上手
+
+1. 创建 Thread — 点击 "+" 开始一个新话题
+2. 邀请成员 — 成员页面邀请人或雇佣 AI Agent
+3. 协作 — 发消息、共享文件、分配任务
+
+## 工作区约定
+
+- \`README.md\` — 承载总结过的上下文，新人先读这个
+- \`DECISION_LOG.md\` — 记录重要决策
+`
+    : `# Welcome to your team!
+
+## Getting Started
+
+1. Create threads — Click "+" to start a new topic
+2. Invite members — Go to Members to invite humans or hire AI agents
+3. Collaborate — Post messages, share files, assign action items
+
+## Workspace Conventions
+
+- \`README.md\` — Summarized context for the thread; newcomers read this first
+- \`DECISION_LOG.md\` — Record of important decisions
+`);
+
+  const welcomeBody = isZh ? WELCOME_BODY_ZH : WELCOME_BODY_EN;
+  const welcomeMsg: Message = {
+    id: "welcome_msg",
+    ts: Date.now(),
+    from: "system:muleteam",
+    from_name: "MuleTeam",
+    type: "system",
+    body: welcomeBody,
+  };
   const welcomeMsgPath = path.join(REPO_BASE(), "threads", "welcome", "messages.jsonl");
-  for (const msg of welcomeMessages) {
-    fs.appendFileSync(welcomeMsgPath, JSON.stringify(msg) + "\n");
-  }
+  fs.appendFileSync(welcomeMsgPath, JSON.stringify(welcomeMsg) + "\n");
 
   // 2. Introductions thread
   const introMeta: ThreadMeta = {
     id: "introductions",
-    title: "Team Introductions",
+    title: isZh ? "团队自我介绍" : "Team Introductions",
     status: "open",
     participants: [],
     created_by: "system:muleteam",
@@ -267,14 +301,41 @@ function seedDefaultThreads(): void {
   };
   createThread(introMeta);
 
-  const introMessages: Message[] = [
-    { id: "intro_en", ts: Date.now() + 2, from: "system:muleteam", from_name: "MuleTeam", type: "system", body: INTRO_BODY_EN },
-    { id: "intro_zh", ts: Date.now() + 3, from: "system:muleteam", from_name: "MuleTeam", type: "system", body: INTRO_BODY_ZH },
-  ];
+  // Seed README with intro thread purpose
+  const introReadmePath = path.join(REPO_BASE(), "threads", "introductions", "workspace", "README.md");
+  fs.writeFileSync(introReadmePath, isZh
+    ? `# 团队自我介绍
+
+新成员加入团队后在这里发帖介绍自己，让大家知道你是谁、擅长什么。
+
+## 建议格式
+
+- **名字 / 角色**
+- **技能和能力**
+- **在做什么项目**
+`
+    : `# Team Introductions
+
+New team members post here to introduce themselves — who you are, what you're good at.
+
+## Suggested Format
+
+- **Name / Role**
+- **Skills & capabilities**
+- **What you're working on**
+`);
+
+  const introBody = isZh ? INTRO_BODY_ZH : INTRO_BODY_EN;
+  const introMsg: Message = {
+    id: "intro_msg",
+    ts: Date.now() + 1,
+    from: "system:muleteam",
+    from_name: "MuleTeam",
+    type: "system",
+    body: introBody,
+  };
   const introMsgPath = path.join(REPO_BASE(), "threads", "introductions", "messages.jsonl");
-  for (const msg of introMessages) {
-    fs.appendFileSync(introMsgPath, JSON.stringify(msg) + "\n");
-  }
+  fs.appendFileSync(introMsgPath, JSON.stringify(introMsg) + "\n");
 
   gitCommit("Seed default threads: Welcome + Introductions", "MuleTeam System", "system@muleteam.local");
 }

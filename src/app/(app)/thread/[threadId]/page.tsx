@@ -10,6 +10,7 @@ import { WorkspaceLinks } from "@/components/thread/WorkspaceLinks";
 import { ParticipantsList } from "@/components/thread/ParticipantsList";
 import { ActionItems } from "@/components/thread/ActionItems";
 import { GitHistory } from "@/components/thread/GitHistory";
+import { MarkdownBody } from "@/components/thread/MarkdownBody";
 import { JoinButton, LeaveButton } from "@/components/thread/JoinButton";
 import { MobileDetailSheet } from "@/components/thread/MobileDetailSheet";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
@@ -335,10 +336,8 @@ export default function ThreadDetailPage() {
         <div className="flex-1 md:w-3/5 flex flex-col md:border-r border-border min-h-0">
           {/* Description */}
           {thread.description && (
-            <div className="px-4 sm:px-6 py-4 border-b border-border">
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {thread.description}
-              </p>
+            <div className="px-4 sm:px-6 py-4 border-b border-border text-muted-foreground">
+              <MarkdownBody body={thread.description} />
             </div>
           )}
 
