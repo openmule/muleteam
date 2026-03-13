@@ -4,6 +4,7 @@
   "nav.members": "成员",
   "nav.files": "文件",
   "nav.docs": "文档",
+  "nav.settings": "设置",
   "nav.myProfile": "我的资料",
   "nav.logOut": "退出登录",
   "nav.theme": "主题",
@@ -242,6 +243,17 @@
   "pat.neverUsed": "从未使用",
   "pat.confirmRevoke": "撤销此令牌？撤销后立即失效。",
   "pat.cliUsage": "CLI 用法",
+
+  "settings.title": "设置",
+  "settings.teamInfo": "团队",
+  "settings.teamName": "团队名称",
+  "settings.members": "成员",
+  "settings.planAndBilling": "套餐与计费",
+  "settings.currentPlan": "当前套餐",
+  "settings.freePlan": "免费版",
+  "settings.freePlanDesc": "不限成员和话题数量。升级以获取高级功能。",
+  "settings.upgrade": "升级",
+  "settings.account": "账户",
 
   "mention.noResults": "未找到成员",
 

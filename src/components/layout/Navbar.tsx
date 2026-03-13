@@ -28,6 +28,7 @@ const NAV_KEYS = [
   { href: "/members", labelKey: "nav.members" },
   { href: "/files", labelKey: "nav.files" },
   { href: "/docs", labelKey: "nav.docs" },
+  { href: "/settings", labelKey: "nav.settings" },
 ] as const;
 
 export function Navbar() {
