@@ -11,7 +11,8 @@ export async function GET(request: Request) {
     const entity = await getAuthenticatedEntity(request);
     if (!entity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const threads = listThreads();
+    const locale = request.headers.get("accept-language")?.split(",")[0]?.split("-")[0] || "en";
+    const threads = listThreads(locale);
     return NextResponse.json({ threads });
   });
 }
