@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,7 +46,44 @@ export function NewThreadDialog({
   const [selectedChannelId, setSelectedChannelId] = useState(defaultChannelId || "");
   const [creating, setCreating] = useState(false);
 
+  // Derive locked member IDs from selected channel
+  const lockedMemberIds = useMemo(() => {
+    if (!selectedChannelId) return new Set<string>();
+    const channel = channels.find((c) => c.id === selectedChannelId);
+    if (!channel) return new Set<string>();
+    return new Set(channel.members.map((m) => `${m.type}:${m.id}`));
+  }, [selectedChannelId, channels]);
+
+  const handleChannelChange = (channelId: string) => {
+    setSelectedChannelId(channelId);
+    if (!channelId) {
+      // Switching to no channel — remove previously locked members
+      const prevChannel = channels.find((c) => c.id === selectedChannelId);
+      if (prevChannel) {
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          for (const m of prevChannel.members) {
+            next.delete(`${m.type}:${m.id}`);
+          }
+          return next;
+        });
+      }
+      return;
+    }
+    const channel = channels.find((c) => c.id === channelId);
+    if (channel) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const m of channel.members) {
+          next.add(`${m.type}:${m.id}`);
+        }
+        return next;
+      });
+    }
+  };
+
   const toggleSelection = (id: string) => {
+    if (lockedMemberIds.has(id)) return; // channel members cannot be deselected
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -90,8 +127,14 @@ export function NewThreadDialog({
       setOpen(o);
       if (!o) {
         setSelectedChannelId("");
+        setSelectedIds(new Set());
       } else if (defaultChannelId) {
         setSelectedChannelId(defaultChannelId);
+        // Pre-select channel members
+        const channel = channels.find((c) => c.id === defaultChannelId);
+        if (channel) {
+          setSelectedIds(new Set(channel.members.map((m) => `${m.type}:${m.id}`)));
+        }
       }
     }}>
       <DialogTrigger render={<Button variant="outline" size="sm" />}>
@@ -128,7 +171,7 @@ export function NewThreadDialog({
             <select
               className="flex h-9 w-full rounded-md border border-border bg-transparent px-3 py-1 text-sm"
               value={selectedChannelId}
-              onChange={(e) => setSelectedChannelId(e.target.value)}
+              onChange={(e) => handleChannelChange(e.target.value)}
             >
               <option value="">{t("thread.noChannel")}</option>
               {channels.map((p) => (
@@ -143,14 +186,15 @@ export function NewThreadDialog({
                 {(users ?? []).map((u) => {
                   const memberId = `human:${u.id}`;
                   const selected = selectedIds.has(memberId);
+                  const locked = lockedMemberIds.has(memberId);
                   return (
                     <button
                       key={memberId}
                       type="button"
                       onClick={() => toggleSelection(memberId)}
-                      className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50 ${
-                        selected ? "bg-muted/30" : ""
-                      }`}
+                      className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors ${
+                        locked ? "opacity-70 cursor-default" : "hover:bg-muted/50"
+                      } ${selected ? "bg-muted/30" : ""}`}
                     >
                       <span
                         className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] transition-colors ${
@@ -160,20 +204,22 @@ export function NewThreadDialog({
                         {selected && "\u2713"}
                       </span>
                       <span className="font-medium">{u.name}</span>
+                      {locked && <span className="text-[10px] text-muted-foreground ml-auto">{t("thread.channelMember")}</span>}
                     </button>
                   );
                 })}
                 {agents.map((agent) => {
                   const memberId = `agent:${agent.id}`;
                   const selected = selectedIds.has(memberId);
+                  const locked = lockedMemberIds.has(memberId);
                   return (
                     <button
                       key={memberId}
                       type="button"
                       onClick={() => toggleSelection(memberId)}
-                      className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50 ${
-                        selected ? "bg-muted/30" : ""
-                      }`}
+                      className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors ${
+                        locked ? "opacity-70 cursor-default" : "hover:bg-muted/50"
+                      } ${selected ? "bg-muted/30" : ""}`}
                     >
                       <span
                         className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] transition-colors ${
@@ -190,6 +236,7 @@ export function NewThreadDialog({
                           </span>
                         )}
                       </div>
+                      {locked && <span className="text-[10px] text-muted-foreground shrink-0">{t("thread.channelMember")}</span>}
                     </button>
                   );
                 })}

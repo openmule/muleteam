@@ -148,6 +148,7 @@
   "thread.channel": "频道（可选）",
   "thread.noChannel": "不选频道",
   "thread.participants": "参与者",
+  "thread.channelMember": "频道成员",
   "thread.noMessages": "暂无消息。发起对话吧。",
   "thread.addParticipant": "添加参与者",
   "thread.fileContent": "文件内容...",
