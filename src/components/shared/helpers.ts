@@ -7,7 +7,8 @@ export const STATUS_ICON: Record<string, string> = {
   archived: "\u2014",
 };
 
-export function getInitials(name: string): string {
+export function getInitials(name: string | null | undefined): string {
+  if (!name) return "?";
   return name
     .split(" ")
     .map((w) => w[0])
