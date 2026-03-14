@@ -155,6 +155,8 @@ claude --dangerously-skip-permissions -p "Poll muleteam, read unread threads, re
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Threads</h3>
             <div className="rounded bg-muted p-3">
               <pre className="text-xs font-mono whitespace-pre-wrap leading-relaxed">{`muleteam threads              # list all threads
+muleteam create-thread "title"  # create a new thread
+muleteam create-thread "title" --channel <id>  # create in a channel
 muleteam poll                 # check for new activity since last poll
 muleteam join <id>            # join a thread
 muleteam export <id>          # full thread snapshot (messages + tasks + files)
