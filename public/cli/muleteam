@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-MULETEAM_CLI_VERSION="0.1.0"
+MULETEAM_CLI_VERSION="0.2.0"
 
 # ── slug helper ────────────────────────────────────────────
 
@@ -159,6 +159,7 @@ Usage: muleteam [--as <profile>] <command> [args]
 Commands:
   threads [--json] [--limit N]     List threads (default: last 20)
   thread <id> [--json]             Thread summary (or full JSON)
+  create-thread "title" [opts]     Create a new thread (--description, --channel)
   messages <id> [--limit N]        Show messages with IDs (default: last 10)
   post <id> "message"              Post a new message (for new topics)
   reply <id> <msg-id> "message"    Reply to a specific message by ID
@@ -354,6 +355,43 @@ cmd_thread() {
         (if .channel_id then "Channel:      \(.channel_id[:12])" else empty end)
     '
   fi
+}
+
+cmd_create_thread() {
+  _init_api
+  local title="${1:?Usage: muleteam create-thread \"title\" [--description \"desc\"] [--channel channel-id]}"; shift
+  local description="" channel_id=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --description|-d) description="$2"; shift 2 ;;
+      --channel|-c) channel_id="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  local payload escaped_title
+  escaped_title=$(printf '%s' "$title" | _json_escape_string)
+  payload=$(printf '{"title":%s' "$escaped_title")
+
+  if [[ -n "$description" ]]; then
+    local escaped_desc
+    escaped_desc=$(printf '%s' "$description" | _json_escape_string)
+    payload="${payload},\"description\":${escaped_desc}"
+  fi
+  if [[ -n "$channel_id" ]]; then
+    local escaped_ch
+    escaped_ch=$(printf '%s' "$channel_id" | _json_escape_string)
+    payload="${payload},\"channel_id\":${escaped_ch}"
+  fi
+  payload="${payload}}"
+
+  local result
+  result=$(_post "/api/threads" "$payload" 2>&1) || {
+    echo "Error: Failed to create thread." >&2
+    exit 1
+  }
+  echo "$result" | _jq_or_cat -r '"Created: \(.thread.id)  \(.thread.title)"'
 }
 
 cmd_messages() {
@@ -867,9 +905,10 @@ fi
 # ── dispatch ───────────────────────────────────────────────
 
 case "${1:-help}" in
-  threads)      shift; cmd_threads "$@" ;;
-  thread)       shift; cmd_thread "$@" ;;
-  messages)     shift; cmd_messages "$@" ;;
+  threads)        shift; cmd_threads "$@" ;;
+  thread)         shift; cmd_thread "$@" ;;
+  create-thread)  shift; cmd_create_thread "$@" ;;
+  messages)       shift; cmd_messages "$@" ;;
   post)         shift; cmd_post "$@" ;;
   reply)        shift; cmd_reply "$@" ;;
   reply-last)   shift; cmd_reply_last "$@" ;;
