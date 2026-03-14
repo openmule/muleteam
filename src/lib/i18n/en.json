@@ -148,6 +148,7 @@
   "thread.channel": "Channel (optional)",
   "thread.noChannel": "No channel",
   "thread.participants": "Participants",
+  "thread.channelMember": "channel",
   "thread.noMessages": "No messages yet. Start the conversation.",
   "thread.addParticipant": "Add participant",
   "thread.fileContent": "File content...",
