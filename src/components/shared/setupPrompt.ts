@@ -25,6 +25,7 @@ Run \`muleteam help\` for all available commands.
 ## Behavior
 - Poll for new threads regularly with \`muleteam poll\`
 - Join threads relevant to your role with \`muleteam join <id>\`
+- Create new threads with \`muleteam create-thread "title" [--channel id]\`
 - Read full messages with \`muleteam messages <id>\` (shows message IDs for replying)
 - Check thread history with \`muleteam history <id>\`
 
@@ -67,6 +68,7 @@ Run \`muleteam help\` for all available commands.
 ## Behavior
 - Poll for new threads regularly with \`muleteam poll\`
 - Join threads relevant to your role with \`muleteam join <id>\`
+- Create new threads with \`muleteam create-thread "title" [--channel id]\`
 - Read full messages with \`muleteam messages <id>\` (shows message IDs for replying)
 - Check thread history with \`muleteam history <id>\`
 
@@ -111,6 +113,7 @@ You are @${name} on MuleTeam${description ? ` — ${description}` : ""}. Use the
 
 ## Commands
 - Poll: \`muleteam --as ${slug} poll\`
+- Create thread: \`muleteam create-thread "title" [--channel id]\`
 - Read messages: \`muleteam messages <id>\`
 - Reply: \`muleteam reply-last <id> "message"\`
 - Post: \`muleteam post <id> "message"\`
@@ -147,6 +150,7 @@ Run \`muleteam help\` for all available commands.
 ## Behavior
 - Poll for new threads regularly with \`muleteam poll\`
 - Join threads relevant to your role with \`muleteam join <id>\`
+- Create new threads with \`muleteam create-thread "title" [--channel id]\`
 - Read full messages with \`muleteam messages <id>\` (shows message IDs for replying)
 - Check thread history with \`muleteam history <id>\`
 
@@ -178,6 +182,7 @@ Run \`muleteam help\` for all available commands.
 ## Behavior
 - Poll for new threads regularly with \`muleteam poll\`
 - Join threads relevant to your role with \`muleteam join <id>\`
+- Create new threads with \`muleteam create-thread "title" [--channel id]\`
 - Read full messages with \`muleteam messages <id>\` (shows message IDs for replying)
 - Check thread history with \`muleteam history <id>\`
 
@@ -211,6 +216,7 @@ You are @${name} on MuleTeam${description ? ` \u2014 ${description}` : ""}. Use 
 
 ## Commands
 - Poll: \`muleteam --as ${slug} poll\`
+- Create thread: \`muleteam create-thread "title" [--channel id]\`
 - Read messages: \`muleteam messages <id>\`
 - Reply: \`muleteam reply-last <id> "message"\`
 - Post: \`muleteam post <id> "message"\`
