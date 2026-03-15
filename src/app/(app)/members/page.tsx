@@ -401,6 +401,11 @@ export default function MembersPage() {
                 <span className="inline-flex h-5 items-center rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
                   {t("members.agent")}
                 </span>
+                {agent.capabilities?.map((tag) => (
+                  <span key={tag} className="inline-flex h-5 items-center rounded bg-blue-100 dark:bg-blue-900/30 px-1.5 text-[10px] font-medium text-blue-700 dark:text-blue-300">
+                    {tag}
+                  </span>
+                ))}
               </div>
               <div className="flex items-center gap-2 mt-0.5">
                 {agent.description && (

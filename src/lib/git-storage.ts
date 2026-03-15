@@ -703,6 +703,19 @@ export function deleteAgent(agentId: string): boolean {
   return true;
 }
 
+export function updateAgent(agentId: string, updates: Partial<Pick<RegisteredAgent, "description" | "capabilities">>): RegisteredAgent | null {
+  const agent = getAgentById(agentId);
+  if (!agent) return null;
+  if (updates.description !== undefined) agent.description = updates.description;
+  if (updates.capabilities !== undefined) agent.capabilities = updates.capabilities;
+  fs.writeFileSync(
+    path.join(AGENTS_DIR(),`${agentId}.json`),
+    JSON.stringify(agent, null, 2)
+  );
+  gitCommit(`Update agent: ${agent.name}`, "MuleTeam System", "system@muleteam.local");
+  return agent;
+}
+
 export function updateAgentLastSeen(agentId: string): void {
   const agent = getAgentById(agentId);
   if (!agent) return;
