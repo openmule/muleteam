@@ -38,6 +38,9 @@ export default function MemberDetailPage() {
   const [setupTab, setSetupTab] = useState<"claude" | "opencode" | "openclaw">("claude");
   const [snippetTab, setSnippetTab] = useState<"claude" | "opencode" | "openclaw">("claude");
   const [confirmRegenerate, setConfirmRegenerate] = useState(false);
+  const [editingTags, setEditingTags] = useState(false);
+  const [tagsDraft, setTagsDraft] = useState("");
+  const [savingTags, setSavingTags] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookDraft, setWebhookDraft] = useState("");
   const [webhookLoading, setWebhookLoading] = useState(false);
@@ -142,6 +145,79 @@ export default function MemberDetailPage() {
             {memberAgent.description && (
               <p className="text-sm text-muted-foreground mt-0.5">{memberAgent.description}</p>
             )}
+            {/* Tags display and edit */}
+            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+              {memberAgent.capabilities?.map((tag) => (
+                <span key={tag} className="inline-flex h-5 items-center rounded bg-blue-100 dark:bg-blue-900/30 px-1.5 text-[10px] font-medium text-blue-700 dark:text-blue-300">
+                  {tag}
+                </span>
+              ))}
+              {editingTags ? (
+                <div className="flex items-center gap-2 w-full mt-1">
+                  <input
+                    type="text"
+                    className="text-xs border border-border rounded px-2 py-1 bg-background text-foreground flex-1"
+                    value={tagsDraft}
+                    onChange={(e) => setTagsDraft(e.target.value)}
+                    placeholder={t("members.tagsPlaceholder")}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") setEditingTags(false);
+                      if (e.key === "Enter") {
+                        setSavingTags(true);
+                        const tags = tagsDraft.split(",").map(s => s.trim()).filter(Boolean);
+                        fetch(`/api/agents/${entityId}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ capabilities: tags }),
+                        }).then(async (res) => {
+                          if (res.ok) {
+                            const data = await res.json();
+                            setMemberAgent({ ...memberAgent, capabilities: data.agent.capabilities });
+                          }
+                          setEditingTags(false);
+                        }).finally(() => setSavingTags(false));
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={savingTags}
+                    onClick={() => {
+                      setSavingTags(true);
+                      const tags = tagsDraft.split(",").map(s => s.trim()).filter(Boolean);
+                      fetch(`/api/agents/${entityId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ capabilities: tags }),
+                      }).then(async (res) => {
+                        if (res.ok) {
+                          const data = await res.json();
+                          setMemberAgent({ ...memberAgent, capabilities: data.agent.capabilities });
+                        }
+                        setEditingTags(false);
+                      }).finally(() => setSavingTags(false));
+                    }}
+                  >
+                    {savingTags ? "..." : t("common.save")}
+                  </Button>
+                  <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setEditingTags(false)}>
+                    {t("common.cancel")}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  className="text-[10px] text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setTagsDraft((memberAgent.capabilities ?? []).join(", "));
+                    setEditingTags(true);
+                  }}
+                >
+                  {(memberAgent.capabilities?.length ?? 0) > 0 ? t("members.editTags") : `+ ${t("members.tags")}`}
+                </button>
+              )}
+            </div>
           </div>
           <span className="inline-flex h-6 items-center rounded bg-muted px-2 text-xs font-medium text-muted-foreground ml-auto">
             Agent

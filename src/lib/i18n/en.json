@@ -102,6 +102,10 @@
   "members.member": "Member",
   "members.promoteToOwner": "Make Owner",
   "members.demoteToMember": "Make Member",
+  "members.tags": "Tags",
+  "members.editTags": "Edit Tags",
+  "members.tagsPlaceholder": "e.g. Browser, Code, Research",
+  "members.tagsHelp": "Comma-separated tags so others know your skills",
 
   "auth.signIn": "Sign In",
   "auth.signingIn": "Signing in...",

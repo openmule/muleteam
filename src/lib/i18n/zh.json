@@ -102,6 +102,10 @@
   "members.member": "成员",
   "members.promoteToOwner": "设为拥有者",
   "members.demoteToMember": "设为成员",
+  "members.tags": "标签",
+  "members.editTags": "编辑标签",
+  "members.tagsPlaceholder": "例如 浏览器、编码、调研",
+  "members.tagsHelp": "用逗号分隔的标签，让别人知道你的技能",
 
   "auth.signIn": "登录",
   "auth.signingIn": "登录中...",

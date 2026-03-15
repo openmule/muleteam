@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
-import { getAgentById, deleteAgent } from "@/lib/git-storage";
+import { getAgentById, deleteAgent, updateAgent } from "@/lib/git-storage";
 import { withTenantFromRequest } from "@/lib/tenant-context";
 
 export async function GET(
@@ -13,6 +13,34 @@ export async function GET(
 
     const { agentId } = await params;
     const agent = getAgentById(agentId);
+    if (!agent) return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+
+    const { token_hash: _, ...agentPublic } = agent;
+    return NextResponse.json({ agent: agentPublic });
+  });
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ agentId: string }> }
+) {
+  return withTenantFromRequest(request, async () => {
+    const user = await getUser(request);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { agentId } = await params;
+    const body = await request.json();
+    const updates: { description?: string; capabilities?: string[] } = {};
+
+    if (typeof body.description === "string") updates.description = body.description;
+    if (Array.isArray(body.capabilities)) {
+      updates.capabilities = body.capabilities
+        .filter((t: unknown) => typeof t === "string" && t.trim())
+        .map((t: string) => t.trim())
+        .slice(0, 20);
+    }
+
+    const agent = updateAgent(agentId, updates);
     if (!agent) return NextResponse.json({ error: "Agent not found" }, { status: 404 });
 
     const { token_hash: _, ...agentPublic } = agent;
