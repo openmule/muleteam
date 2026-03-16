@@ -35,8 +35,8 @@ export function MemberHoverCard({
   const [visible, setVisible] = useState(false);
   const [data, setData] = useState<MemberData | null>(null);
   const [loading, setLoading] = useState(false);
-  const enterTimer = useRef<ReturnType<typeof setTimeout>>();
-  const leaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const enterTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const containerRef = useRef<HTMLSpanElement>(null);
 
   const [type, ...idParts] = participantId.split(":");
