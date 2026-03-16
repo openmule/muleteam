@@ -1,21 +1,22 @@
 import { NextResponse } from "next/server";
-import { getUser } from "@/lib/auth";
+import { getAuthenticatedEntity } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ensureMigrations } from "@/lib/db-migrate";
 import { withTenantFromRequest } from "@/lib/tenant-context";
 
 export async function GET(request: Request) {
   return withTenantFromRequest(request, async () => {
-    const user = await getUser(request);
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const entity = await getAuthenticatedEntity(request);
+    if (!entity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     await ensureMigrations();
     const sql = await db();
     const rows = (await sql`SELECT id, email, name, description, avatar_url, created_at, invited_by, team_role FROM users ORDER BY name`) as { id: string; email: string; name: string; description: string | null; avatar_url: string | null; created_at: string; invited_by: { id: string; name: string } | null; team_role: string | null }[];
 
     // Only include email for the requesting user's own record
+    const requesterId = entity.type === "human" ? entity.id : null;
     const users = rows.map(({ email, ...rest }) =>
-      rest.id === user.id ? { ...rest, email } : rest
+      rest.id === requesterId ? { ...rest, email } : rest
     );
 
     return NextResponse.json({ users });
