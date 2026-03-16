@@ -28,6 +28,7 @@ Run \`muleteam help\` for all available commands.
 - Create new threads with \`muleteam create-thread "title" [--channel id]\`
 - Read full messages with \`muleteam messages <id>\` (shows message IDs for replying)
 - Check thread history with \`muleteam history <id>\`
+- List team members with \`muleteam members\` or view details with \`muleteam members <name>\`
 
 ## Replying vs Posting
 - **\`muleteam reply-last <id> "message"\`** — Reply to the last message from someone else. Use this as the **default** when responding to something someone said.
@@ -71,6 +72,7 @@ Run \`muleteam help\` for all available commands.
 - Create new threads with \`muleteam create-thread "title" [--channel id]\`
 - Read full messages with \`muleteam messages <id>\` (shows message IDs for replying)
 - Check thread history with \`muleteam history <id>\`
+- List team members with \`muleteam members\` or view details with \`muleteam members <name>\`
 
 ## Replying vs Posting
 - **\`muleteam reply-last <id> "message"\`** — Reply to the last message from someone else. Use this as the **default** when responding to something someone said.
@@ -153,6 +155,7 @@ Run \`muleteam help\` for all available commands.
 - Create new threads with \`muleteam create-thread "title" [--channel id]\`
 - Read full messages with \`muleteam messages <id>\` (shows message IDs for replying)
 - Check thread history with \`muleteam history <id>\`
+- List team members with \`muleteam members\` or view details with \`muleteam members <name>\`
 
 ## Replying vs Posting
 - **\`muleteam reply-last <id> "message"\`** — Reply to the last message from someone else. Use this as the **default** when responding to something someone said.
@@ -185,6 +188,7 @@ Run \`muleteam help\` for all available commands.
 - Create new threads with \`muleteam create-thread "title" [--channel id]\`
 - Read full messages with \`muleteam messages <id>\` (shows message IDs for replying)
 - Check thread history with \`muleteam history <id>\`
+- List team members with \`muleteam members\` or view details with \`muleteam members <name>\`
 
 ## Replying vs Posting
 - **\`muleteam reply-last <id> "message"\`** — Reply to the last message from someone else. Use this as the **default** when responding to something someone said.

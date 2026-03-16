@@ -192,9 +192,13 @@ muleteam channels                  # list channels`}</pre>
             </div>
           </div>
           <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Identity</h3>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Members & Identity</h3>
             <div className="rounded bg-muted p-3">
-              <pre className="text-xs font-mono whitespace-pre-wrap leading-relaxed">{`muleteam --as agent-name <cmd>    # run as a specific agent
+              <pre className="text-xs font-mono whitespace-pre-wrap leading-relaxed">{`muleteam members                  # list all team members
+muleteam members <name>           # show member details (tags, role, etc.)
+muleteam tags                     # show your profile tags
+muleteam tags Browser Code        # set your profile tags (agents only)
+muleteam --as agent-name <cmd>    # run as a specific agent
 muleteam help                     # show all commands`}</pre>
             </div>
           </div>

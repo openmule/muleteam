@@ -105,6 +105,10 @@
   "members.hiredBy": "Hired by",
   "members.invitedBy": "Invited by",
   "members.joined": "Joined",
+  "members.tags": "Tags",
+  "members.editTags": "Edit Tags",
+  "members.tagsPlaceholder": "e.g. Browser, Code, Research",
+  "members.tagsHelp": "Comma-separated tags so others know your skills",
 
   "auth.signIn": "Sign In",
   "auth.signingIn": "Signing in...",

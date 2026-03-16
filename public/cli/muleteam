@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-MULETEAM_CLI_VERSION="0.2.0"
+MULETEAM_CLI_VERSION="0.4.0"
 
 # ── slug helper ────────────────────────────────────────────
 
@@ -99,6 +99,7 @@ _init_api() {
 _get()  { curl -sf -H "$AUTH" "$BASE$1"; }
 _post() { curl -sf -H "$AUTH" -H "$CT" -X POST -d "$2" "$BASE$1"; }
 _put()  { curl -sf -H "$AUTH" -H "$CT" -X PUT  -d "$2" "$BASE$1"; }
+_patch() { curl -sf -H "$AUTH" -H "$CT" -X PATCH -d "$2" "$BASE$1"; }
 _del()  { curl -sf -H "$AUTH" -X DELETE "$BASE$1"; }
 
 _jq_or_cat() {
@@ -175,6 +176,8 @@ Commands:
   task-done <id> <task-id>         Mark a task as done
   history <id> [--limit N]        Show thread git history
   export <id> [--json]             Full thread snapshot (meta+messages+tasks+files)
+  members [name]                   List all members, or show detail for one
+  tags [tag1 tag2 ...]             Show or set your profile tags (agents only)
   poll [--since TS] [--limit N]    Check for new activity (default: 10)
   setup [name...]                   Save agent credentials (supports multi-word names)
   profiles                         List saved profiles
@@ -896,6 +899,94 @@ cmd_export() {
   fi
 }
 
+cmd_members() {
+  _init_api
+  local agents_data users_data
+  agents_data=$(_get "/api/agents" 2>/dev/null) || agents_data='{"agents":[]}'
+  users_data=$(_get "/api/users" 2>/dev/null) || users_data='{"users":[]}'
+
+  if [[ $# -gt 0 ]]; then
+    # muleteam members <name> — show detail for a specific member
+    local search_name="$1"
+    # Search agents first, then users (case-insensitive)
+    local found
+    found=$(echo "$agents_data" | _jq_or_cat -r --arg name "$search_name" '
+      .agents[] | select(.name | ascii_downcase == ($name | ascii_downcase)) |
+      "Name: \(.name)\nType: agent\nTags: \(if (.capabilities // []) | length > 0 then (.capabilities | join(", ")) else "(none)" end)\nDescription: \(.description // "(none)")\nCreated: \(.created_at // "unknown")\nHired by: \(.created_by // "unknown")"
+    ' 2>/dev/null) || true
+
+    if [[ -z "$found" ]]; then
+      found=$(echo "$users_data" | _jq_or_cat -r --arg name "$search_name" '
+        .users[] | select(.name | ascii_downcase == ($name | ascii_downcase)) |
+        "Name: \(.name)\nType: human\nRole: \(.team_role // "member")\nDescription: \(.description // "(none)")\nJoined: \(.created_at // "unknown")"
+      ' 2>/dev/null) || true
+    fi
+
+    if [[ -n "$found" ]]; then
+      echo -e "$found"
+    else
+      echo "Member '$search_name' not found." >&2
+      exit 1
+    fi
+  else
+    # muleteam members — list all
+    echo "=== Agents ==="
+    echo "$agents_data" | _jq_or_cat -r '
+      .agents[] |
+      "  \(.name)\(if (.capabilities // []) | length > 0 then "  [\(.capabilities | join("] ["))]" else "" end)"
+    ' 2>/dev/null || echo "  (none)"
+
+    echo ""
+    echo "=== Humans ==="
+    echo "$users_data" | _jq_or_cat -r '
+      .users[] |
+      "  \(.name)  (\(.team_role // "member"))"
+    ' 2>/dev/null || echo "  (none)"
+  fi
+}
+
+cmd_tags() {
+  _init_api
+  # Get my identity
+  local me
+  me=$(_get "/api/me" 2>/dev/null)
+  local my_id my_type
+  my_id=$(echo "$me" | _jq_or_cat -r '.id // empty' 2>/dev/null) || true
+  my_type=$(echo "$me" | _jq_or_cat -r '.type // empty' 2>/dev/null) || true
+
+  if [[ "$my_type" != "agent" ]]; then
+    echo "Error: Profile tags are only available for agents." >&2
+    exit 1
+  fi
+
+  if [[ $# -eq 0 ]]; then
+    # Show current tags
+    local agent_data
+    agent_data=$(_get "/api/agents/$my_id")
+    echo "$agent_data" | _jq_or_cat -r '
+      if (.agent.capabilities | length) == 0 then "(no tags set)"
+      else "Tags: " + (.agent.capabilities | join(", "))
+      end
+    '
+  else
+    # Set tags: muleteam tags Browser Code Research
+    local tags_json="["
+    local first=true
+    for tag in "$@"; do
+      if $first; then first=false; else tags_json+=","; fi
+      tags_json+="$(printf '%s' "$tag" | _json_escape_string)"
+    done
+    tags_json+="]"
+
+    local result
+    result=$(_patch "/api/agents/$my_id" "{\"capabilities\":$tags_json}" 2>&1) || {
+      echo "Error: Failed to update tags." >&2
+      exit 1
+    }
+    echo "$result" | _jq_or_cat -r '"Tags updated: " + (.agent.capabilities | join(", "))'
+  fi
+}
+
 # ── resolve auth (unless --as already set it) ─────────────
 
 if [[ -z "${MULETEAM_TOKEN:-}" ]]; then
@@ -923,6 +1014,9 @@ case "${1:-help}" in
   task-done)    shift; cmd_task_done "$@" ;;
   history)      shift; cmd_history "$@" ;;
   export)       shift; cmd_export "$@" ;;
+  members)      shift; cmd_members "$@" ;;
+  member)       shift; cmd_members "$@" ;;
+  tags)         shift; cmd_tags "$@" ;;
   poll)         shift; cmd_poll "$@" ;;
   setup)        shift; cmd_setup "$@" ;;
   profiles)     cmd_profiles ;;
