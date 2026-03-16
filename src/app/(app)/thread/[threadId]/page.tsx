@@ -14,6 +14,7 @@ import { MarkdownBody } from "@/components/thread/MarkdownBody";
 import { JoinButton, LeaveButton } from "@/components/thread/JoinButton";
 import { MobileDetailSheet } from "@/components/thread/MobileDetailSheet";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useT } from "@/lib/i18n";
 
 interface Participant {
@@ -76,6 +77,7 @@ interface RegisteredAgent {
   id: string;
   name: string;
   last_seen_at: string;
+  capabilities?: string[];
 }
 
 interface UserInfo {
@@ -111,6 +113,7 @@ export default function ThreadDetailPage() {
   const [allUsers, setAllUsers] = useState<UserInfo[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const fetchThread = useCallback(async () => {
@@ -183,6 +186,11 @@ export default function ThreadDetailPage() {
   }, []);
 
   useEffect(() => {
+    const saved = sessionStorage.getItem("muleteam:sidebar-tab");
+    if (saved) setSidebarTab(Number(saved));
+  }, []);
+
+  useEffect(() => {
     fetchThread();
     fetchMessages();
     fetchFiles();
@@ -243,6 +251,14 @@ export default function ThreadDetailPage() {
     fetchThread();
     fetchMessages();
   };
+
+  const handleSidebarTabChange = (value: unknown) => {
+    const idx = typeof value === "number" ? value : 0;
+    setSidebarTab(idx);
+    sessionStorage.setItem("muleteam:sidebar-tab", String(idx));
+  };
+
+  const openTaskCount = tasks.filter(t => t.status !== "done").length;
 
   if (!thread) {
     return (
@@ -358,40 +374,63 @@ export default function ThreadDetailPage() {
           )}
         </div>
 
-        {/* Right: Workspace (sidebar) — hidden on mobile, shown on md+ */}
-        <div className="hidden md:flex md:w-2/5 flex-col overflow-y-auto border-border">
-          <WorkspaceFiles
-            threadId={threadId}
-            files={files}
-            onRefresh={fetchFiles}
-            readOnly={!isMember}
-          />
+        {/* Right: Sidebar — hidden on mobile, shown on md+ */}
+        <div className="hidden md:flex md:w-2/5 flex-col overflow-hidden border-border">
+          <Tabs value={sidebarTab} onValueChange={handleSidebarTabChange}>
+            <TabsList variant="line" className="w-full justify-start px-3 pt-2 border-b border-border shrink-0">
+              <TabsTrigger value={0} className="text-xs gap-1">
+                {t("sidebar.actionItems")}
+                {openTaskCount > 0 && (
+                  <span className="text-[10px] text-muted-foreground">({openTaskCount})</span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value={1} className="text-xs">
+                {t("sidebar.participants")}
+              </TabsTrigger>
+            </TabsList>
+            <div className="flex-1 overflow-y-auto">
+              <TabsContent value={0}>
+                <ActionItems
+                  threadId={threadId}
+                  tasks={tasks}
+                  participants={thread.participants}
+                  onRefresh={fetchTasks}
+                  readOnly={!isMember}
+                  embedded
+                />
+              </TabsContent>
+              <TabsContent value={1}>
+                <ParticipantsList
+                  threadId={threadId}
+                  participants={thread.participants}
+                  agents={agents}
+                  users={allUsers}
+                  onParticipantAdded={fetchThread}
+                  readOnly={!isMember}
+                  embedded
+                />
+              </TabsContent>
+            </div>
+          </Tabs>
 
-          <WorkspaceLinks
-            threadId={threadId}
-            links={links}
-            onRefresh={fetchLinks}
-            readOnly={!isMember}
-          />
+          {/* Collapsible sections below tabs */}
+          <div className="border-t border-border overflow-y-auto max-h-[40%]">
+            <WorkspaceFiles
+              threadId={threadId}
+              files={files}
+              onRefresh={fetchFiles}
+              readOnly={!isMember}
+            />
 
-          <ActionItems
-            threadId={threadId}
-            tasks={tasks}
-            participants={thread.participants}
-            onRefresh={fetchTasks}
-            readOnly={!isMember}
-          />
+            <WorkspaceLinks
+              threadId={threadId}
+              links={links}
+              onRefresh={fetchLinks}
+              readOnly={!isMember}
+            />
 
-          <ParticipantsList
-            threadId={threadId}
-            participants={thread.participants}
-            agents={agents}
-            users={allUsers}
-            onParticipantAdded={fetchThread}
-            readOnly={!isMember}
-          />
-
-          <GitHistory threadId={threadId} />
+            <GitHistory threadId={threadId} />
+          </div>
         </div>
       </div>
     </div>
