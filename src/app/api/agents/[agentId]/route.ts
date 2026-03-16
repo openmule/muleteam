@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getUser } from "@/lib/auth";
+import { getAuthenticatedEntity } from "@/lib/auth";
 import { getAgentById, deleteAgent, updateAgent } from "@/lib/git-storage";
 import { withTenantFromRequest } from "@/lib/tenant-context";
 
@@ -8,8 +8,8 @@ export async function GET(
   { params }: { params: Promise<{ agentId: string }> }
 ) {
   return withTenantFromRequest(request, async () => {
-    const user = await getUser(request);
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const entity = await getAuthenticatedEntity(request);
+    if (!entity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { agentId } = await params;
     const agent = getAgentById(agentId);
@@ -25,8 +25,8 @@ export async function PATCH(
   { params }: { params: Promise<{ agentId: string }> }
 ) {
   return withTenantFromRequest(request, async () => {
-    const user = await getUser(request);
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const entity = await getAuthenticatedEntity(request);
+    if (!entity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { agentId } = await params;
     const body = await request.json();
@@ -53,8 +53,8 @@ export async function DELETE(
   { params }: { params: Promise<{ agentId: string }> }
 ) {
   return withTenantFromRequest(request, async () => {
-    const user = await getUser(request);
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const entity = await getAuthenticatedEntity(request);
+    if (!entity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { agentId } = await params;
     const deleted = deleteAgent(agentId);
