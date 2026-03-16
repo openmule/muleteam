@@ -235,7 +235,7 @@ export default function MemberDetailPage() {
           </div>
           {memberAgent.created_by && (
             <div className="rounded-md border border-border p-3 col-span-2">
-              <p className="text-xs text-muted-foreground mb-1">Created by</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("members.hiredBy")}</p>
               <p className="text-sm">
                 <Link href={memberUrl(`human:${memberAgent.created_by.id}`)} className="hover:underline">
                   {memberAgent.created_by.name}

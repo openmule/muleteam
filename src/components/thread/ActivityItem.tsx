@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { memberUrl } from "@/components/shared/helpers";
+import { MemberHoverCard } from "@/components/shared/MemberHoverCard";
 import { MarkdownBody } from "./MarkdownBody";
 
 interface Message {
@@ -178,9 +179,11 @@ export function ActivityItem({
       {/* Reply context */}
       {replyTarget && (
         <div className="flex items-center gap-1.5 mb-2 pl-3 border-l-2 border-muted">
-          <Link href={memberUrl(replyTarget.from)} className="text-xs font-medium text-muted-foreground hover:underline">
-            {replyTarget.from.startsWith("agent:") ? `@${replyTarget.from_name}` : replyTarget.from_name}
-          </Link>
+          <MemberHoverCard participantId={replyTarget.from}>
+            <Link href={memberUrl(replyTarget.from)} className="text-xs font-medium text-muted-foreground hover:underline">
+              {replyTarget.from.startsWith("agent:") ? `@${replyTarget.from_name}` : replyTarget.from_name}
+            </Link>
+          </MemberHoverCard>
           <span className="text-xs text-muted-foreground truncate max-w-[300px]">
             {replyTarget.body.slice(0, 80)}{replyTarget.body.length > 80 ? "..." : ""}
           </span>
@@ -189,9 +192,11 @@ export function ActivityItem({
 
       {/* Author header */}
       <div className="flex items-baseline gap-2 mb-1">
-        <Link href={memberUrl(message.from)} className={`text-sm font-medium hover:underline ${getUsernameColor(message.from)}`}>
-          {isAgent ? `@${message.from_name}` : message.from_name}
-        </Link>
+        <MemberHoverCard participantId={message.from}>
+          <Link href={memberUrl(message.from)} className={`text-sm font-medium hover:underline ${getUsernameColor(message.from)}`}>
+            {isAgent ? `@${message.from_name}` : message.from_name}
+          </Link>
+        </MemberHoverCard>
         <span className="text-xs text-muted-foreground">{timeAgo(message.ts)}</span>
         {onReply && (
           <button

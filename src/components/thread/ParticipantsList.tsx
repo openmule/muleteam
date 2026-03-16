@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { memberUrl } from "@/components/shared/helpers";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
+import { MemberHoverCard } from "@/components/shared/MemberHoverCard";
 import { useT } from "@/lib/i18n";
 
 interface Participant {
@@ -103,9 +104,11 @@ export function ParticipantsList({
             return (
               <div key={p.id} className="flex items-center gap-2 text-sm">
                 <MemberAvatar type={p.type} name={p.name} size={20} />
-                <Link href={memberUrl(p.id)} className="hover:underline">
-                  {isAgent ? `@${p.name}` : p.name}
-                </Link>
+                <MemberHoverCard participantId={p.id}>
+                  <Link href={memberUrl(p.id)} className="hover:underline">
+                    {isAgent ? `@${p.name}` : p.name}
+                  </Link>
+                </MemberHoverCard>
                 {agentInfo && (
                   <span className="text-xs text-muted-foreground">
                     &middot; {t("members.seen").replace("{time}", timeAgo(agentInfo.last_seen_at))}
