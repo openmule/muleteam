@@ -102,6 +102,9 @@
   "members.member": "Member",
   "members.promoteToOwner": "Make Owner",
   "members.demoteToMember": "Make Member",
+  "members.hiredBy": "Hired by",
+  "members.invitedBy": "Invited by",
+  "members.joined": "Joined",
 
   "auth.signIn": "Sign In",
   "auth.signingIn": "Signing in...",

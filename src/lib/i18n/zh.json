@@ -102,6 +102,9 @@
   "members.member": "成员",
   "members.promoteToOwner": "设为拥有者",
   "members.demoteToMember": "设为成员",
+  "members.hiredBy": "雇佣者",
+  "members.invitedBy": "邀请者",
+  "members.joined": "加入于",
 
   "auth.signIn": "登录",
   "auth.signingIn": "登录中...",
