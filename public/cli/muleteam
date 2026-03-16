@@ -168,6 +168,8 @@ Commands:
   files <id> [--limit N]           List workspace files (default: 50)
   read <id> <path> [--lines N]     Read a file (default: first 200 lines)
   write <id> <path> "content"      Write a file (arg or stdin)
+  members [--json]                 List all members (humans + agents)
+  member <name>                    View member details by name
   channels [--json]                List channels
   channel <id>                     Get channel details
   tasks <id>                       List action items (open items with IDs)
@@ -896,6 +898,96 @@ cmd_export() {
   fi
 }
 
+cmd_members() {
+  _init_api
+  local json=false
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --json) json=true; shift ;;
+      *) shift ;;
+    esac
+  done
+
+  local users_data agents_data
+  users_data=$(_get "/api/users")
+  agents_data=$(_get "/api/agents")
+
+  if $json; then
+    _jq_or_cat -n \
+      --argjson users "$(echo "$users_data" | _jq_or_cat '.users // []')" \
+      --argjson agents "$(echo "$agents_data" | _jq_or_cat '.agents // []')" \
+      '{ users: $users, agents: $agents }'
+  else
+    echo "=== Humans ==="
+    echo "$users_data" | _jq_or_cat -r '
+      if (.users // [] | length) == 0 then "(none)"
+      else (.users // [])[]
+        | "\(.name)\t\(.team_role // "member")\t\(.description // "")"
+      end
+    ' | column -t -s $'\t' 2>/dev/null || echo "$users_data"
+    echo ""
+    echo "=== Agents ==="
+    echo "$agents_data" | _jq_or_cat -r '
+      if (.agents // [] | length) == 0 then "(none)"
+      else (.agents // [])[]
+        | "@\(.name)\t\(if (.capabilities | length) > 0 then "[" + (.capabilities | join(", ")) + "]" else "" end)\t\(.description // "")"
+      end
+    ' | column -t -s $'\t' 2>/dev/null || echo "$agents_data"
+  fi
+}
+
+cmd_member() {
+  _init_api
+  local name="${1:?Usage: muleteam member <name>}"
+
+  # Try to find as agent first (by name), then as human
+  local agents_data users_data
+  agents_data=$(_get "/api/agents")
+  users_data=$(_get "/api/users")
+
+  # Search agents (case-insensitive)
+  local agent_match
+  agent_match=$(echo "$agents_data" | _jq_or_cat -r --arg name "$name" '
+    (.agents // [])[]
+    | select(.name | ascii_downcase == ($name | ascii_downcase))
+  ' 2>/dev/null) || true
+
+  if [[ -n "$agent_match" ]]; then
+    echo "$agent_match" | _jq_or_cat -r '
+      "Name:        @\(.name)",
+      "Type:        Agent",
+      "Description: \(.description // "(none)")",
+      "Tags:        \(if (.capabilities | length) > 0 then .capabilities | join(", ") else "(none)" end)",
+      "Created:     \((.created_at // "?")[:16])",
+      "Last Seen:   \((.last_seen_at // "?")[:16])",
+      (if .created_by then "Hired by:    \(.created_by.name)" else empty end)
+    '
+    return
+  fi
+
+  # Search humans (case-insensitive)
+  local user_match
+  user_match=$(echo "$users_data" | _jq_or_cat -r --arg name "$name" '
+    (.users // [])[]
+    | select(.name | ascii_downcase == ($name | ascii_downcase))
+  ' 2>/dev/null) || true
+
+  if [[ -n "$user_match" ]]; then
+    echo "$user_match" | _jq_or_cat -r '
+      "Name:        \(.name)",
+      "Type:        Human",
+      "Role:        \(.team_role // "member")",
+      "Description: \(.description // "(none)")",
+      "Joined:      \((.created_at // "?")[:16])",
+      (if .invited_by then "Invited by:  \(.invited_by.name)" else empty end)
+    '
+    return
+  fi
+
+  echo "Member not found: $name" >&2
+  exit 1
+}
+
 # ── resolve auth (unless --as already set it) ─────────────
 
 if [[ -z "${MULETEAM_TOKEN:-}" ]]; then
@@ -916,6 +1008,8 @@ case "${1:-help}" in
   files)        shift; cmd_files "$@" ;;
   read)         shift; cmd_read "$@" ;;
   write)        shift; cmd_write "$@" ;;
+  members)      shift; cmd_members "$@" ;;
+  member)       shift; cmd_member "$@" ;;
   channels)     shift; cmd_channels "$@" ;;
   channel)      shift; cmd_channel "$@" ;;
   tasks)        shift; cmd_tasks "$@" ;;
