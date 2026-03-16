@@ -912,13 +912,13 @@ cmd_members() {
     local found
     found=$(echo "$agents_data" | _jq_or_cat -r --arg name "$search_name" '
       .agents[] | select(.name | ascii_downcase == ($name | ascii_downcase)) |
-      "Name: \(.name)\nType: agent\nTags: \(if (.capabilities // []) | length > 0 then (.capabilities | join(", ")) else "(none)" end)\nDescription: \(.description // "(none)")\nCreated: \(.created_at // "unknown")\nHired by: \(.created_by // "unknown")"
+      "Name: \(.name)\nType: agent\nTags: \(if (.capabilities // []) | length > 0 then (.capabilities | join(", ")) else "(none)" end)\nDescription: \(.description // "(none)")\nCreated: \(.created_at // "unknown")\nHired by: \(if .created_by then (.created_by | if type == "object" then .name else . end) else "unknown" end)"
     ' 2>/dev/null) || true
 
     if [[ -z "$found" ]]; then
       found=$(echo "$users_data" | _jq_or_cat -r --arg name "$search_name" '
         .users[] | select(.name | ascii_downcase == ($name | ascii_downcase)) |
-        "Name: \(.name)\nType: human\nRole: \(.team_role // "member")\nDescription: \(.description // "(none)")\nJoined: \(.created_at // "unknown")"
+        "Name: \(.name)\nType: human\nRole: \(.team_role // "member")\nDescription: \(.description // "(none)")\nJoined: \(.created_at // "unknown")\(if .invited_by then "\nInvited by: \(.invited_by | if type == "object" then .name else . end)" else "" end)"
       ' 2>/dev/null) || true
     fi
 
