@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ActionItems } from "./ActionItems";
 import { WorkspaceFiles } from "./WorkspaceFiles";
 import { ParticipantsList } from "./ParticipantsList";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useT } from "@/lib/i18n";
 
 interface Participant {
@@ -35,6 +36,7 @@ interface RegisteredAgent {
   id: string;
   name: string;
   last_seen_at: string;
+  capabilities?: string[];
 }
 
 interface UserInfo {
@@ -223,29 +225,47 @@ export function MobileDetailSheet({
           </button>
         </div>
 
-        {/* Scrollable content */}
+        {/* Scrollable content with tabs */}
         <div className="flex-1 overflow-y-auto overscroll-contain">
-          <ActionItems
-            threadId={threadId}
-            tasks={tasks}
-            participants={participants}
-            onRefresh={onRefreshTasks}
-            readOnly={readOnly}
-          />
+          <Tabs defaultValue={0}>
+            <TabsList variant="line" className="w-full justify-start px-3 pt-1 shrink-0">
+              <TabsTrigger value={0} className="text-xs gap-1">
+                {t("sidebar.actionItems")}
+                {openCount > 0 && (
+                  <span className="text-[10px] text-muted-foreground">({openCount})</span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value={1} className="text-xs">
+                {t("sidebar.participants")}
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value={0}>
+              <ActionItems
+                threadId={threadId}
+                tasks={tasks}
+                participants={participants}
+                onRefresh={onRefreshTasks}
+                readOnly={readOnly}
+                embedded
+              />
+            </TabsContent>
+            <TabsContent value={1}>
+              <ParticipantsList
+                threadId={threadId}
+                participants={participants}
+                agents={agents}
+                users={users}
+                onParticipantAdded={onParticipantAdded}
+                readOnly={readOnly}
+                embedded
+              />
+            </TabsContent>
+          </Tabs>
 
           <WorkspaceFiles
             threadId={threadId}
             files={files}
             onRefresh={onRefreshFiles}
-            readOnly={readOnly}
-          />
-
-          <ParticipantsList
-            threadId={threadId}
-            participants={participants}
-            agents={agents}
-            users={users}
-            onParticipantAdded={onParticipantAdded}
             readOnly={readOnly}
           />
         </div>

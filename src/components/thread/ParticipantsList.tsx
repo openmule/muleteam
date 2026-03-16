@@ -17,6 +17,7 @@ interface RegisteredAgent {
   id: string;
   name: string;
   last_seen_at: string;
+  capabilities?: string[];
 }
 
 interface UserInfo {
@@ -42,6 +43,7 @@ export function ParticipantsList({
   users,
   onParticipantAdded,
   readOnly,
+  embedded = false,
 }: {
   threadId: string;
   participants: Participant[];
@@ -49,13 +51,14 @@ export function ParticipantsList({
   users?: UserInfo[];
   onParticipantAdded?: () => void;
   readOnly?: boolean;
+  embedded?: boolean;
 }) {
   const t = useT();
   const [expanded, setExpanded] = useState(true);
   const [showPicker, setShowPicker] = useState(false);
   const [adding, setAdding] = useState(false);
 
-  // Build a map of agent last_seen
+  // Build a map of agent info
   const agentMap = new Map(agents.map((a) => [a.id, a]));
 
   // Filter out participants already in the thread
@@ -80,6 +83,106 @@ export function ParticipantsList({
       setAdding(false);
     }
   };
+
+  const addButton = !readOnly && hasAvailable && !showPicker ? (
+    <button
+      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors pt-1"
+      onClick={() => setShowPicker(true)}
+    >
+      <span className="text-sm">+</span> {t("thread.addParticipant")}
+    </button>
+  ) : null;
+
+  const pickerEl = showPicker ? (
+    <div className="rounded-md border border-border divide-y divide-border mt-1 max-h-48 overflow-y-auto">
+      {availableUsers.map((u) => (
+        <button
+          key={`human:${u.id}`}
+          type="button"
+          disabled={adding}
+          onClick={() => handleAdd(`human:${u.id}`)}
+          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/50 disabled:opacity-50"
+        >
+          <MemberAvatar type="human" name={u.name} size={20} />
+          <span>{u.name}</span>
+        </button>
+      ))}
+      {availableAgents.map((agent) => (
+        <button
+          key={`agent:${agent.id}`}
+          type="button"
+          disabled={adding}
+          onClick={() => handleAdd(`agent:${agent.id}`)}
+          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/50 disabled:opacity-50"
+        >
+          <MemberAvatar type="agent" name={agent.name} size={20} />
+          <span>@{agent.name}</span>
+        </button>
+      ))}
+      <button
+        type="button"
+        onClick={() => setShowPicker(false)}
+        className="flex w-full items-center justify-center px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {t("common.cancel")}
+      </button>
+    </div>
+  ) : null;
+
+  if (embedded) {
+    return (
+      <div className="px-4 py-3 space-y-1">
+        {participants.map((p) => {
+          const isAgent = p.type === "agent";
+          const agentId = p.id.replace("agent:", "");
+          const agentInfo = isAgent ? agentMap.get(agentId) : null;
+
+          return (
+            <div key={p.id} className="flex items-center gap-3 py-1.5">
+              <MemberHoverCard participantId={p.id}>
+                <Link href={memberUrl(p.id)} className="shrink-0">
+                  <MemberAvatar type={p.type} name={p.name} size={32} />
+                </Link>
+              </MemberHoverCard>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <MemberHoverCard participantId={p.id}>
+                    <Link href={memberUrl(p.id)} className="text-sm font-medium hover:underline truncate">
+                      {isAgent ? `@${p.name}` : p.name}
+                    </Link>
+                  </MemberHoverCard>
+                  <span className={`inline-flex h-4 items-center rounded px-1 text-[10px] font-medium ${
+                    isAgent
+                      ? "bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300"
+                      : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
+                  }`}>
+                    {isAgent ? t("members.agent") : t("members.human")}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  {agentInfo?.capabilities?.slice(0, 2).map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex h-4 items-center rounded bg-blue-100 dark:bg-blue-900/30 px-1 text-[10px] font-medium text-blue-700 dark:text-blue-300"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                  {agentInfo && (
+                    <span className="text-[10px] text-muted-foreground">
+                      {t("members.seen").replace("{time}", timeAgo(agentInfo.last_seen_at))}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {addButton}
+        {pickerEl}
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -117,52 +220,8 @@ export function ParticipantsList({
               </div>
             );
           })}
-
-          {/* Add participant button & picker */}
-          {!readOnly && hasAvailable && !showPicker && (
-            <button
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors pt-1"
-              onClick={() => setShowPicker(true)}
-            >
-              <span className="text-sm">+</span> {t("thread.addParticipant")}
-            </button>
-          )}
-
-          {showPicker && (
-            <div className="rounded-md border border-border divide-y divide-border mt-1 max-h-48 overflow-y-auto">
-              {availableUsers.map((u) => (
-                <button
-                  key={`human:${u.id}`}
-                  type="button"
-                  disabled={adding}
-                  onClick={() => handleAdd(`human:${u.id}`)}
-                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/50 disabled:opacity-50"
-                >
-                  <MemberAvatar type="human" name={u.name} size={20} />
-                  <span>{u.name}</span>
-                </button>
-              ))}
-              {availableAgents.map((agent) => (
-                <button
-                  key={`agent:${agent.id}`}
-                  type="button"
-                  disabled={adding}
-                  onClick={() => handleAdd(`agent:${agent.id}`)}
-                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/50 disabled:opacity-50"
-                >
-                  <MemberAvatar type="agent" name={agent.name} size={20} />
-                  <span>@{agent.name}</span>
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => setShowPicker(false)}
-                className="flex w-full items-center justify-center px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {t("common.cancel")}
-              </button>
-            </div>
-          )}
+          {addButton}
+          {pickerEl}
         </div>
       )}
     </div>
