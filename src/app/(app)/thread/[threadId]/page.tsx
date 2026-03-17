@@ -376,7 +376,7 @@ export default function ThreadDetailPage() {
 
         {/* Right: Sidebar — hidden on mobile, shown on md+ */}
         <div className="hidden md:flex md:w-2/5 flex-col overflow-hidden border-border">
-          <Tabs value={sidebarTab} onValueChange={handleSidebarTabChange}>
+          <Tabs value={sidebarTab} onValueChange={handleSidebarTabChange} className="min-h-0 flex flex-col flex-1">
             <TabsList variant="line" className="w-full justify-start px-3 pt-2 border-b border-border shrink-0">
               <TabsTrigger value={0} className="text-xs gap-1">
                 {t("sidebar.actionItems")}
@@ -388,7 +388,7 @@ export default function ThreadDetailPage() {
                 {t("sidebar.participants")}
               </TabsTrigger>
             </TabsList>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto min-h-0">
               <TabsContent value={0}>
                 <ActionItems
                   threadId={threadId}
@@ -413,8 +413,8 @@ export default function ThreadDetailPage() {
             </div>
           </Tabs>
 
-          {/* Collapsible sections below tabs */}
-          <div className="border-t border-border overflow-y-auto max-h-[40%]">
+          {/* Collapsible sections below tabs — always visible */}
+          <div className="border-t border-border overflow-y-auto min-h-[120px] max-h-[40%]">
             <WorkspaceFiles
               threadId={threadId}
               files={files}
