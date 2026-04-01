@@ -32,15 +32,26 @@ export interface Participant {
   name: string;
 }
 
+export interface AnnotationAnchor {
+  file_path: string;        // workspace-relative path, e.g. "design.html"
+  anchor_type: "line" | "selector";
+  start_line?: number;      // MD/MDX line anchor
+  end_line?: number;
+  selector?: string;        // HTML CSS selector anchor
+  commit_hash: string;      // git HEAD at annotation creation time
+  content_snapshot: string; // text content at anchor point
+}
+
 export interface Message {
   id: string;
   ts: number;
   from: string;       // "human:<user-id>" or "agent:<agent-id>"
   from_name: string;  // display name
-  type: "text" | "artifact" | "system" | "activity";
+  type: "text" | "artifact" | "system" | "activity" | "annotation";
   body: string;
   artifact_version?: number; // if type is "artifact", which version this created
   reply_to?: string;  // message id this is replying to
+  annotation?: AnnotationAnchor; // if type is "annotation"
 }
 
 export interface ArtifactVersion {
@@ -938,6 +949,22 @@ export function deleteThreadTask(threadId: string, taskId: string): boolean {
 }
 
 // Git helpers
+export function getGitHead(): string {
+  try {
+    return execSync("git rev-parse HEAD", { cwd: REPO_BASE() }).toString().trim();
+  } catch {
+    return "unknown";
+  }
+}
+
+export function getFileAtCommit(commitHash: string, filePath: string): string | null {
+  try {
+    return execSync(`git show ${commitHash}:${filePath}`, { cwd: REPO_BASE() }).toString();
+  } catch {
+    return null;
+  }
+}
+
 function gitCommit(message: string, authorName: string, authorEmail: string): void {
   try {
     execSync("git add -A", { cwd: REPO_BASE() });
