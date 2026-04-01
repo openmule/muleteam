@@ -11,7 +11,7 @@ interface Message {
   ts: number;
   from: string;
   from_name: string;
-  type: "text" | "artifact" | "system" | "activity";
+  type: "text" | "artifact" | "system" | "activity" | "annotation";
   body: string;
   artifact_version?: number;
   reply_to?: string;

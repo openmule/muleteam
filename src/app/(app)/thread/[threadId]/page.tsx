@@ -14,6 +14,8 @@ import { MarkdownBody } from "@/components/thread/MarkdownBody";
 import { JoinButton, LeaveButton } from "@/components/thread/JoinButton";
 import { MobileDetailSheet } from "@/components/thread/MobileDetailSheet";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { PageViewer, RENDERABLE_RE, type CreateAnnotationPayload } from "@/components/thread/PageViewer";
+import { ResizablePanel } from "@/components/ui/resizable-panel";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useT } from "@/lib/i18n";
 
@@ -34,15 +36,26 @@ interface ThreadMeta {
   updated_at: string;
 }
 
+interface AnnotationAnchor {
+  file_path: string;
+  anchor_type: "line" | "selector";
+  start_line?: number;
+  end_line?: number;
+  selector?: string;
+  commit_hash: string;
+  content_snapshot: string;
+}
+
 interface Message {
   id: string;
   ts: number;
   from: string;
   from_name: string;
-  type: "text" | "artifact" | "system" | "activity";
+  type: "text" | "artifact" | "system" | "activity" | "annotation";
   body: string;
   artifact_version?: number;
   reply_to?: string;
+  annotation?: AnnotationAnchor;
 }
 
 interface WorkspaceFile {
@@ -215,6 +228,9 @@ export default function ThreadDetailPage() {
   // Reply state
   const [replyTo, setReplyTo] = useState<{ id: string; from_name: string; body: string } | null>(null);
 
+  // Annotation navigation state: which annotation to highlight in page viewer
+  const [highlightAnnotationId, setHighlightAnnotationId] = useState<string | null>(null);
+
   const handleReply = (messageId: string) => {
     const msg = messages.find(m => m.id === messageId);
     if (msg) {
@@ -229,9 +245,25 @@ export default function ThreadDetailPage() {
       body: JSON.stringify({ body, reply_to: replyToId }),
     });
     setReplyTo(null);
-    // Don't block on refetch — input clears immediately after POST succeeds
     fetchMessages();
   };
+
+  // Thread → Page: click annotation message → highlight in page viewer
+  const handleNavigateToAnnotation = useCallback((messageId: string) => {
+    setHighlightAnnotationId(messageId);
+    // Clear after animation
+    setTimeout(() => setHighlightAnnotationId(null), 3000);
+  }, []);
+
+  // Page → Thread: create annotation from page viewer
+  const handleCreateAnnotation = useCallback(async (payload: CreateAnnotationPayload, body: string) => {
+    await fetch(`/api/threads/${threadId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body, annotation: payload }),
+    });
+    fetchMessages();
+  }, [threadId, fetchMessages]);
 
   const handleStatusChange = async (newStatus: string) => {
     await fetch(`/api/threads/${threadId}`, {
@@ -271,6 +303,108 @@ export default function ThreadDetailPage() {
   const isMember = currentUser
     ? thread.participants.some(p => p.id === `human:${currentUser.id}`)
     : false;
+
+  const hasRenderableFiles = files.some(f => RENDERABLE_RE.test(f.name));
+
+  // Left panel: Chat + sidebar tabs
+  const leftPanel = (
+    <div className="flex flex-col flex-1 min-h-0">
+      <Tabs value={sidebarTab} onValueChange={handleSidebarTabChange} className="min-h-0 flex flex-col flex-1">
+        <TabsList variant="line" className="w-full justify-start px-3 pt-1 border-b border-border shrink-0">
+          <TabsTrigger value={0} className="text-xs">
+            {t("sidebar.chat")}
+          </TabsTrigger>
+          <TabsTrigger value={1} className="text-xs gap-1">
+            {t("sidebar.actionItems")}
+            {openTaskCount > 0 && (
+              <span className="text-[10px] text-muted-foreground">({openTaskCount})</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value={2} className="text-xs">
+            {t("sidebar.participants")}
+          </TabsTrigger>
+          <TabsTrigger value={3} className="text-xs">
+            {t("sidebar.files")}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Chat tab */}
+        <TabsContent value={0} className="flex flex-col flex-1 min-h-0">
+          {thread.description && (
+            <div className="px-4 sm:px-6 py-3 border-b border-border text-muted-foreground">
+              <MarkdownBody body={thread.description} />
+            </div>
+          )}
+          <ActivityFeed threadId={threadId} messages={messages} onReply={isMember ? handleReply : undefined} onNavigateToAnnotation={handleNavigateToAnnotation} />
+          {isMember ? (
+            <CommentInput
+              threadId={threadId}
+              onSubmit={handleSendMessage}
+              replyTo={replyTo}
+              onCancelReply={() => setReplyTo(null)}
+              participants={thread.participants}
+            />
+          ) : (
+            <JoinButton threadId={threadId} onJoined={handleJoined} />
+          )}
+        </TabsContent>
+
+        {/* Tasks tab */}
+        <TabsContent value={1} className="flex-1 overflow-y-auto">
+          <ActionItems
+            threadId={threadId}
+            tasks={tasks}
+            participants={thread.participants}
+            onRefresh={fetchTasks}
+            readOnly={!isMember}
+            embedded
+          />
+        </TabsContent>
+
+        {/* Participants tab */}
+        <TabsContent value={2} className="flex-1 overflow-y-auto">
+          <ParticipantsList
+            threadId={threadId}
+            participants={thread.participants}
+            agents={agents}
+            users={allUsers}
+            onParticipantAdded={fetchThread}
+            readOnly={!isMember}
+            embedded
+          />
+        </TabsContent>
+
+        {/* Files tab */}
+        <TabsContent value={3} className="flex-1 overflow-y-auto">
+          <WorkspaceFiles
+            threadId={threadId}
+            files={files}
+            onRefresh={fetchFiles}
+            readOnly={!isMember}
+          />
+          <WorkspaceLinks
+            threadId={threadId}
+            links={links}
+            onRefresh={fetchLinks}
+            readOnly={!isMember}
+          />
+          <GitHistory threadId={threadId} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+
+  // Right panel: Page viewer
+  const rightPanel = (
+    <PageViewer
+      threadId={threadId}
+      files={files}
+      messages={messages}
+      onCreateAnnotation={isMember ? handleCreateAnnotation : undefined}
+      highlightAnnotationId={highlightAnnotationId}
+      onPinClicked={handleNavigateToAnnotation}
+    />
+  );
 
   return (
     <div className="h-[calc(100dvh-3.5rem)] flex flex-col overflow-hidden">
@@ -346,21 +480,34 @@ export default function ThreadDetailPage() {
         </div>
       </header>
 
-      {/* Main: Split View */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        {/* Left: Activity Feed */}
-        <div className="flex-1 md:w-3/5 flex flex-col md:border-r border-border min-h-0">
-          {/* Description */}
+      {/* Main content */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+        {/* Desktop: split layout when pages exist, full-width chat when not */}
+        <div className="hidden md:flex flex-1 min-h-0">
+          {hasRenderableFiles ? (
+            <ResizablePanel
+              left={leftPanel}
+              right={rightPanel}
+              defaultRatio={0.4}
+              storageKey={`muleteam:panel-ratio:${threadId}`}
+            />
+          ) : (
+            <div className="flex flex-1 min-h-0">
+              <div className="flex flex-col flex-1 min-h-0 border-r border-border">
+                {leftPanel}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile: single column, chat only (pages via mobile sheet later) */}
+        <div className="flex md:hidden flex-col flex-1 min-h-0">
           {thread.description && (
-            <div className="px-4 sm:px-6 py-4 border-b border-border text-muted-foreground">
+            <div className="px-4 py-3 border-b border-border text-muted-foreground">
               <MarkdownBody body={thread.description} />
             </div>
           )}
-
-          {/* Messages */}
-          <ActivityFeed threadId={threadId} messages={messages} onReply={isMember ? handleReply : undefined} />
-
-          {/* Comment input or Join button */}
+          <ActivityFeed threadId={threadId} messages={messages} onReply={isMember ? handleReply : undefined} onNavigateToAnnotation={handleNavigateToAnnotation} />
           {isMember ? (
             <CommentInput
               threadId={threadId}
@@ -372,65 +519,6 @@ export default function ThreadDetailPage() {
           ) : (
             <JoinButton threadId={threadId} onJoined={handleJoined} />
           )}
-        </div>
-
-        {/* Right: Sidebar — hidden on mobile, shown on md+ */}
-        <div className="hidden md:flex md:w-2/5 flex-col overflow-hidden border-border">
-          <Tabs value={sidebarTab} onValueChange={handleSidebarTabChange} className="min-h-0 flex flex-col flex-1">
-            <TabsList variant="line" className="w-full justify-start px-3 pt-2 border-b border-border shrink-0">
-              <TabsTrigger value={0} className="text-xs gap-1">
-                {t("sidebar.actionItems")}
-                {openTaskCount > 0 && (
-                  <span className="text-[10px] text-muted-foreground">({openTaskCount})</span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value={1} className="text-xs">
-                {t("sidebar.participants")}
-              </TabsTrigger>
-            </TabsList>
-            <div className="flex-1 overflow-y-auto min-h-0">
-              <TabsContent value={0}>
-                <ActionItems
-                  threadId={threadId}
-                  tasks={tasks}
-                  participants={thread.participants}
-                  onRefresh={fetchTasks}
-                  readOnly={!isMember}
-                  embedded
-                />
-              </TabsContent>
-              <TabsContent value={1}>
-                <ParticipantsList
-                  threadId={threadId}
-                  participants={thread.participants}
-                  agents={agents}
-                  users={allUsers}
-                  onParticipantAdded={fetchThread}
-                  readOnly={!isMember}
-                  embedded
-                />
-              </TabsContent>
-            </div>
-          </Tabs>
-
-          {/* Collapsible sections below tabs — always visible */}
-          <div className="border-t border-border overflow-y-auto min-h-[120px] max-h-[40%]">
-            <WorkspaceFiles
-              threadId={threadId}
-              files={files}
-              onRefresh={fetchFiles}
-              readOnly={!isMember}
-            />
-
-            <WorkspaceLinks
-              threadId={threadId}
-              links={links}
-              onRefresh={fetchLinks}
-              readOnly={!isMember}
-            />
-
-            <GitHistory threadId={threadId} />
-          </div>
         </div>
       </div>
     </div>

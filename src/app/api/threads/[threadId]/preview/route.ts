@@ -2,9 +2,23 @@ import { NextResponse } from "next/server";
 import { getArtifact, readWorkspaceFile } from "@/lib/git-storage";
 import { withTenantFromRequest } from "@/lib/tenant-context";
 
+const BRIDGE_SCRIPT_TAG = `<script src="/annotation-bridge.js"></script>`;
+
+/** Inject annotation bridge script before </body> or at end of HTML */
+function injectBridge(html: string): string {
+  if (html.includes("</body>")) {
+    return html.replace("</body>", `${BRIDGE_SCRIPT_TAG}</body>`);
+  }
+  if (html.includes("</html>")) {
+    return html.replace("</html>", `${BRIDGE_SCRIPT_TAG}</html>`);
+  }
+  return html + BRIDGE_SCRIPT_TAG;
+}
+
 // GET - serve artifact HTML or workspace HTML file
 // ?version=N for specific artifact version
 // ?file=filename for workspace file
+// ?inject=annotation-bridge to inject annotation bridge script
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ threadId: string }> }
@@ -12,6 +26,7 @@ export async function GET(
   return withTenantFromRequest(request, async () => {
     const { threadId } = await params;
     const url = new URL(request.url);
+    const shouldInject = url.searchParams.get("inject") === "annotation-bridge";
 
     // Serve workspace file if ?file= is specified
     const fileParam = url.searchParams.get("file");
@@ -20,10 +35,13 @@ export async function GET(
         const content = readWorkspaceFile(threadId, fileParam);
         if (content) {
           const ext = fileParam.split(".").pop()?.toLowerCase();
-          const contentType = ext === "html" || ext === "htm"
+          const isHtml = ext === "html" || ext === "htm";
+          const contentType = isHtml
             ? "text/html; charset=utf-8"
             : "text/plain; charset=utf-8";
-          return new NextResponse(content, {
+
+          const output = isHtml && shouldInject ? injectBridge(content) : content;
+          return new NextResponse(output, {
             headers: { "Content-Type": contentType },
           });
         }
@@ -50,7 +68,8 @@ export async function GET(
       );
     }
 
-    return new NextResponse(html, {
+    const output = shouldInject ? injectBridge(html) : html;
+    return new NextResponse(output, {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   });
