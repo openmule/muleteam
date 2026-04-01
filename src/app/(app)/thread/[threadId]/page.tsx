@@ -304,7 +304,8 @@ export default function ThreadDetailPage() {
     ? thread.participants.some(p => p.id === `human:${currentUser.id}`)
     : false;
 
-  const hasRenderableFiles = files.some(f => RENDERABLE_RE.test(f.name));
+  const EXCLUDED_FILES = new Set(["README.md", "DECISION_LOG.md"]);
+  const hasRenderableFiles = files.some(f => RENDERABLE_RE.test(f.name) && !EXCLUDED_FILES.has(f.name));
 
   // Left panel: Chat + sidebar tabs
   const leftPanel = (

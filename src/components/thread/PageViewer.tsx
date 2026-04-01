@@ -36,6 +36,8 @@ export interface CreateAnnotationPayload {
 }
 
 const RENDERABLE_RE = /\.(html|htm|md|mdx|markdown)$/i;
+// System-generated workspace files that should NOT trigger page viewer
+const EXCLUDED_FILES = new Set(["README.md", "DECISION_LOG.md"]);
 const isHtml = (name: string) => /\.(html|htm)$/i.test(name);
 const isMarkdown = (name: string) => /\.(md|mdx|markdown)$/i.test(name);
 
@@ -54,7 +56,7 @@ export function PageViewer({
   highlightAnnotationId?: string | null;
   onPinClicked?: (annotationId: string) => void;
 }) {
-  const renderableFiles = files.filter((f) => RENDERABLE_RE.test(f.name));
+  const renderableFiles = files.filter((f) => RENDERABLE_RE.test(f.name) && !EXCLUDED_FILES.has(f.name));
   const [activeFile, setActiveFile] = useState<string | null>(null);
 
   const current = activeFile && renderableFiles.some((f) => f.name === activeFile)
