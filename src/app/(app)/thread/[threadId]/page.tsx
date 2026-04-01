@@ -482,7 +482,7 @@ export default function ThreadDetailPage() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
-        {/* Desktop: split layout when pages exist, full-width chat when not */}
+        {/* Desktop: split layout with page viewer OR original layout */}
         <div className="hidden md:flex flex-1 min-h-0">
           {hasRenderableFiles ? (
             <ResizablePanel
@@ -492,11 +492,56 @@ export default function ThreadDetailPage() {
               storageKey={`muleteam:panel-ratio:${threadId}`}
             />
           ) : (
-            <div className="flex flex-1 min-h-0">
-              <div className="flex flex-col flex-1 min-h-0 border-r border-border">
-                {leftPanel}
+            /* Original layout: chat left + sidebar right */
+            <>
+              <div className="flex-1 md:w-3/5 flex flex-col md:border-r border-border min-h-0">
+                {thread.description && (
+                  <div className="px-4 sm:px-6 py-4 border-b border-border text-muted-foreground">
+                    <MarkdownBody body={thread.description} />
+                  </div>
+                )}
+                <ActivityFeed threadId={threadId} messages={messages} onReply={isMember ? handleReply : undefined} onNavigateToAnnotation={handleNavigateToAnnotation} />
+                {isMember ? (
+                  <CommentInput
+                    threadId={threadId}
+                    onSubmit={handleSendMessage}
+                    replyTo={replyTo}
+                    onCancelReply={() => setReplyTo(null)}
+                    participants={thread.participants}
+                  />
+                ) : (
+                  <JoinButton threadId={threadId} onJoined={handleJoined} />
+                )}
               </div>
-            </div>
+              <div className="md:w-2/5 flex flex-col overflow-hidden border-border">
+                <Tabs value={sidebarTab} onValueChange={handleSidebarTabChange} className="min-h-0 flex flex-col flex-1">
+                  <TabsList variant="line" className="w-full justify-start px-3 pt-2 border-b border-border shrink-0">
+                    <TabsTrigger value={0} className="text-xs gap-1">
+                      {t("sidebar.actionItems")}
+                      {openTaskCount > 0 && (
+                        <span className="text-[10px] text-muted-foreground">({openTaskCount})</span>
+                      )}
+                    </TabsTrigger>
+                    <TabsTrigger value={1} className="text-xs">
+                      {t("sidebar.participants")}
+                    </TabsTrigger>
+                  </TabsList>
+                  <div className="flex-1 overflow-y-auto min-h-0">
+                    <TabsContent value={0}>
+                      <ActionItems threadId={threadId} tasks={tasks} participants={thread.participants} onRefresh={fetchTasks} readOnly={!isMember} embedded />
+                    </TabsContent>
+                    <TabsContent value={1}>
+                      <ParticipantsList threadId={threadId} participants={thread.participants} agents={agents} users={allUsers} onParticipantAdded={fetchThread} readOnly={!isMember} embedded />
+                    </TabsContent>
+                  </div>
+                </Tabs>
+                <div className="border-t border-border overflow-y-auto min-h-[120px] max-h-[40%]">
+                  <WorkspaceFiles threadId={threadId} files={files} onRefresh={fetchFiles} readOnly={!isMember} />
+                  <WorkspaceLinks threadId={threadId} links={links} onRefresh={fetchLinks} readOnly={!isMember} />
+                  <GitHistory threadId={threadId} />
+                </div>
+              </div>
+            </>
           )}
         </div>
 
