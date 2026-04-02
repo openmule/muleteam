@@ -495,7 +495,7 @@ export default function ThreadDetailPage() {
           ) : (
             /* Original layout: chat left + sidebar right */
             <>
-              <div className="flex-1 md:w-3/5 flex flex-col md:border-r border-border min-h-0">
+              <div className="flex-[3] flex flex-col border-r border-border min-h-0 min-w-0">
                 {thread.description && (
                   <div className="px-4 sm:px-6 py-4 border-b border-border text-muted-foreground">
                     <MarkdownBody body={thread.description} />
@@ -514,7 +514,7 @@ export default function ThreadDetailPage() {
                   <JoinButton threadId={threadId} onJoined={handleJoined} />
                 )}
               </div>
-              <div className="md:w-2/5 flex flex-col overflow-hidden border-border">
+              <div className="flex-[2] flex flex-col overflow-hidden border-border min-w-0">
                 <Tabs value={sidebarTab} onValueChange={handleSidebarTabChange} className="min-h-0 flex flex-col flex-1">
                   <TabsList variant="line" className="w-full justify-start px-3 pt-2 border-b border-border shrink-0">
                     <TabsTrigger value={0} className="text-xs gap-1">
