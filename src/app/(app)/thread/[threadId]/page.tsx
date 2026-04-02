@@ -307,6 +307,9 @@ export default function ThreadDetailPage() {
   const EXCLUDED_FILES = new Set(["README.md", "DECISION_LOG.md"]);
   const hasRenderableFiles = files.some(f => RENDERABLE_RE.test(f.name) && !EXCLUDED_FILES.has(f.name));
 
+  // Original layout only has sidebar tabs 0-1; clamp stored value to avoid blank sidebar
+  const effectiveSidebarTab = hasRenderableFiles ? sidebarTab : Math.min(sidebarTab, 1);
+
   // Left panel: Chat + sidebar tabs
   const leftPanel = (
     <div className="flex flex-col flex-1 min-h-0">
@@ -495,7 +498,7 @@ export default function ThreadDetailPage() {
           ) : (
             /* Original layout: chat left + sidebar right */
             <>
-              <div className="flex-[3] flex flex-col border-r border-border min-h-0 min-w-0">
+              <div className="flex-[3] flex flex-col border-r border-border min-h-0 min-w-0 overflow-hidden">
                 {thread.description && (
                   <div className="px-4 sm:px-6 py-4 border-b border-border text-muted-foreground">
                     <MarkdownBody body={thread.description} />
@@ -515,7 +518,7 @@ export default function ThreadDetailPage() {
                 )}
               </div>
               <div className="flex-[2] flex flex-col overflow-hidden border-border min-w-0">
-                <Tabs value={sidebarTab} onValueChange={handleSidebarTabChange} className="min-h-0 flex flex-col flex-1">
+                <Tabs value={effectiveSidebarTab} onValueChange={handleSidebarTabChange} className="min-h-0 flex flex-col flex-1">
                   <TabsList variant="line" className="w-full justify-start px-3 pt-2 border-b border-border shrink-0">
                     <TabsTrigger value={0} className="text-xs gap-1">
                       {t("sidebar.actionItems")}
