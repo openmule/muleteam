@@ -518,7 +518,7 @@ export default function ThreadDetailPage() {
                 )}
               </div>
               <div className="flex-[2] flex flex-col overflow-hidden border-border min-w-0">
-                <Tabs value={effectiveSidebarTab} onValueChange={handleSidebarTabChange} className="min-h-0 flex flex-col flex-1">
+                <Tabs value={effectiveSidebarTab} onValueChange={handleSidebarTabChange}>
                   <TabsList variant="line" className="w-full justify-start px-3 pt-2 border-b border-border shrink-0">
                     <TabsTrigger value={0} className="text-xs gap-1">
                       {t("sidebar.actionItems")}
@@ -530,19 +530,19 @@ export default function ThreadDetailPage() {
                       {t("sidebar.participants")}
                     </TabsTrigger>
                   </TabsList>
-                  <div className="flex-1 overflow-y-auto min-h-0">
-                    <TabsContent value={0}>
-                      <ActionItems threadId={threadId} tasks={tasks} participants={thread.participants} onRefresh={fetchTasks} readOnly={!isMember} embedded />
-                    </TabsContent>
-                    <TabsContent value={1}>
-                      <ParticipantsList threadId={threadId} participants={thread.participants} agents={agents} users={allUsers} onParticipantAdded={fetchThread} readOnly={!isMember} embedded />
-                    </TabsContent>
-                  </div>
                 </Tabs>
-                <div className="border-t border-border overflow-y-auto min-h-[120px] max-h-[40%]">
-                  <WorkspaceFiles threadId={threadId} files={files} onRefresh={fetchFiles} readOnly={!isMember} />
-                  <WorkspaceLinks threadId={threadId} links={links} onRefresh={fetchLinks} readOnly={!isMember} />
-                  <GitHistory threadId={threadId} />
+                <div className="flex-1 overflow-y-auto min-h-0">
+                  {effectiveSidebarTab === 0 && (
+                    <ActionItems threadId={threadId} tasks={tasks} participants={thread.participants} onRefresh={fetchTasks} readOnly={!isMember} embedded />
+                  )}
+                  {effectiveSidebarTab === 1 && (
+                    <ParticipantsList threadId={threadId} participants={thread.participants} agents={agents} users={allUsers} onParticipantAdded={fetchThread} readOnly={!isMember} embedded />
+                  )}
+                  <div className="border-t border-border">
+                    <WorkspaceFiles threadId={threadId} files={files} onRefresh={fetchFiles} readOnly={!isMember} />
+                    <WorkspaceLinks threadId={threadId} links={links} onRefresh={fetchLinks} readOnly={!isMember} />
+                    <GitHistory threadId={threadId} />
+                  </div>
                 </div>
               </div>
             </>
