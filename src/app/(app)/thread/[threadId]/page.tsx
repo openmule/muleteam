@@ -337,11 +337,11 @@ export default function ThreadDetailPage() {
         ))}
         {/* Close page viewer button */}
         <button
-          className="ml-auto text-xs text-muted-foreground hover:text-foreground px-2 py-1"
+          className="ml-auto text-xs text-muted-foreground hover:text-foreground px-2 py-1 border border-border rounded hover:bg-muted transition-colors"
           onClick={() => setShowPageViewer(false)}
           title="Close page viewer"
         >
-          ✕
+          ✕ Close
         </button>
       </div>
 
