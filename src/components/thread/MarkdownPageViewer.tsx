@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef, useLayoutEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -40,17 +40,25 @@ function rehypeLineNumbers() {
   };
 }
 
+interface LinePosition {
+  line: number;
+  top: number;
+  height: number;
+}
+
 export function MarkdownPageViewer({
   threadId,
   filename,
   annotations = [],
   onCreateAnnotation,
+  onPinClicked,
   highlightAnnotationId,
 }: {
   threadId: string;
   filename: string;
   annotations?: AnnotationMessage[];
   onCreateAnnotation?: (line: number, contentSnapshot: string, body: string) => void;
+  onPinClicked?: (annotationId: string) => void;
   highlightAnnotationId?: string | null;
 }) {
   const [content, setContent] = useState<string | null>(null);
@@ -58,8 +66,11 @@ export function MarkdownPageViewer({
   const [commentLine, setCommentLine] = useState<number | null>(null);
   const [commentBody, setCommentBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [linePositions, setLinePositions] = useState<LinePosition[]>([]);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const [renderKey, setRenderKey] = useState(0);
 
   useEffect(() => {
     setLoading(true);
@@ -88,13 +99,59 @@ export function MarkdownPageViewer({
     return lines;
   }, [annotations, filename]);
 
-  // Handle line click → open comment input
-  const handleLineClick = useCallback((lineNum: number) => {
-    if (!onCreateAnnotation) return;
-    setCommentLine(lineNum);
-    setCommentBody("");
-    setTimeout(() => commentInputRef.current?.focus(), 50);
-  }, [onCreateAnnotation]);
+  // Measure positions of rendered block elements after content renders
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => {
+    if (!contentRef.current || !containerRef.current) return;
+
+    const els = contentRef.current.querySelectorAll("[data-source-line]");
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const scrollTop = containerRef.current.scrollTop;
+    const seen = new Set<number>();
+    const positions: LinePosition[] = [];
+
+    els.forEach((el) => {
+      const line = parseInt(el.getAttribute("data-source-line") || "0");
+      if (line <= 0 || seen.has(line)) return;
+      seen.add(line);
+      const rect = el.getBoundingClientRect();
+      positions.push({
+        line,
+        top: rect.top - containerRect.top + scrollTop,
+        height: rect.height,
+      });
+    });
+
+    positions.sort((a, b) => a.line - b.line);
+    setLinePositions(positions);
+  // Re-measure when content changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content, renderKey]);
+
+  // Trigger re-measure after ReactMarkdown finishes rendering
+  useEffect(() => {
+    if (content !== null) {
+      const timer = setTimeout(() => setRenderKey((k) => k + 1), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [content]);
+
+  // Handle line click
+  const handleLineClick = useCallback(
+    (lineNum: number) => {
+      const msgIds = annotatedLines.get(lineNum);
+      if (msgIds && msgIds.length > 0 && onPinClicked) {
+        // Has existing annotations → navigate to first one in chat
+        onPinClicked(msgIds[0]);
+        return;
+      }
+      if (!onCreateAnnotation) return;
+      setCommentLine(lineNum);
+      setCommentBody("");
+      setTimeout(() => commentInputRef.current?.focus(), 50);
+    },
+    [onCreateAnnotation, onPinClicked, annotatedLines]
+  );
 
   // Submit annotation
   const handleSubmit = useCallback(async () => {
@@ -113,11 +170,13 @@ export function MarkdownPageViewer({
   // Scroll to highlighted annotation line
   useEffect(() => {
     if (!highlightAnnotationId || !contentRef.current) return;
-    const msg = annotations.find(m => m.id === highlightAnnotationId);
+    const msg = annotations.find((m) => m.id === highlightAnnotationId);
     const ann = msg?.annotation;
     if (!ann || ann.anchor_type !== "line" || !ann.start_line) return;
 
-    const lineEl = contentRef.current.querySelector(`[data-line="${ann.start_line}"]`) as HTMLElement | null;
+    const lineEl = contentRef.current.querySelector(
+      `[data-source-line="${ann.start_line}"]`
+    ) as HTMLElement | null;
     if (lineEl) {
       lineEl.scrollIntoView({ behavior: "smooth", block: "center" });
       lineEl.classList.add("bg-yellow-200/50", "dark:bg-yellow-900/30");
@@ -130,29 +189,65 @@ export function MarkdownPageViewer({
   const components = useMemo(
     () => ({
       pre: ({ children, ...props }: React.ComponentProps<"pre">) => (
-        <pre className="rounded-md bg-muted p-3 overflow-x-auto text-xs leading-relaxed my-2" {...props}>
+        <pre
+          className="rounded-md bg-muted p-3 overflow-x-auto text-xs leading-relaxed my-2"
+          {...props}
+        >
           {children}
         </pre>
       ),
-      code: ({ className, children, ...props }: React.ComponentProps<"code"> & { className?: string }) => {
+      code: ({
+        className,
+        children,
+        ...props
+      }: React.ComponentProps<"code"> & { className?: string }) => {
         const isBlock = className?.startsWith("hljs") || className?.startsWith("language-");
-        if (isBlock) return <code className={className} {...props}>{children}</code>;
-        return <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono" {...props}>{children}</code>;
+        if (isBlock)
+          return (
+            <code className={className} {...props}>
+              {children}
+            </code>
+          );
+        return (
+          <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono" {...props}>
+            {children}
+          </code>
+        );
       },
       a: ({ children, ...props }: React.ComponentProps<"a">) => (
-        <a className="underline underline-offset-2 text-primary hover:text-primary/80" target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
+        <a
+          className="underline underline-offset-2 text-primary hover:text-primary/80"
+          target="_blank"
+          rel="noopener noreferrer"
+          {...props}
+        >
+          {children}
+        </a>
       ),
       table: ({ children, ...props }: React.ComponentProps<"table">) => (
-        <div className="overflow-x-auto my-2"><table className="text-sm border-collapse w-full" {...props}>{children}</table></div>
+        <div className="overflow-x-auto my-2">
+          <table className="text-sm border-collapse w-full" {...props}>
+            {children}
+          </table>
+        </div>
       ),
       th: ({ children, ...props }: React.ComponentProps<"th">) => (
-        <th className="border border-border px-2 py-1 text-left font-medium bg-muted" {...props}>{children}</th>
+        <th className="border border-border px-2 py-1 text-left font-medium bg-muted" {...props}>
+          {children}
+        </th>
       ),
       td: ({ children, ...props }: React.ComponentProps<"td">) => (
-        <td className="border border-border px-2 py-1" {...props}>{children}</td>
+        <td className="border border-border px-2 py-1" {...props}>
+          {children}
+        </td>
       ),
       blockquote: ({ children, ...props }: React.ComponentProps<"blockquote">) => (
-        <blockquote className="border-l-2 border-muted-foreground/30 pl-3 my-2 text-muted-foreground" {...props}>{children}</blockquote>
+        <blockquote
+          className="border-l-2 border-muted-foreground/30 pl-3 my-2 text-muted-foreground"
+          {...props}
+        >
+          {children}
+        </blockquote>
       ),
       img: ({ ...props }: React.ComponentProps<"img">) => (
         <img className="max-w-full h-auto rounded my-2" {...props} />
@@ -178,95 +273,96 @@ export function MarkdownPageViewer({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto min-h-0" ref={contentRef}>
-      <div className="flex">
-        {/* Line number gutter */}
-        <div className="shrink-0 select-none border-r border-border bg-muted/30 text-right pr-2 pl-3 py-4 font-mono text-xs text-muted-foreground/50 leading-relaxed">
-          {sourceLines.map((_, i) => {
-            const lineNum = i + 1;
-            const hasAnnotation = annotatedLines.has(lineNum);
-            return (
-              <div
-                key={i}
-                className={`h-[1.625em] cursor-pointer transition-colors ${
-                  hasAnnotation
-                    ? "text-primary font-medium"
-                    : "hover:text-muted-foreground"
-                } ${commentLine === lineNum ? "bg-primary/10 text-primary" : ""}`}
-                data-line={lineNum}
-                onClick={() => handleLineClick(lineNum)}
-                title={hasAnnotation ? "Has annotations" : "Click to annotate"}
-              >
-                {hasAnnotation ? "📌" : lineNum}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Rendered content + inline comment input */}
-        <div className="flex-1 min-w-0 px-6 py-4 relative">
-          <div className="prose-sm max-w-none text-foreground/90 break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&>p]:my-2 [&>ul]:my-2 [&>ol]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mt-6 [&>h1]:mb-3 [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mt-5 [&>h2]:mb-2 [&>h3]:text-base [&>h3]:font-medium [&>h3]:mt-4 [&>h3]:mb-2 [&>hr]:my-4 [&>hr]:border-border">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeHighlight, rehypeLineNumbers]}
-              components={components}
+    <div className="flex-1 overflow-y-auto min-h-0 relative" ref={containerRef}>
+      {/* Position-based line number gutter */}
+      <div className="absolute left-0 top-0 w-10 select-none z-10 border-r border-border bg-muted/30">
+        {linePositions.map(({ line, top, height }) => {
+          const hasAnnotation = annotatedLines.has(line);
+          return (
+            <div
+              key={line}
+              className={`absolute right-0 pr-2 font-mono text-xs text-right w-10 flex items-center justify-end cursor-pointer transition-colors ${
+                hasAnnotation
+                  ? "text-primary font-medium"
+                  : "text-muted-foreground/50 hover:text-muted-foreground"
+              } ${commentLine === line ? "bg-primary/10 text-primary" : ""}`}
+              style={{ top, height }}
+              onClick={() => handleLineClick(line)}
+              title={
+                hasAnnotation
+                  ? `${annotatedLines.get(line)!.length} annotation(s) — click to view`
+                  : "Click to annotate"
+              }
             >
-              {content}
-            </ReactMarkdown>
-          </div>
-
-          {/* Inline comment popover */}
-          {commentLine !== null && onCreateAnnotation && (
-            <div className="fixed bottom-4 right-4 z-[60] w-80 bg-background border border-border rounded-lg shadow-lg p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">
-                  📌 Annotate line {commentLine}
-                </span>
-                <button
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                  onClick={() => setCommentLine(null)}
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="text-xs font-mono text-foreground/60 bg-muted rounded px-2 py-1 truncate">
-                {sourceLines[commentLine - 1] || "(empty line)"}
-              </div>
-              <textarea
-                ref={commentInputRef}
-                className="w-full text-sm border border-border rounded-md px-3 py-2 bg-background resize-none focus:outline-none focus:ring-1 focus:ring-primary"
-                rows={3}
-                placeholder="Add your comment..."
-                value={commentBody}
-                onChange={(e) => setCommentBody(e.target.value)}
-                onKeyDown={(e) => {
-                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                    e.preventDefault();
-                    handleSubmit();
-                  }
-                  if (e.key === "Escape") {
-                    setCommentLine(null);
-                  }
-                }}
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  className="text-xs text-muted-foreground hover:text-foreground px-2 py-1"
-                  onClick={() => setCommentLine(null)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="text-xs bg-primary text-primary-foreground rounded px-3 py-1 hover:bg-primary/90 disabled:opacity-50"
-                  disabled={!commentBody.trim() || submitting}
-                  onClick={handleSubmit}
-                >
-                  {submitting ? "..." : "Comment"}
-                </button>
-              </div>
+              {hasAnnotation ? "📌" : line}
             </div>
-          )}
+          );
+        })}
+      </div>
+
+      {/* Rendered content */}
+      <div className="pl-12 pr-6 py-4 relative" ref={contentRef}>
+        <div className="prose-sm max-w-none text-foreground/90 break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&>p]:my-2 [&>ul]:my-2 [&>ol]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mt-6 [&>h1]:mb-3 [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mt-5 [&>h2]:mb-2 [&>h3]:text-base [&>h3]:font-medium [&>h3]:mt-4 [&>h3]:mb-2 [&>hr]:my-4 [&>hr]:border-border">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeHighlight, rehypeLineNumbers]}
+            components={components}
+          >
+            {content}
+          </ReactMarkdown>
         </div>
+
+        {/* Inline comment popover */}
+        {commentLine !== null && onCreateAnnotation && (
+          <div className="fixed bottom-4 right-4 z-[60] w-80 bg-background border border-border rounded-lg shadow-lg p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">
+                📌 Annotate line {commentLine}
+              </span>
+              <button
+                className="text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setCommentLine(null)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="text-xs font-mono text-foreground/60 bg-muted rounded px-2 py-1 truncate">
+              {sourceLines[commentLine - 1] || "(empty line)"}
+            </div>
+            <textarea
+              ref={commentInputRef}
+              className="w-full text-sm border border-border rounded-md px-3 py-2 bg-background resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+              rows={3}
+              placeholder="Add your comment..."
+              value={commentBody}
+              onChange={(e) => setCommentBody(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+                if (e.key === "Escape") {
+                  setCommentLine(null);
+                }
+              }}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                className="text-xs text-muted-foreground hover:text-foreground px-2 py-1"
+                onClick={() => setCommentLine(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="text-xs bg-primary text-primary-foreground rounded px-3 py-1 hover:bg-primary/90 disabled:opacity-50"
+                disabled={!commentBody.trim() || submitting}
+                onClick={handleSubmit}
+              >
+                {submitting ? "..." : "Comment"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
