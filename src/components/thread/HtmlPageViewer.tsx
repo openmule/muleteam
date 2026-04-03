@@ -150,7 +150,7 @@ export function HtmlPageViewer({
 
       {/* Comment popover for selected element */}
       {selectedElement && onCreateAnnotation && (
-        <div className="absolute bottom-4 right-4 z-40 w-80 bg-background border border-border rounded-lg shadow-lg p-3 space-y-2">
+        <div className="absolute bottom-4 right-4 z-[60] w-80 bg-background border border-border rounded-lg shadow-lg p-3 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">
               📌 Annotate element
