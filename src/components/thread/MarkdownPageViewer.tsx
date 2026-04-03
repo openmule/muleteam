@@ -178,8 +178,8 @@ export function MarkdownPageViewer({
   }
 
   return (
-    <div className="flex-1 overflow-auto" ref={contentRef}>
-      <div className="flex min-h-full">
+    <div className="flex-1 overflow-y-auto min-h-0" ref={contentRef}>
+      <div className="flex">
         {/* Line number gutter */}
         <div className="shrink-0 select-none border-r border-border bg-muted/30 text-right pr-2 pl-3 py-4 font-mono text-xs text-muted-foreground/50 leading-relaxed">
           {sourceLines.map((_, i) => {
@@ -217,7 +217,7 @@ export function MarkdownPageViewer({
 
           {/* Inline comment popover */}
           {commentLine !== null && onCreateAnnotation && (
-            <div className="fixed bottom-4 right-4 z-40 w-80 bg-background border border-border rounded-lg shadow-lg p-3 space-y-2">
+            <div className="fixed bottom-4 right-4 z-[60] w-80 bg-background border border-border rounded-lg shadow-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">
                   📌 Annotate line {commentLine}
