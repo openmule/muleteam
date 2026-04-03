@@ -37,7 +37,6 @@ export interface CreateAnnotationPayload {
 
 const RENDERABLE_RE = /\.(html|htm|md|mdx|markdown)$/i;
 // System-generated workspace files that should NOT trigger page viewer
-const EXCLUDED_FILES = new Set(["README.md", "DECISION_LOG.md"]);
 const isHtml = (name: string) => /\.(html|htm)$/i.test(name);
 const isMarkdown = (name: string) => /\.(md|mdx|markdown)$/i.test(name);
 
@@ -48,6 +47,7 @@ export function PageViewer({
   onCreateAnnotation,
   highlightAnnotationId,
   onPinClicked,
+  onClose,
 }: {
   threadId: string;
   files: PageFile[];
@@ -55,8 +55,9 @@ export function PageViewer({
   onCreateAnnotation?: (payload: CreateAnnotationPayload, body: string) => Promise<void>;
   highlightAnnotationId?: string | null;
   onPinClicked?: (annotationId: string) => void;
+  onClose?: () => void;
 }) {
-  const renderableFiles = files.filter((f) => RENDERABLE_RE.test(f.name) && !EXCLUDED_FILES.has(f.name));
+  const renderableFiles = files.filter((f) => RENDERABLE_RE.test(f.name));
   const [activeFile, setActiveFile] = useState<string | null>(null);
 
   const current = activeFile && renderableFiles.some((f) => f.name === activeFile)
@@ -114,11 +115,20 @@ export function PageViewer({
             href={`/api/threads/${threadId}/preview?file=${encodeURIComponent(current)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="shrink-0 px-2 py-1 mr-1 text-xs text-muted-foreground hover:text-foreground"
+            className="shrink-0 px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
             title="Open in new tab"
           >
             ↗
           </a>
+        )}
+        {onClose && (
+          <button
+            className="shrink-0 px-2 py-1 mr-1 text-xs text-muted-foreground hover:text-foreground border-l border-border"
+            onClick={onClose}
+            title="Close viewer"
+          >
+            ✕
+          </button>
         )}
       </div>
 
