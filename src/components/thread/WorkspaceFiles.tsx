@@ -18,7 +18,6 @@ function formatSize(bytes: number): string {
 }
 
 const RENDERABLE_RE = /\.(html|htm|md|mdx|markdown)$/i;
-const EXCLUDED_FILES = new Set(["README.md", "DECISION_LOG.md"]);
 
 export function WorkspaceFiles({
   threadId,
@@ -98,7 +97,7 @@ export function WorkspaceFiles({
               </button>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-xs text-muted-foreground">{formatSize(file.size)}</span>
-                {RENDERABLE_RE.test(file.name) && !EXCLUDED_FILES.has(file.name) && onOpenPageViewer && (
+                {RENDERABLE_RE.test(file.name) && onOpenPageViewer && (
                   <button
                     className="text-xs text-primary hover:text-primary/80 font-medium"
                     onClick={(e) => { e.stopPropagation(); onOpenPageViewer(); }}

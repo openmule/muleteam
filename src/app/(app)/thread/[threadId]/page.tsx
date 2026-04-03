@@ -305,8 +305,7 @@ export default function ThreadDetailPage() {
     ? thread.participants.some(p => p.id === `human:${currentUser.id}`)
     : false;
 
-  const EXCLUDED_FILES = new Set(["README.md", "DECISION_LOG.md"]);
-  const hasRenderableFiles = files.some(f => RENDERABLE_RE.test(f.name) && !EXCLUDED_FILES.has(f.name));
+  const hasRenderableFiles = files.some(f => RENDERABLE_RE.test(f.name));
 
   // Original layout only has sidebar tabs 0-1; clamp stored value to avoid blank sidebar
   const effectiveSidebarTab = hasRenderableFiles ? sidebarTab : Math.min(sidebarTab, 1);
@@ -335,14 +334,6 @@ export default function ThreadDetailPage() {
             {tab.badge && <span className="text-[10px] text-muted-foreground ml-1">{tab.badge}</span>}
           </button>
         ))}
-        {/* Close page viewer button */}
-        <button
-          className="ml-auto text-xs text-muted-foreground hover:text-foreground px-2 py-1 border border-border rounded hover:bg-muted transition-colors"
-          onClick={() => setShowPageViewer(false)}
-          title="Close page viewer"
-        >
-          ✕ Close
-        </button>
       </div>
 
       {/* Chat tab — always mounted, hidden via CSS to preserve input state */}
@@ -400,6 +391,7 @@ export default function ThreadDetailPage() {
       onCreateAnnotation={isMember ? handleCreateAnnotation : undefined}
       highlightAnnotationId={highlightAnnotationId}
       onPinClicked={handleNavigateToAnnotation}
+      onClose={() => setShowPageViewer(false)}
     />
   );
 
@@ -445,7 +437,7 @@ export default function ThreadDetailPage() {
                 onClick={() => setConfirmClose(true)}
                 className="text-xs"
               >
-                {t("common.close")}
+                {t("thread.closeThread")}
               </Button>
               <ConfirmDialog
                 open={confirmClose}
