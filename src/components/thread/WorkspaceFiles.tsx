@@ -106,17 +106,6 @@ export function WorkspaceFiles({
                     Open
                   </button>
                 )}
-                {isHtml(file.name) && (
-                  <a
-                    href={`/api/threads/${threadId}/preview?file=${encodeURIComponent(file.name)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {t("common.preview")}
-                  </a>
-                )}
               </div>
             </div>
           ))}

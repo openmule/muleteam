@@ -92,9 +92,9 @@ export function PageViewer({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* File tabs */}
-      {renderableFiles.length > 1 && (
-        <div className="flex items-center gap-0 border-b border-border shrink-0 overflow-x-auto">
+      {/* File tabs + open in new tab */}
+      <div className="flex items-center border-b border-border shrink-0">
+        <div className="flex items-center gap-0 overflow-x-auto flex-1">
           {renderableFiles.map((f) => (
             <button
               key={f.name}
@@ -109,14 +109,18 @@ export function PageViewer({
             </button>
           ))}
         </div>
-      )}
-
-      {/* Single file: show filename bar */}
-      {renderableFiles.length === 1 && (
-        <div className="flex items-center px-3 py-2 border-b border-border shrink-0">
-          <span className="text-xs font-mono text-muted-foreground">{current}</span>
-        </div>
-      )}
+        {current && isHtml(current) && (
+          <a
+            href={`/api/threads/${threadId}/preview?file=${encodeURIComponent(current)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 px-2 py-1 mr-1 text-xs text-muted-foreground hover:text-foreground"
+            title="Open in new tab"
+          >
+            ↗
+          </a>
+        )}
+      </div>
 
       {/* Page content */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
