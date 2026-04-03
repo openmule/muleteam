@@ -17,16 +17,21 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)}mb`;
 }
 
+const RENDERABLE_RE = /\.(html|htm|md|mdx|markdown)$/i;
+const EXCLUDED_FILES = new Set(["README.md", "DECISION_LOG.md"]);
+
 export function WorkspaceFiles({
   threadId,
   files,
   onRefresh,
   readOnly = false,
+  onOpenPageViewer,
 }: {
   threadId: string;
   files: WorkspaceFile[];
   onRefresh: () => void;
   readOnly?: boolean;
+  onOpenPageViewer?: () => void;
 }) {
   const t = useT();
   const [expanded, setExpanded] = useState(true);
@@ -93,6 +98,14 @@ export function WorkspaceFiles({
               </button>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-xs text-muted-foreground">{formatSize(file.size)}</span>
+                {RENDERABLE_RE.test(file.name) && !EXCLUDED_FILES.has(file.name) && onOpenPageViewer && (
+                  <button
+                    className="text-xs text-primary hover:text-primary/80 font-medium"
+                    onClick={(e) => { e.stopPropagation(); onOpenPageViewer(); }}
+                  >
+                    Open
+                  </button>
+                )}
                 {isHtml(file.name) && (
                   <a
                     href={`/api/threads/${threadId}/preview?file=${encodeURIComponent(file.name)}`}
