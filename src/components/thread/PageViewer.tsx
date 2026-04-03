@@ -166,6 +166,7 @@ export function PageViewer({
                 : undefined
             }
             highlightAnnotationId={effectiveHighlight}
+            onPinClicked={onPinClicked}
           />
         ) : null}
       </div>
