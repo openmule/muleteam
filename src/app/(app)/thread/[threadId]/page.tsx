@@ -127,6 +127,7 @@ export default function ThreadDetailPage() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
   const [sidebarTab, setSidebarTab] = useState(0);
+  const [showPageViewer, setShowPageViewer] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const fetchThread = useCallback(async () => {
@@ -310,91 +311,83 @@ export default function ThreadDetailPage() {
   // Original layout only has sidebar tabs 0-1; clamp stored value to avoid blank sidebar
   const effectiveSidebarTab = hasRenderableFiles ? sidebarTab : Math.min(sidebarTab, 1);
 
-  // Left panel: Chat + sidebar tabs
+  // Left panel: Chat + sidebar tabs (used when page viewer is open)
   const leftPanel = (
     <div className="flex flex-col flex-1 min-h-0">
-      <Tabs value={sidebarTab} onValueChange={handleSidebarTabChange} className="min-h-0 flex flex-col flex-1">
-        <TabsList variant="line" className="w-full justify-start px-3 pt-1 border-b border-border shrink-0">
-          <TabsTrigger value={0} className="text-xs">
-            {t("sidebar.chat")}
-          </TabsTrigger>
-          <TabsTrigger value={1} className="text-xs gap-1">
-            {t("sidebar.actionItems")}
-            {openTaskCount > 0 && (
-              <span className="text-[10px] text-muted-foreground">({openTaskCount})</span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value={2} className="text-xs">
-            {t("sidebar.participants")}
-          </TabsTrigger>
-          <TabsTrigger value={3} className="text-xs">
-            {t("sidebar.files")}
-          </TabsTrigger>
-        </TabsList>
+      {/* Tab bar */}
+      <div className="flex items-center justify-start px-3 pt-1 border-b border-border shrink-0">
+        {[
+          { value: 0, label: t("sidebar.chat") },
+          { value: 1, label: t("sidebar.actionItems"), badge: openTaskCount > 0 ? `(${openTaskCount})` : undefined },
+          { value: 2, label: t("sidebar.participants") },
+          { value: 3, label: t("sidebar.files") },
+        ].map((tab) => (
+          <button
+            key={tab.value}
+            className={`px-2 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+              sidebarTab === tab.value
+                ? "border-foreground text-foreground"
+                : "border-transparent text-foreground/60 hover:text-foreground"
+            }`}
+            onClick={() => handleSidebarTabChange(tab.value)}
+          >
+            {tab.label}
+            {tab.badge && <span className="text-[10px] text-muted-foreground ml-1">{tab.badge}</span>}
+          </button>
+        ))}
+        {/* Close page viewer button */}
+        <button
+          className="ml-auto text-xs text-muted-foreground hover:text-foreground px-2 py-1"
+          onClick={() => setShowPageViewer(false)}
+          title="Close page viewer"
+        >
+          ✕
+        </button>
+      </div>
 
-        {/* Chat tab */}
-        <TabsContent value={0} className="flex flex-col flex-1 min-h-0">
-          {thread.description && (
-            <div className="px-4 sm:px-6 py-3 border-b border-border text-muted-foreground">
-              <MarkdownBody body={thread.description} />
-            </div>
-          )}
-          <ActivityFeed threadId={threadId} messages={messages} onReply={isMember ? handleReply : undefined} onNavigateToAnnotation={handleNavigateToAnnotation} />
-          {isMember ? (
-            <CommentInput
-              threadId={threadId}
-              onSubmit={handleSendMessage}
-              replyTo={replyTo}
-              onCancelReply={() => setReplyTo(null)}
-              participants={thread.participants}
-            />
-          ) : (
-            <JoinButton threadId={threadId} onJoined={handleJoined} />
-          )}
-        </TabsContent>
-
-        {/* Tasks tab */}
-        <TabsContent value={1} className="flex-1 overflow-y-auto">
-          <ActionItems
+      {/* Chat tab — always mounted, hidden via CSS to preserve input state */}
+      <div className={`flex flex-col flex-1 min-h-0 ${sidebarTab === 0 ? "" : "hidden"}`}>
+        {thread.description && (
+          <div className="px-4 sm:px-6 py-3 border-b border-border text-muted-foreground">
+            <MarkdownBody body={thread.description} />
+          </div>
+        )}
+        <ActivityFeed threadId={threadId} messages={messages} onReply={isMember ? handleReply : undefined} onNavigateToAnnotation={handleNavigateToAnnotation} />
+        {isMember ? (
+          <CommentInput
             threadId={threadId}
-            tasks={tasks}
+            onSubmit={handleSendMessage}
+            replyTo={replyTo}
+            onCancelReply={() => setReplyTo(null)}
             participants={thread.participants}
-            onRefresh={fetchTasks}
-            readOnly={!isMember}
-            embedded
           />
-        </TabsContent>
+        ) : (
+          <JoinButton threadId={threadId} onJoined={handleJoined} />
+        )}
+      </div>
 
-        {/* Participants tab */}
-        <TabsContent value={2} className="flex-1 overflow-y-auto">
-          <ParticipantsList
-            threadId={threadId}
-            participants={thread.participants}
-            agents={agents}
-            users={allUsers}
-            onParticipantAdded={fetchThread}
-            readOnly={!isMember}
-            embedded
-          />
-        </TabsContent>
+      {/* Tasks tab */}
+      {sidebarTab === 1 && (
+        <div className="flex-1 overflow-y-auto">
+          <ActionItems threadId={threadId} tasks={tasks} participants={thread.participants} onRefresh={fetchTasks} readOnly={!isMember} embedded />
+        </div>
+      )}
 
-        {/* Files tab */}
-        <TabsContent value={3} className="flex-1 overflow-y-auto">
-          <WorkspaceFiles
-            threadId={threadId}
-            files={files}
-            onRefresh={fetchFiles}
-            readOnly={!isMember}
-          />
-          <WorkspaceLinks
-            threadId={threadId}
-            links={links}
-            onRefresh={fetchLinks}
-            readOnly={!isMember}
-          />
+      {/* Participants tab */}
+      {sidebarTab === 2 && (
+        <div className="flex-1 overflow-y-auto">
+          <ParticipantsList threadId={threadId} participants={thread.participants} agents={agents} users={allUsers} onParticipantAdded={fetchThread} readOnly={!isMember} embedded />
+        </div>
+      )}
+
+      {/* Files tab */}
+      {sidebarTab === 3 && (
+        <div className="flex-1 overflow-y-auto">
+          <WorkspaceFiles threadId={threadId} files={files} onRefresh={fetchFiles} readOnly={!isMember} onOpenPageViewer={hasRenderableFiles ? () => setShowPageViewer(true) : undefined} />
+          <WorkspaceLinks threadId={threadId} links={links} onRefresh={fetchLinks} readOnly={!isMember} />
           <GitHistory threadId={threadId} />
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   );
 
@@ -488,7 +481,7 @@ export default function ThreadDetailPage() {
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
         {/* Desktop: split layout with page viewer OR original layout */}
         <div className="hidden md:flex flex-1 min-h-0 overflow-hidden">
-          {hasRenderableFiles ? (
+          {showPageViewer && hasRenderableFiles ? (
             <ResizablePanel
               left={leftPanel}
               right={rightPanel}
@@ -539,7 +532,7 @@ export default function ThreadDetailPage() {
                     <ParticipantsList threadId={threadId} participants={thread.participants} agents={agents} users={allUsers} onParticipantAdded={fetchThread} readOnly={!isMember} embedded />
                   )}
                   <div className="border-t border-border">
-                    <WorkspaceFiles threadId={threadId} files={files} onRefresh={fetchFiles} readOnly={!isMember} />
+                    <WorkspaceFiles threadId={threadId} files={files} onRefresh={fetchFiles} readOnly={!isMember} onOpenPageViewer={hasRenderableFiles ? () => setShowPageViewer(true) : undefined} />
                     <WorkspaceLinks threadId={threadId} links={links} onRefresh={fetchLinks} readOnly={!isMember} />
                     <GitHistory threadId={threadId} />
                   </div>
