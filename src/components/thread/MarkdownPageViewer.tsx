@@ -21,21 +21,18 @@ interface AnnotationMessage {
   annotation?: AnnotationAnchor;
 }
 
-/** Rehype plugin: inject data-source-line on block elements */
+/** Rehype plugin: inject data-source-line on top-level block elements only.
+ *  Only direct children of the root get tagged — nested elements (li, td,
+ *  strong, etc.) are skipped to avoid overlapping/out-of-order gutter entries. */
 function rehypeLineNumbers() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (tree: any) => {
-    function visit(node: any) {
+    if (!Array.isArray(tree.children)) return;
+    for (const node of tree.children) {
       if (node.type === "element" && node.position?.start?.line) {
         node.properties = node.properties || {};
         node.properties["dataSourceLine"] = node.position.start.line;
       }
-      if (Array.isArray(node.children)) {
-        node.children.forEach(visit);
-      }
-    }
-    if (Array.isArray(tree.children)) {
-      tree.children.forEach(visit);
     }
   };
 }
