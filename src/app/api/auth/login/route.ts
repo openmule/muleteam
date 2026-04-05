@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyPassword, signToken } from "@/lib/auth";
 import { withTenantFromRequest } from "@/lib/tenant-context";
+import { cookieOptions } from "@/lib/cookie";
 
 export async function POST(request: Request) {
   return withTenantFromRequest(request, async () => {
@@ -42,10 +43,8 @@ export async function POST(request: Request) {
 
       const response = NextResponse.json({ user: { id: user.id, email: user.email, name: user.name } });
       response.cookies.set("token", token, {
-        httpOnly: true,
-        path: "/",
+        ...cookieOptions,
         maxAge: 60 * 60 * 24 * 7,
-        sameSite: "lax",
       });
 
       return response;
