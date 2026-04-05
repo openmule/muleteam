@@ -164,24 +164,29 @@ export function MarkdownPageViewer({
     }
   }, [commentBody, commentLine, sourceLines, onCreateAnnotation]);
 
-  // Scroll to highlighted annotation line
+  // Scroll to highlighted annotation line (waits for content to render)
   useEffect(() => {
-    if (!highlightAnnotationId || !contentRef.current) return;
+    if (!highlightAnnotationId || !contentRef.current || !content) return;
     const msg = annotations.find((m) => m.id === highlightAnnotationId);
     const ann = msg?.annotation;
     if (!ann || ann.anchor_type !== "line" || !ann.start_line) return;
 
-    const lineEl = contentRef.current.querySelector(
-      `[data-source-line="${ann.start_line}"]`
-    ) as HTMLElement | null;
-    if (lineEl) {
-      lineEl.scrollIntoView({ behavior: "smooth", block: "center" });
-      lineEl.classList.add("bg-yellow-200/50", "dark:bg-yellow-900/30");
-      setTimeout(() => {
-        lineEl.classList.remove("bg-yellow-200/50", "dark:bg-yellow-900/30");
-      }, 2000);
-    }
-  }, [highlightAnnotationId, annotations]);
+    // Delay to ensure DOM is fully rendered after content load
+    const timer = setTimeout(() => {
+      if (!contentRef.current) return;
+      const lineEl = contentRef.current.querySelector(
+        `[data-source-line="${ann.start_line}"]`
+      ) as HTMLElement | null;
+      if (lineEl) {
+        lineEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        lineEl.classList.add("bg-yellow-200/50", "dark:bg-yellow-900/30");
+        setTimeout(() => {
+          lineEl.classList.remove("bg-yellow-200/50", "dark:bg-yellow-900/30");
+        }, 2000);
+      }
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [highlightAnnotationId, annotations, content, renderKey]);
 
   const components = useMemo(
     () => ({
