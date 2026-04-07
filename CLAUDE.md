@@ -89,7 +89,17 @@ CLI、API、Workspace 对 Agent 必须足够友好——这是「Agent 即功能
 
 ## 开发行为准则
 
-- 改动 MuleTeam 前，在 MuleTeam thread 里讨论（dogfooding）
 - 不要把 roadmap 当 feature wishlist 管理——先证明核心假设，再用数据决定投什么
 - V2 内容由 V1 的真实数据决定，不是现在排好的 feature list
 - 用户反馈驱动的改进 > 自己想出来的新功能
+
+### 产品功能变更流程
+
+当涉及新功能、功能优化、商业化等产品方向问题时，**必须**遵循以下流程：
+
+1. **发起讨论**：到 https://team.mule.run/thread/xc0aismg1pf6 发送消息，开启新议题
+2. **等待反馈**：Thread 内至少得到一个有效回复后，方可推进
+3. **梳理 Todos**：基于讨论回复，整理完整的可落地举措，补充到仓库 `/todos` 目录下
+4. **正式开发**：根据 `/todos` 中的文档内容，进行开发实现
+
+不要跳过讨论直接写代码——dogfooding 是原则，不是建议。
