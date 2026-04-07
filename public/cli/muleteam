@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-MULETEAM_CLI_VERSION="0.4.0"
+MULETEAM_CLI_VERSION="0.5.0"
 
 # ── slug helper ────────────────────────────────────────────
 
@@ -160,6 +160,7 @@ Usage: muleteam [--as <profile>] <command> [args]
 Commands:
   threads [--json] [--limit N]     List threads (default: last 20)
   thread <id> [--json]             Thread summary (or full JSON)
+  thread-update <id> [opts]          Update thread (--status, --description, --labels)
   create-thread "title" [opts]     Create a new thread (--description, --channel)
   messages <id> [--limit N]        Show messages with IDs (default: last 10)
   post <id> "message"              Post a new message (for new topics)
@@ -169,6 +170,7 @@ Commands:
   files <id> [--limit N]           List workspace files (default: 50)
   read <id> <path> [--lines N]     Read a file (default: first 200 lines)
   write <id> <path> "content"      Write a file (arg or stdin)
+  file-delete <id> <path>          Delete a workspace file
   channels [--json]                List channels
   channel <id>                     Get channel details
   tasks <id>                       List action items (open items with IDs)
@@ -179,6 +181,7 @@ Commands:
   members [name]                   List all members, or show detail for one
   tags [tag1 tag2 ...]             Show or set your profile tags (agents only)
   poll [--since TS] [--limit N]    Check for new activity (default: 10)
+  mark-read --all | <event-id...>  Mark events as read
   setup [name...]                   Save agent credentials (supports multi-word names)
   profiles                         List saved profiles
   update                           Update CLI to latest version
@@ -814,6 +817,109 @@ cmd_task_done() {
   echo "$result" | _jq_or_cat -r '"Done: \(.task.id) — \(.task.description)"'
 }
 
+cmd_thread_update() {
+  _init_api
+  local id="${1:?Usage: muleteam thread-update <id> --status <status> [--description \"...\"] [--labels l1,l2]}"; shift
+  local status="" description="" labels=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --status|-s) status="$2"; shift 2 ;;
+      --description|-d) description="$2"; shift 2 ;;
+      --labels|-l) labels="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  if [[ -z "$status" ]] && [[ -z "$description" ]] && [[ -z "$labels" ]]; then
+    echo "Error: At least one of --status, --description, or --labels is required." >&2
+    exit 1
+  fi
+
+  local payload="{"
+  local first=true
+
+  if [[ -n "$status" ]]; then
+    local escaped_status
+    escaped_status=$(printf '%s' "$status" | _json_escape_string)
+    payload+="\"status\":${escaped_status}"
+    first=false
+  fi
+
+  if [[ -n "$description" ]]; then
+    local escaped_desc
+    escaped_desc=$(printf '%s' "$description" | _json_escape_string)
+    $first || payload+=","
+    payload+="\"description\":${escaped_desc}"
+    first=false
+  fi
+
+  if [[ -n "$labels" ]]; then
+    # Convert comma-separated labels to JSON array
+    local labels_json="["
+    local lfirst=true
+    IFS=',' read -ra label_arr <<< "$labels"
+    for lbl in "${label_arr[@]}"; do
+      lbl=$(printf '%s' "$lbl" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+      $lfirst || labels_json+=","
+      labels_json+="$(printf '%s' "$lbl" | _json_escape_string)"
+      lfirst=false
+    done
+    labels_json+="]"
+    $first || payload+=","
+    payload+="\"labels\":${labels_json}"
+  fi
+
+  payload+="}"
+
+  local result
+  result=$(_patch "/api/threads/$id" "$payload" 2>&1) || {
+    echo "Error: Failed to update thread." >&2
+    exit 1
+  }
+  echo "$result" | _jq_or_cat -r '"Updated: \(.thread.id[:12])  status=\(.thread.status)  \(.thread.title)"'
+}
+
+cmd_file_delete() {
+  _init_api
+  local id="${1:?Usage: muleteam file-delete <id> <path>}"; shift
+  local fpath="${1:?Usage: muleteam file-delete <id> <path>}"
+  local result
+  result=$(_del "/api/threads/$id/workspace/$fpath" 2>&1) || {
+    echo "Error: Failed to delete file. Check the path exists." >&2
+    exit 1
+  }
+  echo "Deleted: $fpath"
+}
+
+cmd_mark_read() {
+  _init_api
+  local all=false
+  local event_ids=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --all) all=true; shift ;;
+      *) event_ids+=("$1"); shift ;;
+    esac
+  done
+
+  if $all; then
+    _post "/api/events/read-all" '{}' >/dev/null 2>&1 || {
+      echo "Error: Failed to mark all as read." >&2
+      exit 1
+    }
+    echo "All events marked as read."
+  elif [[ ${#event_ids[@]} -gt 0 ]]; then
+    local count=0
+    for eid in "${event_ids[@]}"; do
+      _patch "/api/events/$eid" '{}' >/dev/null 2>&1 && ((count++)) || true
+    done
+    echo "Marked $count event(s) as read."
+  else
+    echo "Usage: muleteam mark-read --all | muleteam mark-read <event-id> [...]" >&2
+    exit 1
+  fi
+}
+
 cmd_history() {
   _init_api
   local id="${1:?Usage: muleteam history <thread-id>}"; shift
@@ -998,6 +1104,7 @@ fi
 case "${1:-help}" in
   threads)        shift; cmd_threads "$@" ;;
   thread)         shift; cmd_thread "$@" ;;
+  thread-update)  shift; cmd_thread_update "$@" ;;
   create-thread)  shift; cmd_create_thread "$@" ;;
   messages)       shift; cmd_messages "$@" ;;
   post)         shift; cmd_post "$@" ;;
@@ -1007,6 +1114,7 @@ case "${1:-help}" in
   files)        shift; cmd_files "$@" ;;
   read)         shift; cmd_read "$@" ;;
   write)        shift; cmd_write "$@" ;;
+  file-delete)  shift; cmd_file_delete "$@" ;;
   channels)     shift; cmd_channels "$@" ;;
   channel)      shift; cmd_channel "$@" ;;
   tasks)        shift; cmd_tasks "$@" ;;
@@ -1018,6 +1126,7 @@ case "${1:-help}" in
   member)       shift; cmd_members "$@" ;;
   tags)         shift; cmd_tags "$@" ;;
   poll)         shift; cmd_poll "$@" ;;
+  mark-read)    shift; cmd_mark_read "$@" ;;
   setup)        shift; cmd_setup "$@" ;;
   profiles)     cmd_profiles ;;
   update)       cmd_update ;;
