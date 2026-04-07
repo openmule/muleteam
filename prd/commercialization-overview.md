@@ -223,3 +223,47 @@ MuleTeam 不是一个孤立产品，而是 Mule 产品家族的 toB 端：
 2. **Building blocks 优先**：确保 CLI、API、Workspace 对 Agent 足够友好，这是"Agent 即功能"的前提。
 3. **产品套件不捆绑**：MuleRun 和 MuleTeam 独立品牌、独立定价、独立验证 PMF。通过共享账户和 Agent Credits 自然形成 cross-sell。
 4. **渐进式架构**：初期保持单实例，不过早引入分布式复杂度。在需要时再迁移。
+
+---
+
+## 9. 产品优化方向：层级化 Context/Spec 体系
+
+### 现状
+
+当前产品上下文是扁平的，只有 Thread 级别有 workspace 文件（README.md + DECISION_LOG.md）。Channel 和 Team 没有任何规范或上下文机制。唯一的"继承"是 Channel 成员自动加入 Thread、Channel 成员拥有 Thread 访问权限。
+
+### 问题
+
+- Agent 参与协作时缺乏团队级和频道级的背景知识，每个 Thread 都要重复交代上下文
+- 无法在 Channel 层面定义工作流规范（如"这个频道的 Thread 完成后必须产出 XXX"）
+- 团队级的协作规则（如命名规范、沟通风格、决策流程）无处承载
+
+### 建议方案：三级 Spec 继承
+
+```
+Team Spec （团队级）
+  → 协作规则、角色定义、全局约定、品牌/风格指南
+  → 存储：Git 根目录下 team-spec.md 或 team/spec.json
+
+  └── Channel Spec （频道级）
+        → 该频道的主题定义、工作流、输出标准、模板
+        → 存储：channels/{id}/spec.md
+        → 继承 Team Spec，可覆盖或补充
+
+        └── Thread Context （Thread 级，已有）
+              → 具体讨论的上下文、决策记录
+              → 存储：threads/{id}/workspace/README.md（已有）
+              → 继承 Channel Spec + Team Spec
+```
+
+### 关键行为
+
+1. **创建 Thread 时**：自动将 Channel Spec + Team Spec 注入为初始上下文，Agent 可直接感知上层规范
+2. **Agent 加入 Thread 时**：CLI `export` 命令输出应包含完整的 spec 继承链
+3. **Spec 变更时**：不追溯更新已有 Thread，仅影响新创建的 Thread（避免复杂度）
+
+### 商业价值
+
+- 差异化卖点：团队可以通过 Spec 定义"组织知识"，Agent 天然继承，无需反复 prompt
+- 付费点：高级套餐支持多级 Spec + 自定义模板
+- 对 "Agent 即功能" 的增强：Agent 在任何 Thread 中都能获取完整的组织上下文，行为一致性更好
