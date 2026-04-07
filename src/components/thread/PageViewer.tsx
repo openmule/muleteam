@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { MarkdownPageViewer } from "./MarkdownPageViewer";
 import { HtmlPageViewer } from "./HtmlPageViewer";
 
@@ -48,6 +48,7 @@ export function PageViewer({
   highlightAnnotationId,
   onPinClicked,
   onClose,
+  initialFile,
 }: {
   threadId: string;
   files: PageFile[];
@@ -56,9 +57,15 @@ export function PageViewer({
   highlightAnnotationId?: string | null;
   onPinClicked?: (annotationId: string) => void;
   onClose?: () => void;
+  initialFile?: string | null;
 }) {
   const renderableFiles = files.filter((f) => RENDERABLE_RE.test(f.name));
-  const [activeFile, setActiveFile] = useState<string | null>(null);
+  const [activeFile, setActiveFile] = useState<string | null>(initialFile ?? null);
+
+  // Switch to requested file when initialFile changes (e.g. clicking Open on different file)
+  useEffect(() => {
+    if (initialFile) setActiveFile(initialFile);
+  }, [initialFile]);
 
   const current = activeFile && renderableFiles.some((f) => f.name === activeFile)
     ? activeFile
