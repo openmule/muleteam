@@ -167,12 +167,17 @@ Commands:
   reply <id> <msg-id> "message"    Reply to a specific message by ID
   reply-last <id> "message"        Reply to the last message from someone else
   join <id>                        Join a thread
+  thread-leave <id>                Leave a thread
+  thread-add-member <id> <name>    Add a member to a thread
+  thread-move <id> --channel <id>  Move thread to a channel (--channel none to remove)
   files <id> [--limit N]           List workspace files (default: 50)
   read <id> <path> [--lines N]     Read a file (default: first 200 lines)
   write <id> <path> "content"      Write a file (arg or stdin)
   file-delete <id> <path>          Delete a workspace file
   channels [--json]                List channels
   channel <id>                     Get channel details
+  channel-create "name" [opts]     Create a channel (--description)
+  invite --list|--create|--revoke  Manage team invites
   tasks <id>                       List action items (open items with IDs)
   task-add <id> "desc" [--assignee @name]  Create a new task
   task-done <id> <task-id>         Mark a task as done
@@ -920,6 +925,170 @@ cmd_mark_read() {
   fi
 }
 
+cmd_thread_leave() {
+  _init_api
+  local id="${1:?Usage: muleteam thread-leave <id>}"
+  local result
+  result=$(_del "/api/threads/$id/join" 2>&1) || {
+    echo "Error: Failed to leave thread." >&2
+    exit 1
+  }
+  echo "$result" | _jq_or_cat -r '"Left thread: \(.thread.title)"'
+}
+
+cmd_thread_add_member() {
+  _init_api
+  local id="${1:?Usage: muleteam thread-add-member <id> <member-name>}"; shift
+  local member_name="${1:?Usage: muleteam thread-add-member <id> <member-name>}"
+  member_name="${member_name#@}"
+
+  # Look up member in agents and users to get participantId
+  local agents_data users_data participant_id=""
+  agents_data=$(_get "/api/agents" 2>/dev/null) || agents_data='{"agents":[]}'
+  participant_id=$(echo "$agents_data" | _jq_or_cat -r --arg name "$member_name" '
+    .agents[] | select(.name | ascii_downcase == ($name | ascii_downcase)) | "agent:\(.id)"
+  ' 2>/dev/null | head -1) || true
+
+  if [[ -z "$participant_id" ]]; then
+    users_data=$(_get "/api/users" 2>/dev/null) || users_data='{"users":[]}'
+    participant_id=$(echo "$users_data" | _jq_or_cat -r --arg name "$member_name" '
+      .users[] | select(.name | ascii_downcase == ($name | ascii_downcase)) | "human:\(.id)"
+    ' 2>/dev/null | head -1) || true
+  fi
+
+  if [[ -z "$participant_id" ]]; then
+    echo "Error: Member '$member_name' not found." >&2
+    exit 1
+  fi
+
+  local escaped_pid
+  escaped_pid=$(printf '%s' "$participant_id" | _json_escape_string)
+  local result
+  result=$(_post "/api/threads/$id/participants" "{\"participantId\":${escaped_pid}}" 2>&1) || {
+    echo "Error: Failed to add member." >&2
+    exit 1
+  }
+  echo "Added $member_name to thread."
+}
+
+cmd_thread_move() {
+  _init_api
+  local id="${1:?Usage: muleteam thread-move <id> --channel <channel-id>}"; shift
+  local channel_id=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --channel|-c) channel_id="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  if [[ -z "$channel_id" ]]; then
+    echo "Error: --channel is required. Use --channel none to remove from channel." >&2
+    exit 1
+  fi
+
+  local payload
+  if [[ "$channel_id" == "none" ]]; then
+    payload='{"channel_id":""}'
+  else
+    local escaped_ch
+    escaped_ch=$(printf '%s' "$channel_id" | _json_escape_string)
+    payload="{\"channel_id\":${escaped_ch}}"
+  fi
+
+  local result
+  result=$(_patch "/api/threads/$id" "$payload" 2>&1) || {
+    echo "Error: Failed to move thread." >&2
+    exit 1
+  }
+  echo "$result" | _jq_or_cat -r '"Moved: \(.thread.id[:12])  \(.thread.title)"'
+}
+
+cmd_invite() {
+  _init_api
+  local action=""
+  local note="" token=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --list) action="list"; shift ;;
+      --create) action="create"; shift ;;
+      --revoke) action="revoke"; token="$2"; shift 2 ;;
+      --note) note="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  case "$action" in
+    list)
+      local data
+      data=$(_get "/api/invites")
+      echo "$data" | _jq_or_cat -r '
+        .invites[]
+        | [.status, .token[:16]+"...", (.note // "-"), .expires_at[:16]]
+        | @tsv
+      ' | column -t -s $'\t' 2>/dev/null || echo "$data" | _jq_or_cat '.'
+      ;;
+    create)
+      local payload='{}'
+      if [[ -n "$note" ]]; then
+        local escaped_note
+        escaped_note=$(printf '%s' "$note" | _json_escape_string)
+        payload="{\"note\":${escaped_note}}"
+      fi
+      local result
+      result=$(_post "/api/invites" "$payload" 2>&1) || {
+        echo "Error: Failed to create invite." >&2
+        exit 1
+      }
+      echo "$result" | _jq_or_cat -r '"Invite created: \(.token)\nExpires: \(.expires_at)"'
+      ;;
+    revoke)
+      if [[ -z "$token" ]]; then
+        echo "Error: Token is required. Usage: muleteam invite --revoke <token>" >&2
+        exit 1
+      fi
+      _del "/api/invites/$token" >/dev/null 2>&1 || {
+        echo "Error: Failed to revoke invite." >&2
+        exit 1
+      }
+      echo "Invite revoked."
+      ;;
+    *)
+      echo "Usage: muleteam invite --list | --create [--note \"...\"] | --revoke <token>" >&2
+      exit 1
+      ;;
+  esac
+}
+
+cmd_channel_create() {
+  _init_api
+  local name="${1:?Usage: muleteam channel-create \"name\" [--description \"...\"]}"; shift
+  local description=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --description|-d) description="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  local payload escaped_name
+  escaped_name=$(printf '%s' "$name" | _json_escape_string)
+  payload="{\"name\":${escaped_name}"
+  if [[ -n "$description" ]]; then
+    local escaped_desc
+    escaped_desc=$(printf '%s' "$description" | _json_escape_string)
+    payload+=",\"description\":${escaped_desc}"
+  fi
+  payload+="}"
+
+  local result
+  result=$(_post "/api/channels" "$payload" 2>&1) || {
+    echo "Error: Failed to create channel." >&2
+    exit 1
+  }
+  echo "$result" | _jq_or_cat -r '"Created: \(.channel.id)  \(.channel.name)"'
+}
+
 cmd_history() {
   _init_api
   local id="${1:?Usage: muleteam history <thread-id>}"; shift
@@ -1111,12 +1280,17 @@ case "${1:-help}" in
   reply)        shift; cmd_reply "$@" ;;
   reply-last)   shift; cmd_reply_last "$@" ;;
   join)         shift; cmd_join "$@" ;;
+  thread-leave) shift; cmd_thread_leave "$@" ;;
+  thread-add-member) shift; cmd_thread_add_member "$@" ;;
+  thread-move)  shift; cmd_thread_move "$@" ;;
   files)        shift; cmd_files "$@" ;;
   read)         shift; cmd_read "$@" ;;
   write)        shift; cmd_write "$@" ;;
   file-delete)  shift; cmd_file_delete "$@" ;;
   channels)     shift; cmd_channels "$@" ;;
   channel)      shift; cmd_channel "$@" ;;
+  channel-create) shift; cmd_channel_create "$@" ;;
+  invite)       shift; cmd_invite "$@" ;;
   tasks)        shift; cmd_tasks "$@" ;;
   task-add)     shift; cmd_task_add "$@" ;;
   task-done)    shift; cmd_task_done "$@" ;;
