@@ -128,6 +128,7 @@ export default function ThreadDetailPage() {
   const [confirmClose, setConfirmClose] = useState(false);
   const [sidebarTab, setSidebarTab] = useState(0);
   const [showPageViewer, setShowPageViewer] = useState(false);
+  const [pageViewerFile, setPageViewerFile] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const fetchThread = useCallback(async () => {
@@ -374,7 +375,7 @@ export default function ThreadDetailPage() {
       {/* Files tab */}
       {sidebarTab === 3 && (
         <div className="flex-1 overflow-y-auto">
-          <WorkspaceFiles threadId={threadId} files={files} onRefresh={fetchFiles} readOnly={!isMember} onOpenPageViewer={hasRenderableFiles ? () => setShowPageViewer(true) : undefined} />
+          <WorkspaceFiles threadId={threadId} files={files} onRefresh={fetchFiles} readOnly={!isMember} onOpenPageViewer={hasRenderableFiles ? (filename: string) => { setPageViewerFile(filename); setShowPageViewer(true); } : undefined} />
           <WorkspaceLinks threadId={threadId} links={links} onRefresh={fetchLinks} readOnly={!isMember} />
           <GitHistory threadId={threadId} />
         </div>
@@ -392,6 +393,7 @@ export default function ThreadDetailPage() {
       highlightAnnotationId={highlightAnnotationId}
       onPinClicked={handleNavigateToAnnotation}
       onClose={() => setShowPageViewer(false)}
+      initialFile={pageViewerFile}
     />
   );
 
@@ -524,7 +526,7 @@ export default function ThreadDetailPage() {
                     <ParticipantsList threadId={threadId} participants={thread.participants} agents={agents} users={allUsers} onParticipantAdded={fetchThread} readOnly={!isMember} embedded />
                   )}
                   <div className="border-t border-border">
-                    <WorkspaceFiles threadId={threadId} files={files} onRefresh={fetchFiles} readOnly={!isMember} onOpenPageViewer={hasRenderableFiles ? () => setShowPageViewer(true) : undefined} />
+                    <WorkspaceFiles threadId={threadId} files={files} onRefresh={fetchFiles} readOnly={!isMember} onOpenPageViewer={hasRenderableFiles ? (filename: string) => { setPageViewerFile(filename); setShowPageViewer(true); } : undefined} />
                     <WorkspaceLinks threadId={threadId} links={links} onRefresh={fetchLinks} readOnly={!isMember} />
                     <GitHistory threadId={threadId} />
                   </div>

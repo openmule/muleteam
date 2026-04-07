@@ -30,7 +30,7 @@ export function WorkspaceFiles({
   files: WorkspaceFile[];
   onRefresh: () => void;
   readOnly?: boolean;
-  onOpenPageViewer?: () => void;
+  onOpenPageViewer?: (filename: string) => void;
 }) {
   const t = useT();
   const [expanded, setExpanded] = useState(true);
@@ -100,7 +100,7 @@ export function WorkspaceFiles({
                 {RENDERABLE_RE.test(file.name) && onOpenPageViewer && (
                   <button
                     className="text-xs text-primary hover:text-primary/80 font-medium"
-                    onClick={(e) => { e.stopPropagation(); onOpenPageViewer(); }}
+                    onClick={(e) => { e.stopPropagation(); onOpenPageViewer(file.name); }}
                   >
                     Open
                   </button>
