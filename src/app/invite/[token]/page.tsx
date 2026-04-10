@@ -112,7 +112,7 @@ function InvitePage() {
         <div className="w-full max-w-sm rounded-lg border border-border bg-background p-6 text-center">
           <img src="/logo.svg" width={32} height={32} alt="MuleTeam" className="mx-auto mb-2" />
           <h1 className="text-xl font-semibold tracking-tight mb-2">MuleTeam</h1>
-          <p className="text-sm text-green-600 dark:text-green-400">{t("invite.success")}</p>
+          <p className="text-sm text-[var(--color-green-1000)]">{t("invite.success")}</p>
         </div>
       </div>
     );

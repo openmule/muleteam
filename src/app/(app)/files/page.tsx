@@ -136,7 +136,7 @@ export default function FilesPage() {
   }
 
   const usagePercent = maxStorage > 0 ? Math.min((totalSize / maxStorage) * 100, 100) : 0;
-  const barColor = usagePercent > 95 ? "bg-red-500" : usagePercent > 80 ? "bg-orange-500" : "bg-green-500";
+  const barColor = usagePercent > 95 ? "bg-[var(--color-red-1000)]" : usagePercent > 80 ? "bg-[var(--color-orange-1000)]" : "bg-[var(--color-green-1000)]";
 
   return (
     <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10">
@@ -163,7 +163,7 @@ export default function FilesPage() {
           <p className="text-muted-foreground text-sm">{t("files.noFiles")}</p>
         </div>
       ) : (
-        <div className="rounded-md border border-border divide-y divide-border">
+        <div className="rounded-md border border-border divide-y divide-border bg-[var(--bg-grouped-quaternary)]">
           {groups.map((group) => {
             const isExpanded = expandedThreads.has(group.thread_id);
             const fileCount = (function countFiles(nodes: FileTreeNode[]): number {

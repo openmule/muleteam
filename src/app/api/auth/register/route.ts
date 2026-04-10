@@ -35,6 +35,9 @@ export async function POST(request: Request) {
 
       const sql = await db();
 
+      // Ensure tables exist before any queries
+      await ensureMigrations();
+
       const existing = (await sql`SELECT id FROM users WHERE email = ${email}`) as { id: string }[];
       if (existing.length > 0) {
         return NextResponse.json(
@@ -47,7 +50,6 @@ export async function POST(request: Request) {
       const invitedBy = inviter ? JSON.stringify({ id: inviter.id, name: inviter.name }) : null;
 
       // First user becomes owner automatically
-      await ensureMigrations();
       const existingUsers = await sql`SELECT COUNT(*)::int as count FROM users` as { count: number }[];
       const teamRole = existingUsers[0].count === 0 ? "owner" : "member";
 

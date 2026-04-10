@@ -18,6 +18,8 @@ export interface ThreadMeta {
   title: string;
   description?: string;
   status: "open" | "in_progress" | "done" | "archived";
+  status_label?: string;
+  status_detail?: string;
   labels?: string[];
   participants: Participant[];
   channel_id?: string;
@@ -32,26 +34,15 @@ export interface Participant {
   name: string;
 }
 
-export interface AnnotationAnchor {
-  file_path: string;        // workspace-relative path, e.g. "design.html"
-  anchor_type: "line" | "selector";
-  start_line?: number;      // MD/MDX line anchor
-  end_line?: number;
-  selector?: string;        // HTML CSS selector anchor
-  commit_hash: string;      // git HEAD at annotation creation time
-  content_snapshot: string; // text content at anchor point
-}
-
 export interface Message {
   id: string;
   ts: number;
   from: string;       // "human:<user-id>" or "agent:<agent-id>"
   from_name: string;  // display name
-  type: "text" | "artifact" | "system" | "activity" | "annotation";
+  type: "text" | "artifact" | "system" | "activity";
   body: string;
   artifact_version?: number; // if type is "artifact", which version this created
   reply_to?: string;  // message id this is replying to
-  annotation?: AnnotationAnchor; // if type is "annotation"
 }
 
 export interface ArtifactVersion {
@@ -110,6 +101,14 @@ export function initRepo(): void {
   }
 }
 
+export function clearRepo(): void {
+  const base = REPO_BASE();
+  for (const dir of ["threads", "channels", "agents"]) {
+    const p = path.join(base, dir);
+    if (fs.existsSync(p)) fs.rmSync(p, { recursive: true });
+  }
+}
+
 // Thread operations
 export function createThread(meta: ThreadMeta): void {
   initRepo();
@@ -161,7 +160,22 @@ export function listThreads(locale?: string): ThreadMeta[] {
   }
   const threads = fs.readdirSync(threadsDir)
     .filter(d => fs.existsSync(path.join(threadsDir, d, "meta.json")))
-    .map(d => JSON.parse(fs.readFileSync(path.join(threadsDir, d, "meta.json"), "utf-8")))
+    .map(d => {
+      const meta = JSON.parse(fs.readFileSync(path.join(threadsDir, d, "meta.json"), "utf-8"));
+      // Attach last message preview
+      const messagesPath = path.join(threadsDir, d, "messages.jsonl");
+      if (fs.existsSync(messagesPath)) {
+        const content = fs.readFileSync(messagesPath, "utf-8").trim();
+        if (content) {
+          const lines = content.split("\n");
+          try {
+            const last = JSON.parse(lines[lines.length - 1]);
+            meta.last_message = { from_name: last.from_name, body: last.body, ts: last.ts };
+          } catch { /* ignore parse errors */ }
+        }
+      }
+      return meta;
+    })
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   if (threads.length === 0) {
     seedDefaultThreads(locale);
@@ -949,22 +963,6 @@ export function deleteThreadTask(threadId: string, taskId: string): boolean {
 }
 
 // Git helpers
-export function getGitHead(): string {
-  try {
-    return execSync("git rev-parse HEAD", { cwd: REPO_BASE() }).toString().trim();
-  } catch {
-    return "unknown";
-  }
-}
-
-export function getFileAtCommit(commitHash: string, filePath: string): string | null {
-  try {
-    return execSync(`git show ${commitHash}:${filePath}`, { cwd: REPO_BASE() }).toString();
-  } catch {
-    return null;
-  }
-}
-
 function gitCommit(message: string, authorName: string, authorEmail: string): void {
   try {
     execSync("git add -A", { cwd: REPO_BASE() });

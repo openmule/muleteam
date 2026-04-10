@@ -167,7 +167,7 @@ export default function ChannelsPage() {
             const channelThreads = threads.filter((t) => t.channel_id === channel.id);
             const isExpanded = expandedChannels.has(channel.id);
             return (
-              <div key={channel.id} className="rounded-md border border-border">
+              <div key={channel.id} className="rounded-md border border-border bg-[var(--bg-grouped-quaternary)]">
                 <div
                   className="group flex items-center justify-between w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors cursor-pointer"
                   onClick={() => toggleChannel(channel.id)}
@@ -221,7 +221,7 @@ export default function ChannelsPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs text-muted-foreground font-medium">{t("channels.membersLabel")}</span>
                         {channel.members.map((m) => (
-                          <MemberAvatar key={m.id} type={m.type} name={m.name} size={20} />
+                          <MemberAvatar key={m.id} type={m.type} name={m.name} size={20} avatarUrl={m.type === "human" ? allUsers.find(u => `human:${u.id}` === m.id)?.avatar_url : undefined} />
                         ))}
                         {addingMemberTo !== channel.id && (
                           <button
@@ -237,7 +237,7 @@ export default function ChannelsPage() {
                         const availUsers = allUsers.filter((u) => !memberIds.has(`human:${u.id}`));
                         const availAgents = agents.filter((a) => !memberIds.has(`agent:${a.id}`));
                         return (availUsers.length > 0 || availAgents.length > 0) ? (
-                          <div className="rounded-md border border-border divide-y divide-border mt-2 max-h-40 overflow-y-auto">
+                          <div className="rounded-md border border-border divide-y divide-border mt-2 max-h-40 overflow-y-auto bg-[var(--bg-grouped-quaternary)]">
                             {availUsers.map((u) => (
                               <button
                                 key={u.id}
@@ -246,7 +246,7 @@ export default function ChannelsPage() {
                                 onClick={() => handleAddMember(channel.id, { id: `human:${u.id}`, type: "human", name: u.name })}
                                 className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/50 disabled:opacity-50"
                               >
-                                <MemberAvatar type="human" name={u.name} size={20} />
+                                <MemberAvatar type="human" name={u.name} size={20} avatarUrl={u.avatar_url} />
                                 <span>{u.name}</span>
                               </button>
                             ))}
@@ -294,7 +294,7 @@ export default function ChannelsPage() {
                         <p className="text-xs text-muted-foreground">{t("channels.noThreads")}</p>
                       </div>
                     ) : (
-                      <ThreadList threads={channelThreads} onDelete={(threadId, e) => { e.stopPropagation(); setConfirmDeleteThreadId(threadId); }} />
+                      <ThreadList threads={channelThreads} onDelete={(threadId, e) => { e.stopPropagation(); setConfirmDeleteThreadId(threadId); }} userAvatars={new Map(allUsers.map(u => [u.id, u.avatar_url ?? null]))} />
                     )}
                   </div>
                 )}

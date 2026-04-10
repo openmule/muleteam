@@ -3,7 +3,8 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { memberUrl } from "@/components/shared/helpers";
-import { MemberHoverCard } from "@/components/shared/MemberHoverCard";
+import { MemberAvatar } from "@/components/shared/MemberAvatar";
+import { MessageCircle } from "lucide-react";
 import { MarkdownBody } from "./MarkdownBody";
 
 interface Message {
@@ -11,7 +12,7 @@ interface Message {
   ts: number;
   from: string;
   from_name: string;
-  type: "text" | "artifact" | "system" | "activity" | "annotation";
+  type: "text" | "artifact" | "system" | "activity";
   body: string;
   artifact_version?: number;
   reply_to?: string;
@@ -19,16 +20,16 @@ interface Message {
 
 // Deterministic username color based on participantId hash
 const USERNAME_COLORS = [
-  "text-red-600 dark:text-red-400",
-  "text-blue-600 dark:text-blue-400",
-  "text-green-600 dark:text-green-400",
-  "text-purple-600 dark:text-purple-400",
-  "text-orange-600 dark:text-orange-400",
-  "text-teal-600 dark:text-teal-400",
-  "text-pink-600 dark:text-pink-400",
-  "text-indigo-600 dark:text-indigo-400",
-  "text-cyan-600 dark:text-cyan-400",
-  "text-amber-600 dark:text-amber-400",
+  "text-[var(--color-red-1000)]",
+  "text-[var(--color-blue-1000)]",
+  "text-[var(--color-green-1000)]",
+  "text-[var(--color-purple-1000)]",
+  "text-[var(--color-orange-1000)]",
+  "text-[var(--accent-secondary-1000)]",
+  "text-[var(--color-pink-1000)]",
+  "text-[var(--color-indigo-1000)]",
+  "text-[var(--color-cyan-1000)]",
+  "text-[var(--color-brown-1000)]",
 ];
 
 function getUsernameColor(participantId: string): string {
@@ -72,7 +73,7 @@ function parseBodyWithImages(body: string, threadId: string): { textParts: strin
 function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 cursor-pointer"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-primary)] cursor-pointer"
       onClick={onClose}
     >
       <button
@@ -137,24 +138,25 @@ export function ActivityItem({
   threadId,
   replyTarget,
   onReply,
+  currentUserId,
 }: {
   message: Message;
   threadId: string;
   replyTarget?: Message;
   onReply?: (messageId: string) => void;
+  currentUserId?: string;
 }) {
   const isAgent = message.from.startsWith("agent:");
   const isSystem = message.type === "system" || message.type === "activity";
+  const isOwnMessage = currentUserId ? message.from === `human:${currentUserId}` : false;
 
-  // System/activity messages: compact gray line
+  // System/activity messages: compact centered line
   if (isSystem) {
     return (
-      <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-        <div className="h-px flex-1 bg-border" />
+      <div className="flex items-center justify-center gap-2 py-2 text-xs text-muted-foreground">
         <span>{message.body}</span>
         <span>&middot;</span>
         <span>{timeAgo(message.ts)}</span>
-        <div className="h-px flex-1 bg-border" />
       </div>
     );
   }
@@ -175,61 +177,87 @@ export function ActivityItem({
   const displayBody = textParts.join("").trim();
 
   return (
-    <div className="py-4 group/item">
+    <div className="group/item">
       {/* Reply context */}
       {replyTarget && (
-        <div className="flex items-center gap-1.5 mb-2 pl-3 border-l-2 border-muted">
-          <MemberHoverCard participantId={replyTarget.from}>
-            <Link href={memberUrl(replyTarget.from)} className="text-xs font-medium text-muted-foreground hover:underline">
-              {replyTarget.from.startsWith("agent:") ? `@${replyTarget.from_name}` : replyTarget.from_name}
-            </Link>
-          </MemberHoverCard>
+        <div className={`flex items-center gap-1.5 mb-2 pl-3 border-l-2 border-muted ${isOwnMessage ? "pl-16 pr-6" : "pl-6 pr-16"}`}>
+          <Link href={memberUrl(replyTarget.from)} className="text-xs font-medium text-muted-foreground hover:underline">
+            {replyTarget.from.startsWith("agent:") ? `@${replyTarget.from_name}` : replyTarget.from_name}
+          </Link>
           <span className="text-xs text-muted-foreground truncate max-w-[300px]">
             {replyTarget.body.slice(0, 80)}{replyTarget.body.length > 80 ? "..." : ""}
           </span>
         </div>
       )}
 
-      {/* Author header */}
-      <div className="flex items-baseline gap-2 mb-1">
-        <MemberHoverCard participantId={message.from}>
-          <Link href={memberUrl(message.from)} className={`text-sm font-medium hover:underline ${getUsernameColor(message.from)}`}>
-            {isAgent ? `@${message.from_name}` : message.from_name}
-          </Link>
-        </MemberHoverCard>
-        <span className="text-xs text-muted-foreground">{timeAgo(message.ts)}</span>
-        {onReply && (
-          <button
-            onClick={() => onReply(message.id)}
-            className="opacity-0 group-hover/item:opacity-100 transition-opacity text-xs text-muted-foreground hover:text-foreground ml-auto"
-          >
-            Reply
-          </button>
-        )}
-      </div>
-
-      {/* Body */}
-      {displayBody && (
-        <MarkdownBody body={displayBody} />
-      )}
-
-      {/* No text and no images — show artifact fallback */}
-      {!displayBody && imagePaths.length === 0 && isArtifact && (
-        <div className="text-sm text-foreground/90 whitespace-pre-wrap break-words">
-          (Generated artifact — see workspace)
+      {isOwnMessage ? (
+        /* ── Own message: right-aligned with avatar ── */
+        <div className="flex gap-2 items-start justify-end pl-16 pr-6">
+          <div className="flex flex-col items-end gap-[7px] flex-1 min-w-0">
+            {/* Name + time (right-aligned) */}
+            <div className="flex items-center gap-1">
+              <span className="text-[length:var(--font-size-subheadline)] text-[var(--label-secondary)] opacity-0 group-hover/item:opacity-100 transition-opacity">{timeAgo(message.ts)}</span>
+              <Link href={memberUrl(message.from)} className="text-[length:var(--font-size-body-small)] font-semibold text-[var(--label-primary)] hover:underline">
+                {message.from_name}
+              </Link>
+            </div>
+            {/* Message bubble — width fits content, min 48px, max aligns with others' left edge */}
+            <div className="bg-[var(--fill-quaternary)] rounded-[8px] px-4 py-3 max-w-[calc(100%-64px+24px)] w-fit flex flex-col gap-4">
+              {displayBody && <MarkdownBody body={displayBody} />}
+              {imagePaths.length > 0 && <InlineImages paths={imagePaths} threadId={threadId} />}
+              {!displayBody && imagePaths.length === 0 && isArtifact && (
+                <span className="text-[length:var(--font-size-body-base)] text-foreground/90">(Generated artifact — see workspace)</span>
+              )}
+              {isArtifact && message.artifact_version && (
+                <div className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
+                  v{message.artifact_version} created
+                </div>
+              )}
+            </div>
+          </div>
+          {/* Avatar */}
+          <div className="mt-[2px] shrink-0">
+            <MemberAvatar type="human" name={message.from_name} size={20} avatarUrl={undefined} />
+          </div>
         </div>
-      )}
-
-      {/* Inline images */}
-      {imagePaths.length > 0 && (
-        <InlineImages paths={imagePaths} threadId={threadId} />
-      )}
-
-      {/* Artifact version badge */}
-      {isArtifact && message.artifact_version && (
-        <div className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-          v{message.artifact_version} created
+      ) : (
+        /* ── Others' message: left-aligned with avatar ── */
+        <div className="flex gap-2 items-start pl-6 pr-6">
+          {/* Avatar */}
+          <div className="mt-[2px] shrink-0">
+            <MemberAvatar type={isAgent ? "agent" : "human"} name={message.from_name} size={20} />
+          </div>
+          <div className="flex flex-col gap-[7px] flex-1 min-w-0 mr-[28px]">
+            {/* Name + time */}
+            <div className="flex items-center gap-1">
+              <Link href={memberUrl(message.from)} className="text-[length:var(--font-size-body-small)] font-semibold text-[var(--label-primary)] hover:underline">
+                {isAgent ? `@${message.from_name}` : message.from_name}
+              </Link>
+              <span className="text-[length:var(--font-size-subheadline)] text-[var(--label-secondary)] opacity-0 group-hover/item:opacity-100 transition-opacity">{timeAgo(message.ts)}</span>
+              {onReply && (
+                <button
+                  onClick={() => onReply(message.id)}
+                  className="opacity-0 group-hover/item:opacity-100 transition-opacity text-xs text-muted-foreground hover:text-foreground ml-auto flex items-center gap-0.5"
+                >
+                  <MessageCircle className="size-3" strokeWidth={1.5} />
+                  Reply
+                </button>
+              )}
+            </div>
+            {/* Message body */}
+            <div className="flex flex-col gap-4">
+              {displayBody && <MarkdownBody body={displayBody} />}
+              {!displayBody && imagePaths.length === 0 && isArtifact && (
+                <span className="text-[length:var(--font-size-body-base)] text-foreground/90">(Generated artifact — see workspace)</span>
+              )}
+              {imagePaths.length > 0 && <InlineImages paths={imagePaths} threadId={threadId} />}
+              {isArtifact && message.artifact_version && (
+                <div className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
+                  v{message.artifact_version} created
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

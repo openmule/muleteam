@@ -1,52 +1,106 @@
-import { mergeProps } from "@base-ui/react/merge-props"
-import { useRender } from "@base-ui/react/use-render"
+import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!",
+  "inline-flex items-center justify-center rounded-full border-transparent font-normal whitespace-nowrap transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
-        secondary:
-          "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
+        primary:
+          "bg-[var(--fill-tertiary)] text-secondary-foreground",
+        outline: "border border-input text-foreground",
+        accent:
+          "bg-[var(--accent-primary-100)] text-[var(--accent-primary-1000)]",
         destructive:
-          "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
-        outline:
-          "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
-        ghost:
-          "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-[var(--color-red-100)] text-[var(--color-red-1000)]",
+        green:
+          "bg-[var(--color-green-100)] text-[var(--color-green-1000)]",
+        yellow:
+          "bg-[var(--color-yellow-100)] text-[var(--color-yellow-1000)]",
+        blue:
+          "bg-[var(--color-blue-100)] text-[var(--color-blue-1000)]",
+        purple:
+          "bg-[var(--color-purple-100)] text-[var(--color-purple-1000)]",
+        cyan:
+          "bg-[var(--color-cyan-100)] text-[var(--color-cyan-1000)]",
+        pink:
+          "bg-[var(--color-pink-100)] text-[var(--color-pink-1000)]",
+      },
+      size: {
+        sm: "h-5 min-w-5 px-2 gap-0.5 text-[length:var(--font-size-caption)] [&_svg]:size-3",
+        default: "h-6 min-w-6 px-2.5 gap-1.5 text-[length:var(--font-size-caption)] [&_svg]:size-3.5 [&>svg:first-child]:-ml-0.5 [&>svg:last-child]:-mr-0.5",
+        lg: "h-7 min-w-7 px-3 gap-1.5 text-[length:var(--font-size-body-small)] [&_svg]:size-4 [&>svg:first-child]:-ml-0.5 [&>svg:last-child]:-mr-0.5",
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "accent",
+      size: "default",
     },
   }
 )
 
-function Badge({
-  className,
-  variant = "default",
-  render,
-  ...props
-}: useRender.ComponentProps<"span"> & VariantProps<typeof badgeVariants>) {
-  return useRender({
-    defaultTagName: "span",
-    props: mergeProps<"span">(
-      {
-        className: cn(badgeVariants({ variant }), className),
-      },
-      props
-    ),
-    render,
-    state: {
-      slot: "badge",
-      variant,
-    },
-  })
+export interface BadgeProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof badgeVariants> {}
+
+function Badge({ className, variant, size, ...props }: BadgeProps) {
+  return (
+    <div className={cn(badgeVariants({ variant, size }), className)} {...props} />
+  )
 }
 
-export { Badge, badgeVariants }
+/* ── NotificationBadge ── */
+
+const notificationBadgeVariants = cva(
+  "inline-flex items-center justify-center rounded-full font-normal leading-none",
+  {
+    variants: {
+      intensity: {
+        strong: "bg-[var(--color-red-1000)] text-[var(--gray-white-1000)]",
+        subtle: "bg-[var(--accent-primary-100)] text-[var(--accent-primary-1000)]",
+      },
+      size: {
+        sm: "h-4 min-w-4 px-1 text-[length:var(--font-size-micro)]",
+        default: "h-5 min-w-5 px-1.5 text-[length:var(--font-size-caption)]",
+        lg: "h-6 min-w-6 px-2 text-[length:var(--font-size-body-small)]",
+      },
+    },
+    defaultVariants: {
+      intensity: "strong",
+      size: "default",
+    },
+  }
+)
+
+export interface NotificationBadgeProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, "children">,
+    VariantProps<typeof notificationBadgeVariants> {
+  count: number
+}
+
+function NotificationBadge({ className, intensity, size, count, ...props }: NotificationBadgeProps) {
+  const display = count > 99 ? "99+" : String(count)
+  return (
+    <div
+      className={cn(notificationBadgeVariants({ intensity, size }), className)}
+      {...props}
+    >
+      {display}
+    </div>
+  )
+}
+
+/* ── NotificationDot — pure red dot, no number ── */
+
+function NotificationDot({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn("size-2.5 rounded-full bg-[var(--color-red-1000)]", className)}
+      {...props}
+    />
+  )
+}
+
+export { Badge, badgeVariants, NotificationBadge, notificationBadgeVariants, NotificationDot }

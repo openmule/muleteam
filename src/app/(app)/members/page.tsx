@@ -22,6 +22,13 @@ import { setupPrompt, openCodeSetupPrompt, openClawSetupPrompt } from "@/compone
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { timeAgo, memberUrl } from "@/components/shared/helpers";
 import { useT } from "@/lib/i18n";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { EllipsisVertical, UserPlus, Bot, Shield, Trash2 } from "lucide-react";
 import type { User, RegisteredAgent } from "@/components/shared/types";
 
 interface Invite {
@@ -154,10 +161,10 @@ export default function MembersPage() {
 
   const statusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-      used: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-      expired: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
-      revoked: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+      pending: "bg-[var(--color-yellow-100)] text-[var(--color-yellow-1000)]",
+      used: "bg-[var(--color-green-100)] text-[var(--color-green-1000)]",
+      expired: "bg-[var(--fill-quaternary)] text-[var(--label-secondary)]",
+      revoked: "bg-[var(--color-red-100)] text-[var(--color-red-1000)]",
     };
     const labels: Record<string, string> = {
       pending: t("members.inviteStatusPending"),
@@ -173,363 +180,181 @@ export default function MembersPage() {
   };
 
   return (
-    <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold tracking-tight">
-          {t("members.title")} ({allUsers.length + agents.length})
-        </h1>
-        <div className="flex items-center gap-2">
-          {/* Invite Member */}
-          <Dialog open={inviteOpen} onOpenChange={(open) => {
-            setInviteOpen(open);
-            if (!open) {
-              setInviteResult(null);
-              setInviteNote("");
-            }
-          }}>
-            <DialogTrigger render={<Button variant="outline" size="sm" />}>
-              <span className="hidden sm:inline">{t("members.inviteMember")}</span>
-              <span className="sm:hidden">{t("members.mobileInvite")}</span>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>{t("members.inviteTitle")}</DialogTitle>
-              </DialogHeader>
-              {inviteResult ? (
-                <div className="space-y-4 pt-2">
-                  <div className="space-y-2">
-                    <Label>{t("members.inviteLink")}</Label>
-                    <div className="rounded-md bg-muted p-3">
-                      <code className="text-xs font-mono break-all">{origin}/invite/{inviteResult.token}</code>
-                    </div>
-                  </div>
-                  <CopyButton
-                    className="w-full"
-                    variant="outline"
-                    size="default"
-                    label={t("members.copyLink")}
-                    text={`${origin}/invite/${inviteResult.token}`}
-                  />
-                  <p className="text-xs text-muted-foreground text-center">
-                    {t("members.inviteExpires").replace("{time}", "7 days")}
-                  </p>
-                  <Button className="w-full" onClick={() => {
-                    setInviteOpen(false);
-                    setInviteResult(null);
-                    setInviteNote("");
-                  }}>
-                    {t("common.done")}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4 pt-2">
-                  <div className="space-y-2">
-                    <Label>{t("members.inviteNote")}</Label>
-                    <Input
-                      placeholder={t("members.inviteNotePlaceholder")}
-                      value={inviteNote}
-                      onChange={(e) => setInviteNote(e.target.value)}
-                      autoFocus
-                    />
-                  </div>
-                  <Button className="w-full" onClick={handleGenerateInvite} disabled={inviteGenerating}>
-                    {inviteGenerating ? t("common.creating") : t("members.generateLink")}
-                  </Button>
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
+    <main className="h-full overflow-y-auto scrollbar-thin">
+      <div className="mx-auto max-w-[800px] w-full">
+        {/* Title area */}
+        <div className="flex items-start justify-between pt-20 pb-10">
+          <div className="flex flex-col gap-3">
+            <h1 className="text-[length:var(--font-size-title-page)] font-bold leading-[1.2] text-[var(--label-primary)]">Members</h1>
+            <p className="text-sm text-[var(--label-secondary)]">Manage team members and AI agents.</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="outline-filled" size="sm" onClick={() => setInviteOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-1" strokeWidth={1.5} /> Invite Member
+            </Button>
+            <Button variant="outline-filled" size="sm" onClick={() => setRegisterAgentOpen(true)}>
+              <Bot className="h-4 w-4 mr-1" strokeWidth={1.5} /> Hire Agent
+            </Button>
+          </div>
+        </div>
 
-          {/* Hire Agent */}
-          <Dialog open={registerAgentOpen} onOpenChange={(open) => {
-            setRegisterAgentOpen(open);
-            if (!open) setRegisterAgentResult(null);
-          }}>
-            <DialogTrigger render={<Button variant="outline" size="sm" />}>
-              <span className="hidden sm:inline">{t("members.registerAgent")}</span>
-              <span className="sm:hidden">{t("members.mobileAgent")}</span>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
-              <DialogHeader className="shrink-0">
-                <DialogTitle>{t("members.registerAgentTitle")}</DialogTitle>
-              </DialogHeader>
-              {registerAgentResult ? (
-                <ScrollArea className="flex-1 pr-4">
-                  <div className="space-y-4 pt-2 pb-2">
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-medium text-foreground">@{registerAgentResult.name}</span> {t("members.agentRegistered")}
-                    </p>
-                    <div className="rounded-md border border-border p-3 space-y-2">
-                      <div className="flex gap-1 mb-2">
-                        {(["claude", "opencode", "openclaw"] as const).map((tab) => (
-                          <button
-                            key={tab}
-                            onClick={() => setSetupTab(tab)}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                              setupTab === tab
-                                ? "bg-foreground text-background"
-                                : "bg-muted text-muted-foreground hover:text-foreground"
-                            }`}
-                          >
-                            {tab === "claude" ? t("members.tabClaudeCode") : tab === "opencode" ? t("members.tabOpenCode") : t("members.tabOpenClaw")}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-xs font-medium">
-                        {setupTab === "claude" ? t("members.pasteSetupPrompt") : setupTab === "opencode" ? t("members.pasteOpenCode") : t("members.pasteOpenClaw")}
-                      </p>
-                      <div className="rounded bg-muted p-2 max-h-48 overflow-y-auto">
-                        <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed break-all">
-                          {setupTab === "claude"
-                            ? setupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)
-                            : setupTab === "opencode"
-                            ? openCodeSetupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)
-                            : openClawSetupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)}
-                        </pre>
-                      </div>
-                      <CopyButton
-                        className="w-full"
-                        label={t("members.copySetupPrompt")}
-                        text={
-                          setupTab === "claude"
-                            ? setupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)
-                            : setupTab === "opencode"
-                            ? openCodeSetupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)
-                            : openClawSetupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)
-                        }
-                      />
-                    </div>
-                    <div className="rounded bg-muted/50 border border-border p-2">
-                      <p className="text-[11px] text-muted-foreground">
-                        {t("members.token")}: <code className="font-mono text-foreground break-all">{registerAgentResult.token}</code>
-                      </p>
-                    </div>
-                    <Button className="w-full" onClick={() => {
-                      setRegisterAgentOpen(false);
-                      setRegisterAgentResult(null);
-                      fetchAgents();
-                    }}>
-                      {t("common.done")}
-                    </Button>
+        {/* Members list */}
+        <div className="flex flex-col pb-20">
+          {/* Humans */}
+          {allUsers.map((u) => {
+            const isCurrentUser = u.id === user?.id;
+            return (
+              <div
+                key={`human:${u.id}`}
+                className="group flex items-center gap-3 py-4 border-b border-[var(--border-color-primary)] cursor-pointer"
+                onClick={() => router.push(memberUrl(`human:${u.id}`))}
+              >
+                <MemberAvatar type="human" name={u.name} size={48} avatarUrl={u.avatar_url} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[length:var(--font-size-body-base)] font-[500] text-[var(--label-primary)]">{u.name}</span>
+                    <span className="bg-[var(--color-green-100)] text-[var(--color-green-1000)] text-[10px] px-1.5 h-4 inline-flex items-center rounded-full">Human</span>
+                    {u.team_role === "owner" && (
+                      <span className="bg-[var(--fill-quaternary)] text-[var(--label-secondary)] text-[10px] px-1.5 h-4 inline-flex items-center rounded-full">owner</span>
+                    )}
+                    {isCurrentUser && (
+                      <span className="text-xs text-[var(--label-tertiary)]">{t("members.you")}</span>
+                    )}
                   </div>
-                </ScrollArea>
-              ) : (
-                <RegisterAgentForm
-                  onSuccess={(name, token, description) => {
-                    setRegisterAgentResult({ name, token, description });
-                    fetchAgents();
-                  }}
-                />
-              )}
-            </DialogContent>
-          </Dialog>
+                  {u.description && (
+                    <p className="text-[length:var(--font-size-body-small)] text-[var(--label-secondary)] truncate">{u.description}</p>
+                  )}
+                </div>
+                {isOwner && !isCurrentUser && (
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="flex items-center justify-center size-8 rounded-[6px] text-[var(--label-primary)] hover:bg-[var(--fill-quaternary)] transition-all focus:outline-none cursor-pointer">
+                        <EllipsisVertical className="size-5" strokeWidth={1.5} />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" sideOffset={4} className="w-[180px]">
+                        <DropdownMenuItem onSelect={() => handleChangeRole(u.id, u.team_role === "owner" ? "member" : "owner")}>
+                          <Shield className="h-4 w-4" strokeWidth={1.5} />
+                          {u.team_role === "owner" ? t("members.demoteToMember") : t("members.promoteToOwner")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setConfirmDeleteHuman({ id: u.id, name: u.name })} className="text-destructive focus:text-destructive focus:bg-[var(--color-red-100)]">
+                          <Trash2 className="h-4 w-4" strokeWidth={1.5} /> {t("common.delete")}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Agents */}
+          {agents.map((agent) => (
+            <div
+              key={`agent:${agent.id}`}
+              className="group flex items-start gap-3 py-4 border-b border-[var(--border-color-primary)] cursor-pointer"
+              onClick={() => router.push(memberUrl(`agent:${agent.id}`))}
+            >
+              <MemberAvatar type="agent" name={agent.name} size={48} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[length:var(--font-size-body-base)] font-[500] text-[var(--label-primary)]">{agent.name}</span>
+                  <span className="bg-[var(--color-orange-100)] text-[var(--color-orange-1000)] text-[10px] px-1.5 h-4 inline-flex items-center rounded-full">Agent</span>
+                  {agent.capabilities?.map((tag) => (
+                    <span key={tag} className="bg-[var(--fill-quaternary)] text-[var(--label-secondary)] text-[10px] px-1.5 h-4 inline-flex items-center rounded-full">{tag}</span>
+                  ))}
+                </div>
+                {agent.description && (
+                  <p className="text-[length:var(--font-size-body-small)] text-[var(--label-secondary)] truncate">{agent.description}</p>
+                )}
+              </div>
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="flex items-center justify-center size-8 rounded-[6px] text-[var(--label-primary)] hover:bg-[var(--fill-quaternary)] transition-all focus:outline-none cursor-pointer">
+                    <EllipsisVertical className="size-5" strokeWidth={1.5} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" sideOffset={4} className="w-[180px]">
+                    <DropdownMenuItem onSelect={() => setConfirmDeleteAgent({ id: agent.id, name: agent.name })} className="text-destructive focus:text-destructive focus:bg-[var(--color-red-100)]">
+                      <Trash2 className="h-4 w-4" strokeWidth={1.5} /> {t("common.delete")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          ))}
+
+          {allUsers.length === 0 && agents.length === 0 && (
+            <div className="py-16 text-center">
+              <p className="text-sm text-[var(--label-secondary)]">{t("members.noMembers")}</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Members list — use min-h-0 and overflow-y-auto to prevent clipping on mobile */}
-      <div className="divide-y divide-border rounded-md border border-border overflow-y-auto">
-        {/* Humans */}
-        {allUsers.map((u) => {
-          const isCurrentUser = u.id === user?.id;
-          return (
-            <div
-              key={`human:${u.id}`}
-              className="group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 cursor-pointer transition-colors hover:bg-muted/50"
-              onClick={() => router.push(memberUrl(`human:${u.id}`))}
-            >
-              <MemberAvatar type="human" name={u.name} size={32} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-medium">{u.name}</span>
-                  {isCurrentUser && (
-                    <span className="text-xs text-muted-foreground">{t("members.you")}</span>
-                  )}
-                  {u.team_role === "owner" ? (
-                    <span className="inline-flex h-5 items-center rounded bg-primary/10 px-1.5 text-[10px] font-medium text-primary">
-                      {t("members.owner")}
-                    </span>
-                  ) : (
-                    <span className="inline-flex h-5 items-center rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
-                      {t("members.member")}
-                    </span>
-                  )}
-                  <span className="inline-flex h-5 items-center rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
-                    {t("members.human")}
-                  </span>
+      {/* Dialogs — kept outside the scrollable area */}
+      <Dialog open={inviteOpen} onOpenChange={(open) => { setInviteOpen(open); if (!open) { setInviteResult(null); setInviteNote(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>{t("members.inviteTitle")}</DialogTitle></DialogHeader>
+          {inviteResult ? (
+            <div className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label>{t("members.inviteLink")}</Label>
+                <div className="rounded-md bg-muted p-3">
+                  <code className="text-xs font-mono break-all">{origin}/invite/{inviteResult.token}</code>
                 </div>
-                {u.description && <p className="text-xs text-muted-foreground mt-0.5 truncate">{u.description}</p>}
               </div>
-              {isOwner && !isCurrentUser && (
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleChangeRole(u.id, u.team_role === "owner" ? "member" : "owner");
-                    }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-muted"
-                    title={u.team_role === "owner" ? t("members.demoteToMember") : t("members.promoteToOwner")}
-                  >
-                    {u.team_role === "owner" ? t("members.demoteToMember") : t("members.promoteToOwner")}
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setConfirmDeleteHuman({ id: u.id, name: u.name }); }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-destructive"
-                    title={t("common.delete")}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                  </button>
-                </div>
-              )}
+              <CopyButton className="w-full" variant="outline" size="default" label={t("members.copyLink")} text={`${origin}/invite/${inviteResult.token}`} />
+              <p className="text-xs text-muted-foreground text-center">{t("members.inviteExpires").replace("{time}", "7 days")}</p>
+              <Button className="w-full" onClick={() => { setInviteOpen(false); setInviteResult(null); setInviteNote(""); }}>{t("common.done")}</Button>
             </div>
-          );
-        })}
-
-        {/* Agents */}
-        {agents.map((agent) => (
-          <div
-            key={`agent:${agent.id}`}
-            className="group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 cursor-pointer transition-colors hover:bg-muted/50"
-            onClick={() => router.push(memberUrl(`agent:${agent.id}`))}
-          >
-            <MemberAvatar type="agent" name={agent.name} size={32} />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium">@{agent.name}</span>
-                <span className="inline-flex h-5 items-center rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
-                  {t("members.member")}
-                </span>
-                <span className="inline-flex h-5 items-center rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
-                  {t("members.agent")}
-                </span>
-                {agent.capabilities?.map((tag) => (
-                  <span key={tag} className="inline-flex h-5 items-center rounded bg-blue-100 dark:bg-blue-900/30 px-1.5 text-[10px] font-medium text-blue-700 dark:text-blue-300">
-                    {tag}
-                  </span>
-                ))}
+          ) : (
+            <div className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label>{t("members.inviteNote")}</Label>
+                <Input placeholder={t("members.inviteNotePlaceholder")} value={inviteNote} onChange={(e) => setInviteNote(e.target.value)} autoFocus />
               </div>
-              <div className="flex items-center gap-2 mt-0.5">
-                {agent.description && (
-                  <span className="text-xs text-muted-foreground truncate">{agent.description}</span>
-                )}
-                {agent.description && <span className="text-xs text-muted-foreground">&middot;</span>}
-                <span className="text-xs text-muted-foreground shrink-0">{t("members.seen").replace("{time}", timeAgo(agent.last_seen_at))}</span>
-              </div>
+              <Button className="w-full" onClick={handleGenerateInvite} disabled={inviteGenerating}>{inviteGenerating ? t("common.creating") : t("members.generateLink")}</Button>
             </div>
-            <button
-              onClick={(e) => { e.stopPropagation(); setConfirmDeleteAgent({ id: agent.id, name: agent.name }); }}
-              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-destructive shrink-0"
-              title={t("common.delete")}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-            </button>
-          </div>
-        ))}
+          )}
+        </DialogContent>
+      </Dialog>
 
-        {allUsers.length === 0 && agents.length === 0 && (
-          <div className="px-4 py-8 text-center">
-            <p className="text-sm text-muted-foreground">{t("members.noMembers")}</p>
-          </div>
-        )}
-      </div>
-
-      {/* Invite Links Section */}
-      <div className="mt-8">
-        <button
-          onClick={() => setInvitesExpanded(!invitesExpanded)}
-          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={`transition-transform ${invitesExpanded ? "rotate-90" : ""}`}
-          >
-            <path d="M9 18l6-6-6-6" />
-          </svg>
-          {t("members.inviteLinks")} ({invites.length})
-        </button>
-
-        {invitesExpanded && (
-          <div className="mt-3 divide-y divide-border rounded-md border border-border overflow-y-auto">
-            {invites.length === 0 ? (
-              <div className="px-4 py-6 text-center">
-                <p className="text-sm text-muted-foreground">{t("members.noInvites")}</p>
-              </div>
-            ) : (
-              invites.map((inv) => (
-                <div key={inv.token} className="flex items-center gap-3 px-3 sm:px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {statusBadge(inv.status)}
-                      {inv.note && <span className="text-xs text-muted-foreground truncate">{inv.note}</span>}
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
-                      <span>{inv.creator_name ?? "Unknown"}</span>
-                      <span>&middot;</span>
-                      <span>{timeAgo(inv.created_at)}</span>
-                      {inv.status === "pending" && (
-                        <>
-                          <span>&middot;</span>
-                          <span>{t("members.inviteExpires").replace("{time}", timeAgo(inv.expires_at).replace(" ago", ""))}</span>
-                        </>
-                      )}
-                    </div>
+      <Dialog open={registerAgentOpen} onOpenChange={(open) => { setRegisterAgentOpen(open); if (!open) setRegisterAgentResult(null); }}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+          <DialogHeader className="shrink-0"><DialogTitle>{t("members.registerAgentTitle")}</DialogTitle></DialogHeader>
+          {registerAgentResult ? (
+            <ScrollArea className="flex-1 pr-4">
+              <div className="space-y-4 pt-2 pb-2">
+                <p className="text-sm text-muted-foreground"><span className="font-medium text-foreground">@{registerAgentResult.name}</span> {t("members.agentRegistered")}</p>
+                <div className="rounded-md border border-border p-3 space-y-2">
+                  <div className="flex gap-1 mb-2">
+                    {(["claude", "opencode", "openclaw"] as const).map((tab) => (
+                      <button key={tab} onClick={() => setSetupTab(tab)} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${setupTab === tab ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground"}`}>
+                        {tab === "claude" ? t("members.tabClaudeCode") : tab === "opencode" ? t("members.tabOpenCode") : t("members.tabOpenClaw")}
+                      </button>
+                    ))}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {inv.status === "pending" && (
-                      <>
-                        <CopyButton
-                          label={t("members.copyLink")}
-                          text={`${origin}/invite/${inv.token}`}
-                          size="sm"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => handleRevokeInvite(inv.token)}
-                        >
-                          {t("members.revokeInvite")}
-                        </Button>
-                      </>
-                    )}
+                  <p className="text-xs font-medium">{setupTab === "claude" ? t("members.pasteSetupPrompt") : setupTab === "opencode" ? t("members.pasteOpenCode") : t("members.pasteOpenClaw")}</p>
+                  <div className="rounded bg-muted p-2 max-h-48 overflow-y-auto">
+                    <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed break-all">
+                      {setupTab === "claude" ? setupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description) : setupTab === "opencode" ? openCodeSetupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description) : openClawSetupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)}
+                    </pre>
                   </div>
+                  <CopyButton className="w-full" label={t("members.copySetupPrompt")} text={setupTab === "claude" ? setupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description) : setupTab === "opencode" ? openCodeSetupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description) : openClawSetupPrompt(origin, registerAgentResult.name, registerAgentResult.token, registerAgentResult.description)} />
                 </div>
-              ))
-            )}
-          </div>
-        )}
-      </div>
+                <div className="rounded bg-muted/50 border border-border p-2">
+                  <p className="text-[11px] text-muted-foreground">{t("members.token")}: <code className="font-mono text-foreground break-all">{registerAgentResult.token}</code></p>
+                </div>
+                <Button className="w-full" onClick={() => { setRegisterAgentOpen(false); setRegisterAgentResult(null); fetchAgents(); }}>{t("common.done")}</Button>
+              </div>
+            </ScrollArea>
+          ) : (
+            <RegisterAgentForm onSuccess={(name, token, description) => { setRegisterAgentResult({ name, token, description }); fetchAgents(); }} />
+          )}
+        </DialogContent>
+      </Dialog>
 
-      <ConfirmDialog
-        open={!!confirmDeleteAgent}
-        onOpenChange={(open) => { if (!open) setConfirmDeleteAgent(null); }}
-        title={t("members.confirmDeleteAgent").replace("{name}", confirmDeleteAgent?.name ?? "")}
-        variant="destructive"
-        onConfirm={async () => {
-          if (confirmDeleteAgent) {
-            await handleDeleteAgent(confirmDeleteAgent.id);
-          }
-          setConfirmDeleteAgent(null);
-        }}
-      />
-      <ConfirmDialog
-        open={!!confirmDeleteHuman}
-        onOpenChange={(open) => { if (!open) setConfirmDeleteHuman(null); }}
-        title={t("members.confirmDeleteHuman").replace("{name}", confirmDeleteHuman?.name ?? "")}
-        variant="destructive"
-        onConfirm={async () => {
-          if (confirmDeleteHuman) {
-            await handleDeleteHuman(confirmDeleteHuman.id);
-          }
-          setConfirmDeleteHuman(null);
-        }}
-      />
+      <ConfirmDialog open={!!confirmDeleteAgent} onOpenChange={(open) => { if (!open) setConfirmDeleteAgent(null); }} title={t("members.confirmDeleteAgent").replace("{name}", confirmDeleteAgent?.name ?? "")} variant="destructive" onConfirm={async () => { if (confirmDeleteAgent) await handleDeleteAgent(confirmDeleteAgent.id); setConfirmDeleteAgent(null); }} />
+      <ConfirmDialog open={!!confirmDeleteHuman} onOpenChange={(open) => { if (!open) setConfirmDeleteHuman(null); }} title={t("members.confirmDeleteHuman").replace("{name}", confirmDeleteHuman?.name ?? "")} variant="destructive" onConfirm={async () => { if (confirmDeleteHuman) await handleDeleteHuman(confirmDeleteHuman.id); setConfirmDeleteHuman(null); }} />
     </main>
   );
 }

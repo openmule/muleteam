@@ -10,6 +10,7 @@ interface MemberData {
   type: "human" | "agent";
   name: string;
   description?: string;
+  avatar_url?: string | null;
   capabilities?: string[];
   created_at?: string;
   created_by?: { id: string; name: string };
@@ -128,7 +129,7 @@ export function MemberHoverCard({
             <div className="p-3">
               {/* Header: avatar + name */}
               <div className="flex items-center gap-3 mb-2">
-                <MemberAvatar type={data.type} name={data.name} size={40} />
+                <MemberAvatar type={data.type} name={data.name} size={40} avatarUrl={data.avatar_url} />
                 <div className="min-w-0">
                   <Link
                     href={memberUrl(participantId)}
@@ -149,7 +150,7 @@ export function MemberHoverCard({
                   {data.capabilities.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex h-5 items-center rounded bg-blue-100 dark:bg-blue-900/30 px-1.5 text-[10px] font-medium text-blue-700 dark:text-blue-300"
+                      className="inline-flex h-5 items-center rounded bg-[var(--color-blue-100)] px-1.5 text-[10px] font-medium text-[var(--color-blue-1000)]"
                     >
                       {tag}
                     </span>

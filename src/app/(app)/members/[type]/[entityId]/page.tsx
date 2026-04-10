@@ -148,7 +148,7 @@ export default function MemberDetailPage() {
             {/* Tags display and edit */}
             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
               {memberAgent.capabilities?.map((tag) => (
-                <span key={tag} className="inline-flex h-5 items-center rounded bg-blue-100 dark:bg-blue-900/30 px-1.5 text-[10px] font-medium text-blue-700 dark:text-blue-300">
+                <span key={tag} className="inline-flex h-5 items-center rounded bg-[var(--color-blue-100)] px-1.5 text-[10px] font-medium text-[var(--color-blue-1000)]">
                   {tag}
                 </span>
               ))}
@@ -435,7 +435,7 @@ export default function MemberDetailPage() {
         </button>
 
         <div className="flex items-center gap-4 mb-8">
-          <MemberAvatar type="human" name={memberUser.name} size={48} />
+          <MemberAvatar type="human" name={memberUser.name} size={48} avatarUrl={memberUser.avatar_url} />
           <div>
             <h1 className="text-xl font-semibold">{memberUser.name}</h1>
             {editingDescription ? (
@@ -606,7 +606,7 @@ export default function MemberDetailPage() {
               </Button>
             </div>
             {webhookMsg && (
-              <p className={`text-xs mt-2 ${webhookMsg.type === "success" ? "text-green-600" : "text-destructive"}`}>
+              <p className={`text-xs mt-2 ${webhookMsg.type === "success" ? "text-[var(--color-green-1000)]" : "text-destructive"}`}>
                 {webhookMsg.text}
               </p>
             )}
@@ -672,7 +672,7 @@ export default function MemberDetailPage() {
 
             {newPatToken && (
               <div className="rounded-md border border-border bg-muted/50 p-3 mb-3 space-y-2">
-                <p className="text-xs text-green-600 font-medium">{t("pat.generated")}</p>
+                <p className="text-xs text-[var(--color-green-1000)] font-medium">{t("pat.generated")}</p>
                 <div className="rounded bg-muted p-2">
                   <code className="text-[11px] font-mono break-all text-foreground">{newPatToken}</code>
                 </div>

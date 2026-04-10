@@ -1,0 +1,36 @@
+/* ==========================================================
+   MuleRun Design System — Base Styles
+   Opinionated resets and defaults that apply DS tokens globally.
+   ========================================================== */
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-body-base);
+  line-height: var(--line-height-default);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus-visible ring for accessibility */
+*:focus-visible:not([data-slot="input"]):not([data-slot="input-group-control"]):not(textarea):not(select):not([data-radix-collection-item]) {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Border color default */
+*,
+*::before,
+*::after {
+  border-color: var(--border);
+}
+
+/* Hide scrollbar but keep scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

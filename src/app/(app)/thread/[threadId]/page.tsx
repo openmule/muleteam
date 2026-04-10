@@ -4,19 +4,20 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ActivityFeed } from "@/components/thread/ActivityFeed";
-import { CommentInput } from "@/components/thread/CommentInput";
-import { WorkspaceFiles } from "@/components/thread/WorkspaceFiles";
-import { WorkspaceLinks } from "@/components/thread/WorkspaceLinks";
-import { ParticipantsList } from "@/components/thread/ParticipantsList";
-import { ActionItems } from "@/components/thread/ActionItems";
-import { GitHistory } from "@/components/thread/GitHistory";
+import { ChatInput } from "@/components/ui/chat-input";
+import { ThreadSidebar } from "@/components/thread/ThreadSidebar";
 import { MarkdownBody } from "@/components/thread/MarkdownBody";
 import { JoinButton, LeaveButton } from "@/components/thread/JoinButton";
-import { MobileDetailSheet } from "@/components/thread/MobileDetailSheet";
+import { EllipsisVertical, RotateCcw, X, MessageCircleX } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
-import { PageViewer, RENDERABLE_RE, type CreateAnnotationPayload } from "@/components/thread/PageViewer";
-import { ResizablePanel } from "@/components/ui/resizable-panel";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { StatusBanner } from "@/components/thread/StatusBanner";
+import { CHANNEL_BADGE_COLORS, DEFAULT_BADGE_COLOR } from "@/components/layout/Sidebar";
 import { useT } from "@/lib/i18n";
 
 interface Participant {
@@ -30,20 +31,13 @@ interface ThreadMeta {
   title: string;
   description?: string;
   status: string;
+  status_label?: string;
+  status_detail?: string;
   labels?: string[];
   participants: Participant[];
+  channel_id?: string;
   created_at: string;
   updated_at: string;
-}
-
-interface AnnotationAnchor {
-  file_path: string;
-  anchor_type: "line" | "selector";
-  start_line?: number;
-  end_line?: number;
-  selector?: string;
-  commit_hash: string;
-  content_snapshot: string;
 }
 
 interface Message {
@@ -51,11 +45,10 @@ interface Message {
   ts: number;
   from: string;
   from_name: string;
-  type: "text" | "artifact" | "system" | "activity" | "annotation";
+  type: "text" | "artifact" | "system" | "activity";
   body: string;
   artifact_version?: number;
   reply_to?: string;
-  annotation?: AnnotationAnchor;
 }
 
 interface WorkspaceFile {
@@ -105,15 +98,10 @@ interface CurrentUser {
   email: string;
 }
 
-const STATUS_ICON: Record<string, string> = {
-  open: "\u25CB",
-  in_progress: "\u25CF",
-  done: "\u2713",
-  archived: "\u2014",
-};
 
-export default function ThreadDetailPage() {
-  const { threadId } = useParams<{ threadId: string }>();
+export default function ThreadDetailPage({ threadId: threadIdProp, showChannelBadge = true }: { threadId?: string; showChannelBadge?: boolean } = {}) {
+  const params = useParams<{ threadId: string }>();
+  const threadId = threadIdProp || params.threadId;
   const router = useRouter();
   const t = useT();
 
@@ -122,11 +110,11 @@ export default function ThreadDetailPage() {
   const [files, setFiles] = useState<WorkspaceFile[]>([]);
   const [links, setLinks] = useState<HyperlinkEntry[]>([]);
   const [tasks, setTasks] = useState<ActionItemData[]>([]);
+  const [channelName, setChannelName] = useState<string | null>(null);
   const [agents, setAgents] = useState<RegisteredAgent[]>([]);
   const [allUsers, setAllUsers] = useState<UserInfo[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const fetchThread = useCallback(async () => {
@@ -137,6 +125,15 @@ export default function ThreadDetailPage() {
     }
     const data = await res.json();
     setThread(data.thread);
+    // Fetch channel name
+    if (data.thread?.channel_id) {
+      fetch(`/api/channels/${data.thread.channel_id}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d) setChannelName((d.channel ?? d).name); })
+        .catch(() => {});
+    } else {
+      setChannelName(null);
+    }
   }, [threadId, router]);
 
   const fetchMessages = useCallback(async () => {
@@ -199,11 +196,6 @@ export default function ThreadDetailPage() {
   }, []);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem("muleteam:sidebar-tab");
-    if (saved) setSidebarTab(Number(saved));
-  }, []);
-
-  useEffect(() => {
     fetchThread();
     fetchMessages();
     fetchFiles();
@@ -228,9 +220,6 @@ export default function ThreadDetailPage() {
   // Reply state
   const [replyTo, setReplyTo] = useState<{ id: string; from_name: string; body: string } | null>(null);
 
-  // Annotation navigation state: which annotation to highlight in page viewer
-  const [highlightAnnotationId, setHighlightAnnotationId] = useState<string | null>(null);
-
   const handleReply = (messageId: string) => {
     const msg = messages.find(m => m.id === messageId);
     if (msg) {
@@ -245,25 +234,9 @@ export default function ThreadDetailPage() {
       body: JSON.stringify({ body, reply_to: replyToId }),
     });
     setReplyTo(null);
+    // Don't block on refetch — input clears immediately after POST succeeds
     fetchMessages();
   };
-
-  // Thread → Page: click annotation message → highlight in page viewer
-  const handleNavigateToAnnotation = useCallback((messageId: string) => {
-    setHighlightAnnotationId(messageId);
-    // Clear after animation
-    setTimeout(() => setHighlightAnnotationId(null), 3000);
-  }, []);
-
-  // Page → Thread: create annotation from page viewer
-  const handleCreateAnnotation = useCallback(async (payload: CreateAnnotationPayload, body: string) => {
-    await fetch(`/api/threads/${threadId}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body, annotation: payload }),
-    });
-    fetchMessages();
-  }, [threadId, fetchMessages]);
 
   const handleStatusChange = async (newStatus: string) => {
     await fetch(`/api/threads/${threadId}`, {
@@ -279,294 +252,155 @@ export default function ThreadDetailPage() {
     fetchMessages();
   };
 
-  const handleLeft = () => {
+  const handleLeft = async () => {
+    await fetch(`/api/threads/${threadId}/join`, { method: "DELETE" });
     fetchThread();
     fetchMessages();
   };
 
-  const handleSidebarTabChange = (value: unknown) => {
-    const idx = typeof value === "number" ? value : 0;
-    setSidebarTab(idx);
-    sessionStorage.setItem("muleteam:sidebar-tab", String(idx));
-  };
-
-  const openTaskCount = tasks.filter(t => t.status !== "done").length;
 
   if (!thread) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground text-sm">{t("common.loading")}</div>
-      </div>
-    );
+    return null;
   }
 
   const isMember = currentUser
     ? thread.participants.some(p => p.id === `human:${currentUser.id}`)
     : false;
 
-  const EXCLUDED_FILES = new Set(["README.md", "DECISION_LOG.md"]);
-  const hasRenderableFiles = files.some(f => RENDERABLE_RE.test(f.name) && !EXCLUDED_FILES.has(f.name));
-
-  // Left panel: Chat + sidebar tabs
-  const leftPanel = (
-    <div className="flex flex-col flex-1 min-h-0">
-      <Tabs value={sidebarTab} onValueChange={handleSidebarTabChange} className="min-h-0 flex flex-col flex-1">
-        <TabsList variant="line" className="w-full justify-start px-3 pt-1 border-b border-border shrink-0">
-          <TabsTrigger value={0} className="text-xs">
-            {t("sidebar.chat")}
-          </TabsTrigger>
-          <TabsTrigger value={1} className="text-xs gap-1">
-            {t("sidebar.actionItems")}
-            {openTaskCount > 0 && (
-              <span className="text-[10px] text-muted-foreground">({openTaskCount})</span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value={2} className="text-xs">
-            {t("sidebar.participants")}
-          </TabsTrigger>
-          <TabsTrigger value={3} className="text-xs">
-            {t("sidebar.files")}
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Chat tab */}
-        <TabsContent value={0} className="flex flex-col flex-1 min-h-0">
-          {thread.description && (
-            <div className="px-4 sm:px-6 py-3 border-b border-border text-muted-foreground">
-              <MarkdownBody body={thread.description} />
-            </div>
-          )}
-          <ActivityFeed threadId={threadId} messages={messages} onReply={isMember ? handleReply : undefined} onNavigateToAnnotation={handleNavigateToAnnotation} />
-          {isMember ? (
-            <CommentInput
-              threadId={threadId}
-              onSubmit={handleSendMessage}
-              replyTo={replyTo}
-              onCancelReply={() => setReplyTo(null)}
-              participants={thread.participants}
-            />
-          ) : (
-            <JoinButton threadId={threadId} onJoined={handleJoined} />
-          )}
-        </TabsContent>
-
-        {/* Tasks tab */}
-        <TabsContent value={1} className="flex-1 overflow-y-auto">
-          <ActionItems
-            threadId={threadId}
-            tasks={tasks}
-            participants={thread.participants}
-            onRefresh={fetchTasks}
-            readOnly={!isMember}
-            embedded
-          />
-        </TabsContent>
-
-        {/* Participants tab */}
-        <TabsContent value={2} className="flex-1 overflow-y-auto">
-          <ParticipantsList
-            threadId={threadId}
-            participants={thread.participants}
-            agents={agents}
-            users={allUsers}
-            onParticipantAdded={fetchThread}
-            readOnly={!isMember}
-            embedded
-          />
-        </TabsContent>
-
-        {/* Files tab */}
-        <TabsContent value={3} className="flex-1 overflow-y-auto">
-          <WorkspaceFiles
-            threadId={threadId}
-            files={files}
-            onRefresh={fetchFiles}
-            readOnly={!isMember}
-          />
-          <WorkspaceLinks
-            threadId={threadId}
-            links={links}
-            onRefresh={fetchLinks}
-            readOnly={!isMember}
-          />
-          <GitHistory threadId={threadId} />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-
-  // Right panel: Page viewer
-  const rightPanel = (
-    <PageViewer
-      threadId={threadId}
-      files={files}
-      messages={messages}
-      onCreateAnnotation={isMember ? handleCreateAnnotation : undefined}
-      highlightAnnotationId={highlightAnnotationId}
-      onPinClicked={handleNavigateToAnnotation}
-    />
-  );
-
   return (
-    <div className="h-[calc(100dvh-3.5rem)] flex flex-col overflow-hidden">
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border shrink-0">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/")}
-            className="text-muted-foreground hover:text-foreground shrink-0"
-          >
-            &larr; <span className="hidden sm:inline">{t("common.back")}</span>
-          </Button>
-          <div className="h-4 w-px bg-border hidden sm:block" />
-          <h1 className="text-sm sm:text-base font-semibold truncate">{thread.title}</h1>
-          <span className="text-sm text-muted-foreground font-mono shrink-0 hidden sm:inline" title={thread.status}>
-            {STATUS_ICON[thread.status] || "\u25CB"} {thread.status.replace("_", " ")}
-          </span>
+    <div className="h-screen flex items-stretch p-0">
+      {/* Thread card — left rounded + left border only (top/right/bottom flush to edge) */}
+      <div className="flex-1 flex overflow-hidden rounded-l-[var(--radius-medium-val)] border-l border-y-0 border-r-0 border-[var(--border-color-primary)] shadow-[0_0_64px_var(--grays-black-100,rgba(0,0,0,0.1))]">
+        {/* Left: Chat area */}
+        <div className="flex-1 flex flex-col min-w-0 bg-[var(--bg-grouped-quinary)] relative">
+          {/* Thread title + status banner — fixed glass top */}
+          <div className="flex flex-col gap-2 pt-6 px-6 pb-0 shrink-0 relative z-10 backdrop-blur-[20px]" style={{ backgroundColor: "color-mix(in srgb, var(--bg-grouped-quinary) 85%, transparent)" }}>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold text-[var(--label-primary)]">{thread.title}</h1>
+              {showChannelBadge && channelName && thread.channel_id && (() => {
+                const badgeColor = CHANNEL_BADGE_COLORS[thread.channel_id] ?? DEFAULT_BADGE_COLOR;
+                return (
+                  <span className={`text-xs px-2 h-5 inline-flex items-center rounded-full shrink-0 ${badgeColor.bg} ${badgeColor.text}`}>
+                    {channelName}
+                  </span>
+                );
+              })()}
+              <div className="flex items-center gap-2 ml-auto shrink-0">
+                {isMember && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="flex items-center justify-center size-8 rounded-[6px] text-[var(--label-primary)] hover:bg-[var(--fill-quaternary)] transition-all focus:outline-none cursor-pointer">
+                      <EllipsisVertical className="size-5" strokeWidth={1.5} />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" sideOffset={4} className="w-[180px]">
+                      {thread.status !== "done" && (
+                        <DropdownMenuItem onSelect={() => setConfirmClose(true)}>
+                          <X className="h-4 w-4" strokeWidth={1.5} /> {t("thread.closeThread")}
+                        </DropdownMenuItem>
+                      )}
+                      {thread.status === "done" && (
+                        <DropdownMenuItem onSelect={() => handleStatusChange("open")}>
+                          <RotateCcw className="h-4 w-4" strokeWidth={1.5} /> {t("common.reopen")}
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem onSelect={() => handleLeft()} className="text-destructive focus:text-destructive focus:bg-[var(--color-red-100)]">
+                        <MessageCircleX className="h-4 w-4" strokeWidth={1.5} /> {t("common.leaveThread")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                <ConfirmDialog
+                  open={confirmClose}
+                  onOpenChange={setConfirmClose}
+                  title={t("thread.closeThread")}
+                  description={t("thread.confirmClose")}
+                  confirmLabel={t("thread.closeThread")}
+                  variant="default"
+                  onConfirm={async () => { await handleStatusChange("done"); setConfirmClose(false); }}
+                />
+              </div>
+            </div>
+            <StatusBanner
+              status={thread.status}
+              statusLabel={thread.status_label}
+              statusDetail={thread.status_detail}
+              description={thread.description}
+            />
+          </div>
+
+          {/* Messages */}
+          <ActivityFeed threadId={threadId} messages={messages} onReply={isMember ? handleReply : undefined} currentUserId={currentUser?.id} />
+
+          {/* Input or Join — fixed glass bottom */}
+          <div className="px-6 pb-6 pt-0 shrink-0 relative z-10 backdrop-blur-[20px]" style={{ backgroundColor: "color-mix(in srgb, var(--bg-grouped-quinary) 85%, transparent)" }}>
+            {isMember ? (
+              <ChatInputWrapper onSend={(body) => handleSendMessage(body, replyTo?.id)} />
+            ) : (
+              <JoinBar threadId={threadId} onJoined={handleJoined} />
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Mobile detail sheet trigger */}
-          <MobileDetailSheet
+        {/* Right: Detail sidebar */}
+        <div className="hidden md:flex w-[340px] shrink-0 flex-col overflow-y-auto border-l border-[var(--border-color-secondary)] bg-[var(--bg-grouped-quinary)] px-2 py-5 scrollbar-thin">
+          <ThreadSidebar
             threadId={threadId}
+            description={thread.description}
+            participants={thread.participants}
             tasks={tasks}
             files={files}
-            participants={thread.participants}
+            links={links}
             agents={agents}
             users={allUsers}
-            readOnly={!isMember}
+            isMember={isMember}
+            onRefreshThread={fetchThread}
             onRefreshTasks={fetchTasks}
             onRefreshFiles={fetchFiles}
-            onParticipantAdded={fetchThread}
+            onRefreshLinks={fetchLinks}
           />
-          {isMember && thread.status !== "done" && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setConfirmClose(true)}
-                className="text-xs"
-              >
-                {t("common.close")}
-              </Button>
-              <ConfirmDialog
-                open={confirmClose}
-                onOpenChange={setConfirmClose}
-                title={t("thread.closeThread")}
-                description={t("thread.confirmClose")}
-                confirmLabel={t("thread.closeThread")}
-                variant="default"
-                onConfirm={async () => {
-                  await handleStatusChange("done");
-                  setConfirmClose(false);
-                }}
-              />
-            </>
-          )}
-          {isMember && thread.status === "done" && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleStatusChange("open")}
-              className="text-xs"
-            >
-              {t("common.reopen")}
-            </Button>
-          )}
-          {isMember && (
-            <LeaveButton threadId={threadId} onLeft={handleLeft} />
-          )}
-        </div>
-      </header>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
-        {/* Desktop: split layout with page viewer OR original layout */}
-        <div className="hidden md:flex flex-1 min-h-0">
-          {hasRenderableFiles ? (
-            <ResizablePanel
-              left={leftPanel}
-              right={rightPanel}
-              defaultRatio={0.4}
-              storageKey={`muleteam:panel-ratio:${threadId}`}
-            />
-          ) : (
-            /* Original layout: chat left + sidebar right */
-            <>
-              <div className="flex-[3] flex flex-col border-r border-border min-h-0 min-w-0">
-                {thread.description && (
-                  <div className="px-4 sm:px-6 py-4 border-b border-border text-muted-foreground">
-                    <MarkdownBody body={thread.description} />
-                  </div>
-                )}
-                <ActivityFeed threadId={threadId} messages={messages} onReply={isMember ? handleReply : undefined} onNavigateToAnnotation={handleNavigateToAnnotation} />
-                {isMember ? (
-                  <CommentInput
-                    threadId={threadId}
-                    onSubmit={handleSendMessage}
-                    replyTo={replyTo}
-                    onCancelReply={() => setReplyTo(null)}
-                    participants={thread.participants}
-                  />
-                ) : (
-                  <JoinButton threadId={threadId} onJoined={handleJoined} />
-                )}
-              </div>
-              <div className="flex-[2] flex flex-col overflow-hidden border-border min-w-0">
-                <Tabs value={sidebarTab} onValueChange={handleSidebarTabChange} className="min-h-0 flex flex-col flex-1">
-                  <TabsList variant="line" className="w-full justify-start px-3 pt-2 border-b border-border shrink-0">
-                    <TabsTrigger value={0} className="text-xs gap-1">
-                      {t("sidebar.actionItems")}
-                      {openTaskCount > 0 && (
-                        <span className="text-[10px] text-muted-foreground">({openTaskCount})</span>
-                      )}
-                    </TabsTrigger>
-                    <TabsTrigger value={1} className="text-xs">
-                      {t("sidebar.participants")}
-                    </TabsTrigger>
-                  </TabsList>
-                  <div className="flex-1 overflow-y-auto min-h-0">
-                    <TabsContent value={0}>
-                      <ActionItems threadId={threadId} tasks={tasks} participants={thread.participants} onRefresh={fetchTasks} readOnly={!isMember} embedded />
-                    </TabsContent>
-                    <TabsContent value={1}>
-                      <ParticipantsList threadId={threadId} participants={thread.participants} agents={agents} users={allUsers} onParticipantAdded={fetchThread} readOnly={!isMember} embedded />
-                    </TabsContent>
-                  </div>
-                </Tabs>
-                <div className="border-t border-border overflow-y-auto min-h-[120px] max-h-[40%]">
-                  <WorkspaceFiles threadId={threadId} files={files} onRefresh={fetchFiles} readOnly={!isMember} />
-                  <WorkspaceLinks threadId={threadId} links={links} onRefresh={fetchLinks} readOnly={!isMember} />
-                  <GitHistory threadId={threadId} />
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Mobile: single column, chat only (pages via mobile sheet later) */}
-        <div className="flex md:hidden flex-col flex-1 min-h-0">
-          {thread.description && (
-            <div className="px-4 py-3 border-b border-border text-muted-foreground">
-              <MarkdownBody body={thread.description} />
-            </div>
-          )}
-          <ActivityFeed threadId={threadId} messages={messages} onReply={isMember ? handleReply : undefined} onNavigateToAnnotation={handleNavigateToAnnotation} />
-          {isMember ? (
-            <CommentInput
-              threadId={threadId}
-              onSubmit={handleSendMessage}
-              replyTo={replyTo}
-              onCancelReply={() => setReplyTo(null)}
-              participants={thread.participants}
-            />
-          ) : (
-            <JoinButton threadId={threadId} onJoined={handleJoined} />
-          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Thin wrapper around ChatInput to manage local value state */
+function ChatInputWrapper({ onSend }: { onSend: (body: string) => void }) {
+  const [value, setValue] = useState("");
+  const t = useT();
+  return (
+    <ChatInput
+      value={value}
+      onChange={setValue}
+      placeholder={t("thread.writeComment")}
+      onSend={() => {
+        if (value.trim()) {
+          onSend(value.trim());
+          setValue("");
+        }
+      }}
+      size="sm"
+    />
+  );
+}
+
+/** Join bar — same container style as ChatInput, with text + join button */
+function JoinBar({ threadId, onJoined }: { threadId: string; onJoined: () => void }) {
+  const [joining, setJoining] = useState(false);
+  const t = useT();
+
+  const handleJoin = async () => {
+    setJoining(true);
+    const res = await fetch(`/api/threads/${threadId}/join`, { method: "POST" });
+    if (res.ok) onJoined();
+    setJoining(false);
+  };
+
+  return (
+    <div className="border border-input bg-[var(--bg-grouped-quaternary)] rounded-[12px] shadow-[0px_4px_24px_var(--grays-black-50,rgba(0,0,0,0.05))] flex items-center justify-between px-4 py-3">
+      <span className="text-sm text-[var(--label-tertiary)]">{t("thread.joinToParticipate")}</span>
+      <Button size="sm" onClick={handleJoin} disabled={joining}>
+        {joining ? t("common.joining") : t("common.join")}
+      </Button>
     </div>
   );
 }
