@@ -135,8 +135,10 @@ export default function ChannelsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold tracking-tight">{t("channels.title")}</h1>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger render={<Button variant="outline" size="sm" />}>
-            {t("channels.newChannel")}
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              {t("channels.newChannel")}
+            </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
