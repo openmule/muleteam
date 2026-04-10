@@ -40,7 +40,7 @@ export async function GET(request: Request) {
       SELECT i.token, i.created_by, i.note, i.expires_at, i.used_by, i.used_at, i.status, i.created_at,
              u.name as creator_name
       FROM invites i
-      LEFT JOIN users u ON i.created_by = u.id
+      LEFT JOIN users u ON i.created_by = u.id::text
       ORDER BY i.created_at DESC
     `) as {
       token: string;

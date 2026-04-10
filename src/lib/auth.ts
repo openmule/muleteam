@@ -139,7 +139,7 @@ export async function getAuthenticatedEntity(
 async function getTeamRole(userId: string): Promise<"owner" | "member"> {
   try {
     const sql = await (await import("./db")).db();
-    const rows = await sql`SELECT team_role FROM users WHERE id = ${userId}` as { team_role: string | null }[];
+    const rows = await sql`SELECT team_role FROM users WHERE id::text = ${userId}` as { team_role: string | null }[];
     if (rows.length > 0 && rows[0].team_role === "owner") return "owner";
   } catch {
     // Default to member on error

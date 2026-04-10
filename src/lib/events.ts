@@ -31,7 +31,7 @@ async function getUserWebhookUrl(participantId: string): Promise<string | null> 
   try {
     const sql = await db();
     const rows = (await sql`
-      SELECT webhook_url FROM users WHERE id = ${rawId}
+      SELECT webhook_url FROM users WHERE id::text = ${rawId}
     `) as { webhook_url: string | null }[];
     return rows[0]?.webhook_url ?? null;
   } catch {

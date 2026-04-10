@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 
       const sql = await db();
       const result = (await sql`
-        SELECT webhook_url FROM users WHERE id = ${user.id}
+        SELECT webhook_url FROM users WHERE id::text = ${user.id}
       `) as { webhook_url: string | null }[];
 
       return NextResponse.json({
@@ -52,7 +52,7 @@ export async function PATCH(request: Request) {
 
       const sql = await db();
       const urlValue = webhookUrl && webhookUrl.length > 0 ? webhookUrl : null;
-      await sql`UPDATE users SET webhook_url = ${urlValue} WHERE id = ${user.id}`;
+      await sql`UPDATE users SET webhook_url = ${urlValue} WHERE id::text = ${user.id}`;
 
       return NextResponse.json({ ok: true, webhook_url: urlValue });
     } catch (error) {
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
 
       const sql = await db();
       const result = (await sql`
-        SELECT webhook_url FROM users WHERE id = ${user.id}
+        SELECT webhook_url FROM users WHERE id::text = ${user.id}
       `) as { webhook_url: string | null }[];
 
       const webhookUrl = result[0]?.webhook_url;

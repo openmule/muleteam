@@ -19,7 +19,7 @@ export async function GET(request: Request) {
       const tokens = await sql`
         SELECT id, name, created_at, last_used_at
         FROM personal_tokens
-        WHERE user_id = ${user.id}
+        WHERE user_id::text = ${user.id}
         ORDER BY created_at DESC
       `;
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       const sql = await db();
       await sql`
         INSERT INTO personal_tokens (id, user_id, name, token_hash)
-        VALUES (${id}, ${user.id}, ${name}, ${tokenHash})
+        VALUES (${id}, ${user.id}::uuid, ${name}, ${tokenHash})
       `;
 
       return NextResponse.json({ id, name, token: rawToken });
@@ -79,7 +79,7 @@ export async function DELETE(request: Request) {
       const sql = await db();
       await sql`
         DELETE FROM personal_tokens
-        WHERE id = ${tokenId} AND user_id = ${user.id}
+        WHERE id = ${tokenId} AND user_id::text = ${user.id}
       `;
 
       return NextResponse.json({ ok: true });

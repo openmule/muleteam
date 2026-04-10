@@ -19,7 +19,7 @@ export async function GET(request: Request) {
       const sql = await db();
 
       const result = (await sql`
-        SELECT id, email, name, avatar_url, team_role FROM users WHERE id = ${user.id}
+        SELECT id, email, name, avatar_url, team_role FROM users WHERE id::text = ${user.id}
       `) as { id: string; email: string; name: string; avatar_url: string | null; team_role: string | null }[];
 
       if (result.length === 0) {
