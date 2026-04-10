@@ -365,12 +365,13 @@ New team members post here to introduce themselves — who you are, what you're 
   gitCommit("Seed default threads: Welcome + Introductions", "MuleTeam System", "system@muleteam.local");
 }
 
-export function updateThread(threadId: string, updates: Partial<Pick<ThreadMeta, "status" | "description" | "labels">>): void {
+export function updateThread(threadId: string, updates: Partial<Pick<ThreadMeta, "status" | "description" | "labels" | "channel_id">>): void {
   const meta = getThread(threadId);
   if (!meta) throw new Error("Thread not found");
   if (updates.status !== undefined) meta.status = updates.status;
   if (updates.description !== undefined) meta.description = updates.description;
   if (updates.labels !== undefined) meta.labels = updates.labels;
+  if ("channel_id" in updates) meta.channel_id = updates.channel_id || undefined;
   meta.updated_at = new Date().toISOString();
   fs.writeFileSync(path.join(REPO_BASE(),"threads", threadId, "meta.json"), JSON.stringify(meta, null, 2));
   gitCommit(`Update thread: ${threadId}`, "MuleTeam System", "system@muleteam.local");

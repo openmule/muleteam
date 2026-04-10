@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { useT } from "@/lib/i18n";
 import { FileViewer } from "./FileViewer";
 
@@ -19,40 +17,44 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)}mb`;
 }
 
+const RENDERABLE_RE = /\.(html|htm|md|mdx|markdown)$/i;
+
 export function WorkspaceFiles({
   threadId,
   files,
   onRefresh,
   readOnly = false,
+  onOpenPageViewer,
 }: {
   threadId: string;
   files: WorkspaceFile[];
   onRefresh: () => void;
   readOnly?: boolean;
+  onOpenPageViewer?: (filename: string) => void;
 }) {
   const t = useT();
   const [expanded, setExpanded] = useState(true);
   const [viewingFile, setViewingFile] = useState<string | null>(null);
-  const [showUpload, setShowUpload] = useState(false);
-  const [uploadName, setUploadName] = useState("");
-  const [uploadContent, setUploadContent] = useState("");
   const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleUpload = async () => {
-    if (!uploadName.trim() || !uploadContent.trim()) return;
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (!selectedFiles || selectedFiles.length === 0) return;
     setUploading(true);
     try {
-      await fetch(`/api/threads/${threadId}/workspace/${encodeURIComponent(uploadName.trim())}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: uploadContent }),
-      });
-      setUploadName("");
-      setUploadContent("");
-      setShowUpload(false);
+      for (const file of Array.from(selectedFiles)) {
+        const content = await file.text();
+        await fetch(`/api/threads/${threadId}/workspace/${encodeURIComponent(file.name)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content }),
+        });
+      }
       onRefresh();
     } finally {
       setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -95,53 +97,37 @@ export function WorkspaceFiles({
               </button>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-xs text-muted-foreground">{formatSize(file.size)}</span>
-                {isHtml(file.name) && (
-                  <a
-                    href={`/api/threads/${threadId}/preview?file=${encodeURIComponent(file.name)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                    onClick={(e) => e.stopPropagation()}
+                {RENDERABLE_RE.test(file.name) && onOpenPageViewer && (
+                  <button
+                    className="text-xs text-primary hover:text-primary/80 font-medium"
+                    onClick={(e) => { e.stopPropagation(); onOpenPageViewer(file.name); }}
                   >
-                    {t("common.preview")}
-                  </a>
+                    Open
+                  </button>
                 )}
               </div>
             </div>
           ))}
 
-          {!readOnly && (showUpload ? (
-            <div className="mt-2 space-y-2 rounded-md border border-border p-3">
-              <Input
-                placeholder={t("thread.placeholder.filename")}
-                value={uploadName}
-                onChange={(e) => setUploadName(e.target.value)}
-                className="text-sm h-8"
+          {!readOnly && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".html,.htm,.md,.mdx,.markdown,.txt,.json,.css,.js,.ts,.tsx,.jsx,.yaml,.yml,.xml,.csv"
+                className="hidden"
+                onChange={handleFileSelect}
               />
-              <Textarea
-                placeholder={t("thread.fileContent")}
-                value={uploadContent}
-                onChange={(e) => setUploadContent(e.target.value)}
-                rows={4}
-                className="text-xs font-mono"
-              />
-              <div className="flex gap-2">
-                <Button size="sm" onClick={handleUpload} disabled={uploading || !uploadName.trim()}>
-                  {uploading ? "..." : t("common.save")}
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setShowUpload(false)}>
-                  {t("common.cancel")}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <button
-              className="text-xs text-muted-foreground hover:text-foreground mt-1"
-              onClick={() => setShowUpload(true)}
-            >
-              {t("sidebar.uploadFile")}
-            </button>
-          ))}
+              <button
+                className="text-xs text-muted-foreground hover:text-foreground mt-1"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+              >
+                {uploading ? "Uploading..." : t("sidebar.uploadFile")}
+              </button>
+            </>
+          )}
         </div>
       )}
 

@@ -37,7 +37,7 @@ export async function PATCH(
       return NextResponse.json({ error: "You must join this thread to update it" }, { status: 403 });
     }
 
-    const { status, description, labels } = await request.json();
+    const { status, description, labels, channel_id } = await request.json();
 
     if (status && !["open", "in_progress", "done", "archived"].includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
@@ -47,7 +47,7 @@ export async function PATCH(
     const currentThread = getThread(threadId);
     const oldStatus = currentThread?.status;
 
-    updateThread(threadId, { status, description, labels });
+    updateThread(threadId, { status, description, labels, ...(channel_id !== undefined ? { channel_id: channel_id || undefined } : {}) });
     const thread = getThread(threadId);
 
     // Fire-and-forget: emit status change event if status actually changed
