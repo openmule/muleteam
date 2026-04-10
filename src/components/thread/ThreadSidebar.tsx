@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ChevronDown, Users, SquareCheckBig, Files, Link2,
   GitCommitHorizontal, Plus, ArrowUpRight, Square, SquareCheck,
+  Trash2, Upload, Loader2,
 } from "lucide-react";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { memberUrl } from "@/components/shared/helpers";
 import { useRouter } from "next/navigation";
 import { Pictogram } from "@/components/ui/pictogram";
+import { useT } from "@/lib/i18n";
 
 interface ThreadSidebarProps {
   threadId: string;
@@ -121,13 +123,89 @@ export function ThreadSidebar({
 }: ThreadSidebarProps) {
   const [participantsOpen, setParticipantsOpen] = useState(true);
   const router = useRouter();
+  const t = useT();
   const [actionsOpen, setActionsOpen] = useState(true);
   const [filesOpen, setFilesOpen] = useState(true);
   const [linksOpen, setLinksOpen] = useState(true);
   const [gitOpen, setGitOpen] = useState(true);
 
+  // Action items state
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [newTaskDesc, setNewTaskDesc] = useState("");
+  const [newTaskAssignee, setNewTaskAssignee] = useState("");
+  const [addingTask, setAddingTask] = useState(false);
+
+  // File upload state
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const openTaskCount = tasks.filter((t) => t.status !== "done").length;
   const totalFileSize = files.reduce((sum: number, f: any) => sum + (f.size || 0), 0);
+
+  // Sort tasks: open/in_progress first, then done
+  const sortedTasks = [...tasks].sort((a: any, b: any) => {
+    if (a.status === "done" && b.status !== "done") return 1;
+    if (a.status !== "done" && b.status === "done") return -1;
+    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+  });
+
+  const handleAddTask = async () => {
+    if (!newTaskDesc.trim()) return;
+    setAddingTask(true);
+    try {
+      await fetch(`/api/threads/${threadId}/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: newTaskDesc.trim(),
+          assignee: newTaskAssignee || undefined,
+        }),
+      });
+      setNewTaskDesc("");
+      setNewTaskAssignee("");
+      setShowAddTask(false);
+      onRefreshTasks();
+    } finally {
+      setAddingTask(false);
+    }
+  };
+
+  const handleToggleTask = async (task: any) => {
+    const newStatus = task.status === "done" ? "open" : "done";
+    await fetch(`/api/threads/${threadId}/tasks/${task.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    onRefreshTasks();
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    await fetch(`/api/threads/${threadId}/tasks/${taskId}`, {
+      method: "DELETE",
+    });
+    onRefreshTasks();
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (!selectedFiles || selectedFiles.length === 0) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(selectedFiles)) {
+        const content = await file.text();
+        await fetch(`/api/threads/${threadId}/workspace/${encodeURIComponent(file.name)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content }),
+        });
+      }
+      onRefreshFiles();
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   return (
     <div className="flex flex-col gap-2">
@@ -206,16 +284,33 @@ export function ThreadSidebar({
         />
         <Collapsible open={actionsOpen}>
           <div className="flex flex-col">
-            {tasks.map((task: any) => (
-              <div key={task.id} className="flex items-start gap-2 px-3 py-2 rounded-[8px]">
+            {sortedTasks.length === 0 && !showAddTask && (
+              <p className="px-3 py-2 text-sm text-[var(--label-tertiary)]">{t("sidebar.noTasks")}</p>
+            )}
+            {sortedTasks.map((task: any) => (
+              <div key={task.id} className="flex items-start gap-2 px-3 py-2 rounded-[8px] group hover:bg-[var(--fill-quaternary)] transition-colors">
                 <div className="pt-[2px] shrink-0">
-                  {task.status === "done" ? (
-                    <SquareCheck className="size-4 text-[var(--color-green-1000)]" strokeWidth={1.5} />
+                  {isMember ? (
+                    <button
+                      onClick={() => handleToggleTask(task)}
+                      className="cursor-pointer"
+                      title={task.status === "done" ? "Reopen" : "Mark done"}
+                    >
+                      {task.status === "done" ? (
+                        <SquareCheck className="size-4 text-[var(--color-green-1000)]" strokeWidth={1.5} />
+                      ) : (
+                        <Square className="size-4 text-[var(--label-tertiary)] hover:text-[var(--label-primary)]" strokeWidth={1.5} />
+                      )}
+                    </button>
                   ) : (
-                    <Square className="size-4 text-[var(--label-tertiary)]" strokeWidth={1.5} />
+                    task.status === "done" ? (
+                      <SquareCheck className="size-4 text-[var(--color-green-1000)]" strokeWidth={1.5} />
+                    ) : (
+                      <Square className="size-4 text-[var(--label-tertiary)]" strokeWidth={1.5} />
+                    )
                   )}
                 </div>
-                <div className="flex flex-col gap-1 min-w-0">
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
                   <p className={`text-sm leading-snug ${task.status === "done" ? "line-through text-[var(--label-tertiary)]" : "text-[var(--label-primary)]"}`}>
                     {task.description}
                   </p>
@@ -224,7 +319,76 @@ export function ThreadSidebar({
                     {task.created_at && <span>{timeAgo(task.created_at)}</span>}
                   </div>
                 </div>
+                {isMember && (
+                  <button
+                    onClick={() => handleDeleteTask(task.id)}
+                    className="shrink-0 pt-[2px] opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    title="Delete task"
+                  >
+                    <Trash2 className="size-3.5 text-[var(--label-tertiary)] hover:text-[var(--color-red-1000)]" strokeWidth={1.5} />
+                  </button>
+                )}
               </div>
+            ))}
+
+            {/* Add task form */}
+            {isMember && (showAddTask ? (
+              <div className="mx-3 mt-1 mb-2 p-3 rounded-[8px] border border-[var(--border-color-secondary)] bg-[var(--bg-grouped-quaternary)] space-y-2">
+                <input
+                  type="text"
+                  placeholder="Task description..."
+                  value={newTaskDesc}
+                  onChange={(e) => setNewTaskDesc(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleAddTask();
+                    }
+                    if (e.key === "Escape") {
+                      setShowAddTask(false);
+                      setNewTaskDesc("");
+                      setNewTaskAssignee("");
+                    }
+                  }}
+                  className="w-full text-sm h-8 rounded-[6px] border border-[var(--border-color-secondary)] bg-[var(--bg-grouped-quinary)] px-2.5 text-[var(--label-primary)] placeholder:text-[var(--label-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--label-tertiary)]"
+                  autoFocus
+                />
+                <select
+                  value={newTaskAssignee}
+                  onChange={(e) => setNewTaskAssignee(e.target.value)}
+                  className="w-full text-sm h-8 rounded-[6px] border border-[var(--border-color-secondary)] bg-[var(--bg-grouped-quinary)] px-2 text-[var(--label-primary)]"
+                >
+                  <option value="">No assignee</option>
+                  {participants.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.type === "agent" ? `@${p.name}` : p.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleAddTask}
+                    disabled={addingTask || !newTaskDesc.trim()}
+                    className="text-xs px-3 h-7 rounded-[6px] bg-[var(--label-primary)] text-[var(--bg-grouped-primary)] font-medium disabled:opacity-40 cursor-pointer hover:opacity-90 transition-opacity"
+                  >
+                    {addingTask ? "..." : t("common.add")}
+                  </button>
+                  <button
+                    onClick={() => { setShowAddTask(false); setNewTaskDesc(""); setNewTaskAssignee(""); }}
+                    className="text-xs px-3 h-7 rounded-[6px] text-[var(--label-secondary)] hover:bg-[var(--fill-quaternary)] cursor-pointer transition-colors"
+                  >
+                    {t("common.cancel")}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowAddTask(true)}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm text-[var(--label-tertiary)] hover:text-[var(--label-primary)] transition-colors cursor-pointer"
+              >
+                <Plus className="size-3.5" strokeWidth={1.5} />
+                <span>{t("sidebar.addTask")}</span>
+              </button>
             ))}
           </div>
         </Collapsible>
@@ -243,6 +407,9 @@ export function ThreadSidebar({
         />
         <Collapsible open={filesOpen}>
           <div className="flex flex-col">
+            {files.length === 0 && (
+              <p className="px-3 py-2 text-sm text-[var(--label-tertiary)]">{t("sidebar.noFiles")}</p>
+            )}
             {files.map((file: any) => (
               <div key={file.name} className="flex items-center gap-2 px-3 py-2 rounded-[8px] hover:bg-[var(--fill-quaternary)] transition-colors cursor-pointer">
                 <Pictogram name={getFilePictogram(file.name)} size={24} />
@@ -252,6 +419,32 @@ export function ThreadSidebar({
                 </div>
               </div>
             ))}
+
+            {/* Upload file */}
+            {isMember && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".html,.htm,.md,.mdx,.markdown,.txt,.json,.css,.js,.ts,.tsx,.jsx,.yaml,.yml,.xml,.csv"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm text-[var(--label-tertiary)] hover:text-[var(--label-primary)] transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  {uploading ? (
+                    <Loader2 className="size-3.5 animate-spin" strokeWidth={1.5} />
+                  ) : (
+                    <Upload className="size-3.5" strokeWidth={1.5} />
+                  )}
+                  <span>{uploading ? "Uploading..." : t("sidebar.uploadFile")}</span>
+                </button>
+              </>
+            )}
           </div>
         </Collapsible>
       </div>
