@@ -77,6 +77,14 @@ const AGENTS_DATA: Omit<RegisteredAgent, "token_hash">[] = [
 ];
 
 export async function POST(request: Request) {
+  // Block seed in production to prevent data loss (clearRepo wipes all data)
+  if (process.env.NODE_ENV === "production" && !request.headers.get("x-seed-override")) {
+    return NextResponse.json(
+      { error: "Seed is disabled in production. Set x-seed-override header to force." },
+      { status: 403 }
+    );
+  }
+
   return withTenantFromRequest(request, async () => {
     try {
       const sql = await db();
