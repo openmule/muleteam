@@ -1,0 +1,547 @@
+/* ==========================================================
+   MuleRun Design Tokens — CSS Custom Properties
+   Framework-agnostic. No Tailwind dependency.
+   ========================================================== */
+
+/* ==========================================================
+   Light Mode (default)
+   ========================================================== */
+:root {
+  /* --- MuleRun Typography Tokens --- */
+  --font-family-sans: 'SF Pro', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-family-geohumanist: 'Sen', sans-serif;
+  --font-family-serif: 'Source Serif 4', Georgia, serif;
+  --font-family-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --font-weight-regular: 400;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Font Sizes — Mobile first */
+  --font-size-title-monument: 48px;
+  --font-size-title-display: 44px;
+  --font-size-title-hero: 36px;
+  --font-size-title-page: 32px;
+  --font-size-subtitle: 28px;
+  --font-size-heading: 22px;
+  --font-size-subheading: 20px;
+  --font-size-body-base: 17px;
+  --font-size-body-small: 16px;
+  --font-size-subheadline: 15px;
+  --font-size-footnote: 13px;
+  --font-size-caption: 12px;
+  --font-size-micro: 10px;
+  --line-height-default: 150%;
+  --line-height-micro: 120%;
+
+  /* --- MuleRun Spacing Tokens --- */
+  --space-0: 0;
+  --space-50: 2px;
+  --space-100: 4px;
+  --space-150: 6px;
+  --space-200: 8px;
+  --space-300: 12px;
+  --space-400: 16px;
+  --space-600: 24px;
+  --space-800: 32px;
+  --space-1200: 48px;
+  --space-1600: 64px;
+  --space-2400: 96px;
+  --space-4000: 160px;
+
+  /* --- MuleRun Labels --- */
+  --label-primary: #3D3D39;
+  --label-secondary: #3D3D3999;
+  --label-tertiary: #3D3D394D;
+  --label-quaternary: #3D3D392E;
+
+  /* --- MuleRun Backgrounds --- */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F4F5F2;
+  --bg-tertiary: #FFFFFF;
+
+  /* --- MuleRun Backgrounds (Grouped) --- */
+  --bg-grouped-primary: #EDEFE9;
+  --bg-grouped-secondary: #FFFFFF;
+  --bg-grouped-tertiary: #F4F5F2;
+  --bg-grouped-quaternary: #FFFFFF;
+  --bg-grouped-quinary: #F9FAF9;
+
+  /* --- MuleRun Fills --- */
+  --fill-primary: #7E7E5733;
+  --fill-secondary: #7E7E5729;
+  --fill-tertiary: #7E7E571F;
+  --fill-quaternary: #7E7E5714;
+  --fill-quinary: #7E7E570D;
+
+  /* --- MuleRun Border Colors --- */
+  --border-color-primary: #7E7E5729;
+  --border-color-secondary: #7E7E571F;
+  --border-color-tertiary: #7E7E5714;
+
+  /* --- MuleRun Overlays --- */
+  --overlay-primary: #00000066;
+  --overlay-secondary: #00000033;
+  --overlay-tertiary: #0000001A;
+
+  /* --- MuleRun Blur Fills --- */
+  --blur-fill-primary: #FFFFFFE6;
+  --blur-fill-secondary: #FFFFFFBF;
+  --blur-fill-tertiary: #FFFFFF80;
+
+  /* --- MuleRun Grays --- */
+  --gray-white-1000: #FFFFFF;
+  --gray-white-800: #FFFFFFCC;
+  --gray-white-600: #FFFFFF99;
+  --gray-white-400: #FFFFFF66;
+  --gray-white-200: #FFFFFF33;
+  --gray-white-100: #FFFFFF1A;
+  --gray-white-50: #FFFFFF0D;
+  --gray-black-1000: #3D3D39;
+  --gray-black-800: #3D3D39CC;
+  --gray-black-600: #3D3D3999;
+  --gray-black-400: #3D3D3966;
+  --gray-black-200: #3D3D3933;
+  --gray-black-100: #3D3D391A;
+  --gray-black-50: #3D3D390D;
+
+  /* --- MuleRun Grays (Semantic) --- */
+  --gray-positive-1000: #FFFFFF;
+  --gray-positive-800: #FFFFFFCC;
+  --gray-positive-600: #FFFFFF99;
+  --gray-positive-400: #FFFFFF66;
+  --gray-positive-200: #FFFFFF33;
+  --gray-positive-100: #FFFFFF1A;
+  --gray-negative-1000: #3D3D39;
+  --gray-negative-800: #3D3D39CC;
+  --gray-negative-600: #3D3D3999;
+  --gray-negative-400: #3D3D3966;
+  --gray-negative-200: #3D3D3933;
+  --gray-negative-100: #3D3D391A;
+
+  /* --- MuleRun Accent Primary (based on Orange) --- */
+  --accent-primary-1000: #F27348;
+  --accent-primary-400: #F2734866;
+  --accent-primary-100: #F2734826;
+
+  /* --- MuleRun Accent Secondary --- */
+  --accent-secondary-1000: #5E8F8F;
+  --accent-secondary-400: #5E8F8F66;
+  --accent-secondary-100: #5E8F8F26;
+
+  /* --- MuleRun Functional Colors --- */
+  --color-red-1000: #EA4747;
+  --color-red-400: #EA474759;
+  --color-red-100: #EA47471F;
+  --color-orange-1000: #F27348;
+  --color-orange-400: #F2734866;
+  --color-orange-100: #F2734826;
+  --color-yellow-1000: #EEB230;
+  --color-yellow-400: #EEB23066;
+  --color-yellow-100: #EEB23033;
+  --color-green-1000: #57AB4D;
+  --color-green-400: #57AB4D66;
+  --color-green-100: #57AB4D26;
+  --color-mint-1000: #00C8B3;
+  --color-mint-400: #00C8B366;
+  --color-mint-100: #00C8B326;
+  --color-teal-1000: #439090;
+  --color-teal-400: #43909066;
+  --color-teal-100: #43909026;
+  --color-cyan-1000: #00C0E8;
+  --color-cyan-400: #00C0E866;
+  --color-cyan-100: #00C0E826;
+  --color-blue-1000: #2E7BD0;
+  --color-blue-400: #2E7BD066;
+  --color-blue-100: #2E7BD026;
+  --color-indigo-1000: #674ED9;
+  --color-indigo-400: #674ED959;
+  --color-indigo-100: #674ED91F;
+  --color-purple-1000: #B14CBF;
+  --color-purple-400: #B14CBF66;
+  --color-purple-100: #B14CBF26;
+  --color-pink-1000: #EF48B1;
+  --color-pink-400: #EF48B166;
+  --color-pink-100: #EF48B126;
+  --color-brown-1000: #BD8035;
+  --color-brown-400: #BD803566;
+  --color-brown-100: #BD803526;
+  --color-olive-1000: #8E835A;
+  --color-olive-400: #8E835A66;
+  --color-olive-100: #8E835A26;
+
+  /* --- MuleRun Shadow Tokens --- */
+  --shadow-small: 0 4px 24px rgba(0, 0, 0, 0.05);
+  --shadow-medium: 0 8px 48px rgba(0, 0, 0, 0.05);
+  --shadow-large: 0 16px 64px rgba(0, 0, 0, 0.05);
+
+  /* --- MuleRun Blur Tokens --- */
+  --blur-control: 24px;
+  --blur-layer: 50px;
+  --blur-overlay: 100px;
+
+  /* --- MuleRun Icon Sizes --- */
+  --icon-large: 24px;
+  --icon-medium: 20px;
+  --icon-small: 16px;
+
+  /* --- MuleRun Border Width --- */
+  --border-width-primary: 0.5px;
+  --border-width-secondary: 1px;
+
+  /* --- Radius Ratio System --- */
+  --radius-ratio: 0.25;
+  --radius-h24: calc(24px * var(--radius-ratio));
+  --radius-h28: calc(28px * var(--radius-ratio));
+  --radius-h32: calc(32px * var(--radius-ratio));
+  --radius-h36: calc(36px * var(--radius-ratio));
+  --radius-h40: calc(40px * var(--radius-ratio));
+  --radius-h44: calc(44px * var(--radius-ratio));
+  --radius-h48: calc(48px * var(--radius-ratio));
+  --radius-h60: calc(60px * var(--radius-ratio));
+
+  /* --- shadcn/ui Semantic Variables --- */
+  --radius-xsmall-val: 8px;
+  --radius-small-val: 12px;
+  --radius-medium-val: 16px;
+  --radius-large-val: 20px;
+  --radius-xlarge-val: 30px;
+  --radius-xxlarge-val: 36px;
+  --radius: 16px;
+
+  --background: var(--bg-grouped-tertiary);
+  --foreground: #3D3D39;
+  --card: var(--bg-grouped-quaternary);
+  --card-foreground: #3D3D39;
+  --popover: var(--bg-grouped-quaternary);
+  --popover-foreground: #3D3D39;
+  --primary: var(--label-primary);
+  --primary-foreground: var(--gray-positive-1000);
+  --secondary: #F4F5F2;
+  --secondary-foreground: #3D3D39;
+  --muted: #F4F5F2;
+  --muted-foreground: #3D3D3999;
+  --accent: #7E7E5714;
+  --accent-foreground: #3D3D39;
+  --destructive: #FF383C;
+  --destructive-foreground: #FFFFFF;
+  --border: #7E7E5729;
+  --input: #7E7E5729;
+  --ring: #F27348;
+  --chart-1: #F27348;
+  --chart-2: #34C759;
+  --chart-3: #F27348;
+  --chart-4: #00C0E8;
+  --chart-5: #CB30E0;
+  --sidebar: #F4F5F2;
+  --sidebar-foreground: #3D3D39;
+  --sidebar-primary: #F27348;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #7E7E5714;
+  --sidebar-accent-foreground: #3D3D39;
+  --sidebar-border: #7E7E571F;
+  --sidebar-ring: #F27348;
+}
+
+/* ==========================================================
+   Dark Mode — Auto (prefers-color-scheme)
+   ========================================================== */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --label-primary: #FFFFFF;
+    --label-secondary: #FFFFFF99;
+    --label-tertiary: #FFFFFF4D;
+    --label-quaternary: #FFFFFF2E;
+
+    --bg-primary: #000000;
+    --bg-secondary: #1C1C1D;
+    --bg-tertiary: #2C2C2D;
+
+    --bg-grouped-primary: #1A1A1A;
+    --bg-grouped-secondary: #1C1C1D;
+    --bg-grouped-tertiary: #212020;
+    --bg-grouped-quaternary: #313030;
+    --bg-grouped-quinary: #2A2929;
+
+    --fill-primary: #BBBAB833;
+    --fill-secondary: #BBBAB829;
+    --fill-tertiary: #BBBAB81F;
+    --fill-quaternary: #BBBAB814;
+    --fill-quinary: #BBBAB80D;
+
+    --border-color-primary: #BCBBB129;
+    --border-color-secondary: #BCBBB11F;
+    --border-color-tertiary: #BCBBB114;
+
+    --overlay-primary: #00000066;
+    --overlay-secondary: #00000033;
+    --overlay-tertiary: #0000001A;
+
+    --blur-fill-primary: #333333E6;
+    --blur-fill-secondary: #333333BF;
+    --blur-fill-tertiary: #33333380;
+
+    --gray-positive-1000: #3D3D39;
+    --gray-positive-800: #3D3D39CC;
+    --gray-positive-600: #3D3D3999;
+    --gray-positive-400: #3D3D3966;
+    --gray-positive-200: #3D3D3933;
+    --gray-positive-100: #3D3D391A;
+    --gray-negative-1000: #FFFFFF;
+    --gray-negative-800: #FFFFFFCC;
+    --gray-negative-600: #FFFFFF99;
+    --gray-negative-400: #FFFFFF66;
+    --gray-negative-200: #FFFFFF33;
+    --gray-negative-100: #FFFFFF1A;
+
+    --accent-primary-1000: #FF8054;
+    --accent-primary-400: #FF805499;
+    --accent-primary-100: #FF80544D;
+
+    --accent-secondary-1000: #5CA0A0;
+    --accent-secondary-400: #5CA0A08C;
+    --accent-secondary-100: #5CA0A04D;
+
+    --color-red-1000: #EA5959;
+    --color-red-400: #EA595980;
+    --color-red-100: #EA595940;
+    --color-orange-1000: #FF8054;
+    --color-orange-400: #FF805499;
+    --color-orange-100: #FF80544D;
+    --color-yellow-1000: #EEB230;
+    --color-yellow-400: #EEB23075;
+    --color-yellow-100: #EEB2304D;
+    --color-green-1000: #57AB4D;
+    --color-green-400: #57AB4D8C;
+    --color-green-100: #57AB4D4D;
+    --color-mint-1000: #00C8B3;
+    --color-mint-400: #00C8B380;
+    --color-mint-100: #00C8B340;
+    --color-teal-1000: #5CA0A0;
+    --color-teal-400: #5CA0A080;
+    --color-teal-100: #5CA0A040;
+    --color-cyan-1000: #00C0E8;
+    --color-cyan-400: #00C0E880;
+    --color-cyan-100: #00C0E840;
+    --color-blue-1000: #3C87D8;
+    --color-blue-400: #3C87D880;
+    --color-blue-100: #3C87D84D;
+    --color-indigo-1000: #735BE0;
+    --color-indigo-400: #735BE08C;
+    --color-indigo-100: #735BE04D;
+    --color-purple-1000: #CA56D9;
+    --color-purple-400: #CA56D973;
+    --color-purple-100: #CA56D940;
+    --color-pink-1000: #F260BD;
+    --color-pink-400: #F260BD73;
+    --color-pink-100: #F260BD40;
+    --color-brown-1000: #BD8035;
+    --color-brown-400: #BD803580;
+    --color-brown-100: #BD803540;
+    --color-olive-1000: #9C926E;
+    --color-olive-400: #9C926E80;
+    --color-olive-100: #9C926E40;
+
+    --shadow-small: 0 4px 24px rgba(0, 0, 0, 0.3);
+    --shadow-medium: 0 8px 48px rgba(0, 0, 0, 0.3);
+    --shadow-large: 0 16px 64px rgba(0, 0, 0, 0.3);
+
+    --background: var(--bg-grouped-tertiary);
+    --foreground: #FFFFFF;
+    --card: var(--bg-grouped-quaternary);
+    --card-foreground: #FFFFFF;
+    --popover: var(--bg-grouped-quaternary);
+    --popover-foreground: #FFFFFF;
+    --primary: var(--label-primary);
+    --primary-foreground: var(--gray-positive-1000);
+    --secondary: #1C1C1D;
+    --secondary-foreground: #FFFFFF;
+    --muted: #2C2C2D;
+    --muted-foreground: #FFFFFF99;
+    --accent: #BBBAB814;
+    --accent-foreground: #FFFFFF;
+    --destructive: #FF453A;
+    --destructive-foreground: #FFFFFF;
+    --border: #BCBBB129;
+    --input: #BCBBB129;
+    --ring: #FF8054;
+    --chart-1: #FF8054;
+    --chart-2: #30D158;
+    --chart-3: #FF8054;
+    --chart-4: #0CCBF2;
+    --chart-5: #D53EEA;
+    --sidebar: #1C1C1D;
+    --sidebar-foreground: #FFFFFF;
+    --sidebar-primary: #FF8054;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: #BBBAB814;
+    --sidebar-accent-foreground: #FFFFFF;
+    --sidebar-border: #BCBBB11F;
+    --sidebar-ring: #FF8054;
+  }
+}
+
+/* ==========================================================
+   Dark Mode — Manual (.dark class on <html>)
+   ========================================================== */
+:root.dark {
+    --label-primary: #FFFFFF;
+    --label-secondary: #FFFFFF99;
+    --label-tertiary: #FFFFFF4D;
+    --label-quaternary: #FFFFFF2E;
+
+    --bg-primary: #000000;
+    --bg-secondary: #1C1C1D;
+    --bg-tertiary: #2C2C2D;
+
+    --bg-grouped-primary: #1A1A1A;
+    --bg-grouped-secondary: #1C1C1D;
+    --bg-grouped-tertiary: #212020;
+    --bg-grouped-quaternary: #313030;
+    --bg-grouped-quinary: #2A2929;
+
+    --fill-primary: #BBBAB833;
+    --fill-secondary: #BBBAB829;
+    --fill-tertiary: #BBBAB81F;
+    --fill-quaternary: #BBBAB814;
+    --fill-quinary: #BBBAB80D;
+
+    --border-color-primary: #BCBBB129;
+    --border-color-secondary: #BCBBB11F;
+    --border-color-tertiary: #BCBBB114;
+
+    --overlay-primary: #00000066;
+    --overlay-secondary: #00000033;
+
+    --blur-fill-primary: #333333E6;
+    --blur-fill-secondary: #333333BF;
+    --blur-fill-tertiary: #33333380;
+
+    --gray-positive-1000: #3D3D39;
+    --gray-positive-800: #3D3D39CC;
+    --gray-positive-600: #3D3D3999;
+    --gray-positive-400: #3D3D3966;
+    --gray-positive-200: #3D3D3933;
+    --gray-positive-100: #3D3D391A;
+    --gray-negative-1000: #FFFFFF;
+    --gray-negative-800: #FFFFFFCC;
+    --gray-negative-600: #FFFFFF99;
+    --gray-negative-400: #FFFFFF66;
+    --gray-negative-200: #FFFFFF33;
+    --gray-negative-100: #FFFFFF1A;
+
+    --accent-primary-1000: #FF8054;
+    --accent-primary-400: #FF805499;
+    --accent-primary-100: #FF80544D;
+
+    --accent-secondary-1000: #5CA0A0;
+    --accent-secondary-400: #5CA0A08C;
+    --accent-secondary-100: #5CA0A04D;
+
+    --color-red-1000: #EA5959;
+    --color-red-400: #EA595980;
+    --color-red-100: #EA595940;
+    --color-orange-1000: #FF8054;
+    --color-orange-400: #FF805499;
+    --color-orange-100: #FF80544D;
+    --color-yellow-1000: #EEB230;
+    --color-yellow-400: #EEB23075;
+    --color-yellow-100: #EEB2304D;
+    --color-green-1000: #57AB4D;
+    --color-green-400: #57AB4D8C;
+    --color-green-100: #57AB4D4D;
+    --color-mint-1000: #00C8B3;
+    --color-mint-400: #00C8B380;
+    --color-mint-100: #00C8B340;
+    --color-teal-1000: #5CA0A0;
+    --color-teal-400: #5CA0A080;
+    --color-teal-100: #5CA0A040;
+    --color-cyan-1000: #00C0E8;
+    --color-cyan-400: #00C0E880;
+    --color-cyan-100: #00C0E840;
+    --color-blue-1000: #3C87D8;
+    --color-blue-400: #3C87D880;
+    --color-blue-100: #3C87D84D;
+    --color-indigo-1000: #735BE0;
+    --color-indigo-400: #735BE08C;
+    --color-indigo-100: #735BE04D;
+    --color-purple-1000: #CA56D9;
+    --color-purple-400: #CA56D973;
+    --color-purple-100: #CA56D940;
+    --color-pink-1000: #F260BD;
+    --color-pink-400: #F260BD73;
+    --color-pink-100: #F260BD40;
+    --color-brown-1000: #BD8035;
+    --color-brown-400: #BD803580;
+    --color-brown-100: #BD803540;
+    --color-olive-1000: #9C926E;
+    --color-olive-400: #9C926E80;
+    --color-olive-100: #9C926E40;
+
+    --shadow-small: 0 4px 24px rgba(0, 0, 0, 0.3);
+    --shadow-medium: 0 8px 48px rgba(0, 0, 0, 0.3);
+    --shadow-large: 0 16px 64px rgba(0, 0, 0, 0.3);
+
+    --background: var(--bg-grouped-tertiary);
+    --foreground: #FFFFFF;
+    --card: var(--bg-grouped-quaternary);
+    --card-foreground: #FFFFFF;
+    --popover: var(--bg-grouped-quaternary);
+    --popover-foreground: #FFFFFF;
+    --primary: var(--label-primary);
+    --primary-foreground: var(--gray-positive-1000);
+    --secondary: #1C1C1D;
+    --secondary-foreground: #FFFFFF;
+    --muted: #2C2C2D;
+    --muted-foreground: #FFFFFF99;
+    --accent: #BBBAB814;
+    --accent-foreground: #FFFFFF;
+    --destructive: #FF453A;
+    --destructive-foreground: #FFFFFF;
+    --border: #BCBBB129;
+    --input: #BCBBB129;
+    --ring: #FF8054;
+    --chart-1: #FF8054;
+    --chart-2: #30D158;
+    --chart-3: #FF8054;
+    --chart-4: #0CCBF2;
+    --chart-5: #D53EEA;
+    --sidebar: #1C1C1D;
+    --sidebar-foreground: #FFFFFF;
+    --sidebar-primary: #FF8054;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: #BBBAB814;
+    --sidebar-accent-foreground: #FFFFFF;
+    --sidebar-border: #BCBBB11F;
+    --sidebar-ring: #FF8054;
+}
+
+/* ==========================================================
+   Desktop Overrides (min-width: 768px)
+   ========================================================== */
+@media (min-width: 768px) {
+  :root {
+    --font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+
+    --font-size-title-monument: 80px;
+    --font-size-title-display: 64px;
+    --font-size-title-hero: 48px;
+    --font-size-title-page: 36px;
+    --font-size-heading: 24px;
+    --font-size-body-base: 16px;
+    --font-size-body-small: 14px;
+    --font-size-subheadline: 14px;
+    --font-size-footnote: 12px;
+
+    --radius-large-val: 24px;
+    --radius-xlarge-val: 32px;
+    --radius: 16px;
+
+    --shadow-small: 0 4px 24px rgba(0, 0, 0, 0.05);
+    --shadow-medium: 0 8px 48px rgba(0, 0, 0, 0.05);
+    --shadow-large: 0 16px 64px rgba(0, 0, 0, 0.05);
+
+    --border-width-primary: 1px;
+    --border-width-secondary: 2px;
+  }
+}

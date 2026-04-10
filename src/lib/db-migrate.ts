@@ -26,6 +26,22 @@ export async function ensureMigrations(): Promise<void> {
 async function runMigrations(): Promise<void> {
   const sql = await db();
 
+  // Create users table if it doesn't exist (needed for fresh local installs)
+  await sql`
+    CREATE TABLE IF NOT EXISTS users (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      avatar_url TEXT,
+      role TEXT DEFAULT 'human' CHECK (role IN ('human', 'agent')),
+      team_role TEXT DEFAULT 'member',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`;
+
   // Each statement is idempotent (IF NOT EXISTS) — safe to re-run.
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS description TEXT`;
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS invited_by JSONB`;

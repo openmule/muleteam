@@ -5,6 +5,7 @@ export interface User {
   email: string;
   name: string;
   description?: string;
+  avatar_url?: string | null;
   created_at?: string;
   invited_by?: { id: string; name: string };
   team_role?: "owner" | "member";
@@ -21,12 +22,15 @@ export interface ThreadMeta {
   title: string;
   description?: string;
   status: string;
+  status_label?: string;
+  status_detail?: string;
   labels?: string[];
   participants: Participant[];
   channel_id?: string;
   created_by?: string;
   created_at: string;
   updated_at: string;
+  last_message?: { from_name: string; body: string; ts: number };
 }
 
 export interface RegisteredAgent {

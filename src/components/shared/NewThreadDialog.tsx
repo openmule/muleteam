@@ -137,8 +137,10 @@ export function NewThreadDialog({
         }
       }
     }}>
-      <DialogTrigger render={<Button variant="outline" size="sm" />}>
-        {t("thread.newThread")}
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          {t("thread.newThread")}
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

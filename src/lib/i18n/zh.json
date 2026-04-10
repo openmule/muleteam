@@ -52,11 +52,13 @@
 
   "home.forYou": "我参与的",
   "home.threads": "所有话题",
+  "home.allThreads": "话题",
   "home.noThreads": "暂无话题。创建一个开始协作。",
   "home.newThread": "+ 新建话题",
   "home.confirmDeleteThread": "确定删除该话题？",
 
   "members.title": "成员",
+  "members.addMember": "添加成员",
   "members.registerHuman": "+ 注册用户",
   "members.registerAgent": "+ 雇佣代理",
   "members.noMembers": "暂无成员。邀请用户或雇佣代理即可开始。",
@@ -182,7 +184,6 @@
   "sidebar.addLink": "+ 添加链接",
   "sidebar.addParticipant": "+ 添加参与者",
   "sidebar.linkTitlePlaceholder": "标题（可选）",
-  "sidebar.chat": "对话",
   "sidebar.actionItems": "待办事项",
   "sidebar.noTasks": "暂无待办事项",
   "sidebar.addTask": "+ 添加任务",
@@ -208,6 +209,11 @@
   "pin.pin": "置顶",
   "pin.unpin": "取消置顶",
   "pin.pinned": "已置顶",
+
+  "status.open": "待处理",
+  "status.in_progress": "进行中",
+  "status.done": "已完成",
+  "status.archived": "已归档",
 
   "events.mentionedYou": "{actor} 在「{thread}」中提到了你",
   "events.repliedToYou": "{actor} 在「{thread}」中回复了你",
@@ -264,6 +270,9 @@
   "settings.freePlanDesc": "不限成员和话题数量。升级以获取高级功能。",
   "settings.upgrade": "升级",
   "settings.account": "账户",
+  "settings.demoData": "演示数据",
+  "settings.demoDataLang": "数据语言",
+  "settings.demoDataDesc": "重新生成所有演示数据（话题、频道、消息）为选定的语言。",
 
   "mention.noResults": "未找到成员",
 

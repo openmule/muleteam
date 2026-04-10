@@ -24,6 +24,7 @@ interface UserInfo {
   id: string;
   name: string;
   email: string;
+  avatar_url?: string | null;
 }
 
 function timeAgo(dateStr: string): string {
@@ -60,6 +61,7 @@ export function ParticipantsList({
 
   // Build a map of agent info
   const agentMap = new Map(agents.map((a) => [a.id, a]));
+  const userMap = new Map((users ?? []).map((u) => [u.id, u]));
 
   // Filter out participants already in the thread
   const participantIds = new Set(participants.map((p) => p.id));
@@ -103,7 +105,7 @@ export function ParticipantsList({
           onClick={() => handleAdd(`human:${u.id}`)}
           className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/50 disabled:opacity-50"
         >
-          <MemberAvatar type="human" name={u.name} size={20} />
+          <MemberAvatar type="human" name={u.name} size={20} avatarUrl={u.avatar_url} />
           <span>{u.name}</span>
         </button>
       ))}
@@ -141,7 +143,7 @@ export function ParticipantsList({
             <div key={p.id} className="flex items-center gap-3 py-1.5">
               <MemberHoverCard participantId={p.id}>
                 <Link href={memberUrl(p.id)} className="shrink-0">
-                  <MemberAvatar type={p.type} name={p.name} size={32} />
+                  <MemberAvatar type={p.type} name={p.name} size={32} avatarUrl={!isAgent ? userMap.get(p.id.split(":").slice(1).join(":"))?.avatar_url : undefined} />
                 </Link>
               </MemberHoverCard>
               <div className="flex-1 min-w-0">
@@ -153,8 +155,8 @@ export function ParticipantsList({
                   </MemberHoverCard>
                   <span className={`inline-flex h-4 items-center rounded px-1 text-[10px] font-medium ${
                     isAgent
-                      ? "bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300"
-                      : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
+                      ? "bg-[var(--color-purple-100)] text-[var(--color-purple-1000)]"
+                      : "bg-[var(--color-green-100)] text-[var(--color-green-1000)]"
                   }`}>
                     {isAgent ? t("members.agent") : t("members.human")}
                   </span>
@@ -163,7 +165,7 @@ export function ParticipantsList({
                   {agentInfo?.capabilities?.slice(0, 2).map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex h-4 items-center rounded bg-blue-100 dark:bg-blue-900/30 px-1 text-[10px] font-medium text-blue-700 dark:text-blue-300"
+                      className="inline-flex h-4 items-center rounded bg-[var(--color-blue-100)] px-1 text-[10px] font-medium text-[var(--color-blue-1000)]"
                     >
                       {tag}
                     </span>
@@ -206,7 +208,7 @@ export function ParticipantsList({
 
             return (
               <div key={p.id} className="flex items-center gap-2 text-sm">
-                <MemberAvatar type={p.type} name={p.name} size={20} />
+                <MemberAvatar type={p.type} name={p.name} size={20} avatarUrl={!isAgent ? userMap.get(p.id.split(":").slice(1).join(":"))?.avatar_url : undefined} />
                 <MemberHoverCard participantId={p.id}>
                   <Link href={memberUrl(p.id)} className="hover:underline">
                     {isAgent ? `@${p.name}` : p.name}

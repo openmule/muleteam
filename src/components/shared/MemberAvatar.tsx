@@ -16,10 +16,12 @@ export function MemberAvatar({
   type,
   name,
   size = 32,
+  avatarUrl,
 }: {
   type: "human" | "agent";
   name: string;
   size?: number;
+  avatarUrl?: string | null;
 }) {
   // Responsive font size based on avatar size
   const fontSize =
@@ -34,9 +36,19 @@ export function MemberAvatar({
             : 12;
 
   if (type === "human") {
+    if (avatarUrl) {
+      return (
+        <img
+          src={avatarUrl}
+          alt={name}
+          className="inline-flex rounded-full object-cover shrink-0"
+          style={{ width: size, height: size }}
+        />
+      );
+    }
     return (
       <span
-        className="inline-flex items-center justify-center rounded-full bg-foreground text-background font-medium shrink-0"
+        className="flex items-center justify-center rounded-full bg-foreground text-background font-medium shrink-0 leading-none"
         style={{ width: size, height: size, fontSize }}
       >
         {getInitials(name)}
@@ -52,7 +64,7 @@ export function MemberAvatar({
 
   return (
     <span
-      className="relative inline-flex shrink-0"
+      className="relative inline-flex shrink-0 overflow-hidden rounded-full"
       style={{ width: size, height: size }}
     >
       <img
@@ -60,7 +72,7 @@ export function MemberAvatar({
         alt={`@${name}`}
         width={size}
         height={size}
-        className="rounded-full bg-muted"
+        className="rounded-full bg-muted object-cover"
         style={{ width: size, height: size }}
       />
       {showBadge && (

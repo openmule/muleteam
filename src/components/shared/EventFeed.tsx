@@ -3,56 +3,67 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n";
-import { MemberAvatar } from "@/components/shared/MemberAvatar";
+import { NotificationDot } from "@/components/ui/badge";
+import { Icon } from "@/components/ui/icon";
+import { Button } from "@/components/ui/button";
+import { MemberHoverCard } from "@/components/shared/MemberHoverCard";
 import { timeAgo } from "@/components/shared/helpers";
+import { CircleCheckBig, ChevronDown, ChevronUp } from "lucide-react";
 import type { NotificationEvent } from "@/components/shared/types";
 
 const COLLAPSED_LIMIT = 5;
 
-const TYPE_ICONS: Record<NotificationEvent["type"], string> = {
-  mention: "@",
-  reply: "\u21A9",   // ↩
-  join: "+",
-  status_change: "\u25CB", // ○
-  task_assigned: "\u2610", // ☐
-  task_done: "\u2611",     // ☑
-};
+function EventText({
+  event,
+  t,
+  isRead,
+}: {
+  event: NotificationEvent;
+  t: (key: string) => string;
+  isRead: boolean;
+}) {
+  const textColor = isRead ? "text-[var(--label-tertiary)]" : "text-[var(--label-primary)]";
+  const actorColor = isRead ? "text-[var(--label-tertiary)] hover:underline" : "text-[var(--label-primary)] font-medium hover:underline";
 
-function formatEventText(
-  event: NotificationEvent,
-  t: (key: string) => string
-): string {
+  const actorEl = (
+    <MemberHoverCard participantId={event.actor_id}>
+      <span
+        className={`${actorColor} cursor-pointer`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {event.actor_id.startsWith("agent:") ? `@${event.actor_name}` : event.actor_name}
+      </span>
+    </MemberHoverCard>
+  );
+
   switch (event.type) {
     case "mention":
-      return t("events.mentionedYou")
-        .replace("{actor}", event.actor_name)
-        .replace("{thread}", event.thread_title);
+      return <span className={textColor}>{actorEl} {t("events.mentionedYou").split("{actor}")[1]?.split("{thread}")[0]}"{event.thread_title}"</span>;
     case "reply":
-      return t("events.repliedToYou")
-        .replace("{actor}", event.actor_name)
-        .replace("{thread}", event.thread_title);
+      return <span className={textColor}>{actorEl} {t("events.repliedToYou").split("{actor}")[1]?.split("{thread}")[0]}"{event.thread_title}"</span>;
     case "join":
-      return t("events.addedYou")
-        .replace("{actor}", event.actor_name)
-        .replace("{thread}", event.thread_title);
+      return <span className={textColor}>{actorEl} {t("events.addedYou").split("{actor}")[1]?.split("{thread}")[0]}"{event.thread_title}"</span>;
     case "status_change":
-      return t("events.statusChanged")
-        .replace("{thread}", event.thread_title)
-        .replace("{status}", event.body ?? "");
+      return <span className={textColor}>"{event.thread_title}" marked as {event.body}</span>;
     case "task_assigned":
-      return t("events.taskAssigned")
-        .replace("{actor}", event.actor_name)
-        .replace("{thread}", event.thread_title)
-        .replace("{description}", event.body ?? "");
+      return <span className={textColor}>{actorEl} {t("events.taskAssigned").split("{actor}")[1]?.split("{thread}")[0]}"{event.thread_title}"</span>;
     case "task_done":
-      return t("events.taskDone")
-        .replace("{actor}", event.actor_name)
-        .replace("{thread}", event.thread_title)
-        .replace("{description}", event.body ?? "");
+      return <span className={textColor}>{actorEl} {t("events.taskDone").split("{actor}")[1]?.split("{thread}")[0]}"{event.thread_title}"</span>;
     default:
-      return "";
+      return null;
   }
 }
+
+/*
+ * Item with built-in top separator via ::before pseudo-element.
+ * The first item has no separator (no before).
+ * On hover: this item hides its own separator, and the next sibling hides its separator too.
+ * Achieved purely via CSS adjacent sibling + :hover.
+ *
+ * Structure: each item is a single div with class "feed-row".
+ * Separator is a ::before on every feed-row except :first-child.
+ * On hover: .feed-row:hover::before is hidden, and .feed-row:hover + .feed-row::before is hidden.
+ */
 
 export function EventFeed({
   events,
@@ -67,82 +78,50 @@ export function EventFeed({
   const t = useT();
   const [expanded, setExpanded] = useState(false);
 
-  const hasUnread = events.some((e) => !e.read);
   const visibleEvents = expanded ? events : events.slice(0, COLLAPSED_LIMIT);
   const hasMore = events.length > COLLAPSED_LIMIT;
 
   if (events.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border py-12 text-center px-4">
+      <div className="flex flex-col items-center justify-center rounded-[var(--radius-small-val)] border border-dashed border-border py-12 text-center px-4">
         <p className="text-muted-foreground text-sm">{t("events.noEvents")}</p>
       </div>
     );
   }
 
-  const actorType = (actorId: string): "human" | "agent" =>
-    actorId.startsWith("agent:") ? "agent" : "human";
-
   return (
-    <div>
-      <div className="flex justify-end mb-2">
-        <button
-          onClick={onMarkAllRead}
-          disabled={!hasUnread}
-          className={`text-xs transition-colors ${hasUnread ? "text-muted-foreground hover:text-foreground" : "text-muted-foreground/40 cursor-not-allowed"}`}
+    <div className={`rounded-[var(--radius-medium-val)] border border-[var(--border-color-primary)] bg-[var(--bg-grouped-quaternary)] p-2 feed-container ${hasMore ? "pb-0" : ""}`}>
+      {visibleEvents.map((event) => (
+        <div
+          key={event.id}
+          className="feed-row relative flex items-center gap-3 w-full h-12 px-2 cursor-pointer rounded-[var(--radius-small-val)] hover:bg-[var(--fill-tertiary)] transition-colors"
+          onClick={() => {
+            if (!event.read) onMarkRead(event.id);
+            router.push(`/thread/${event.thread_id}`);
+          }}
         >
-          {t("events.markAllRead")}
-        </button>
-      </div>
-      <div className="divide-y divide-border rounded-md border border-border">
-        {visibleEvents.map((event) => (
-          <button
-            key={event.id}
-            onClick={() => {
-              if (!event.read) onMarkRead(event.id);
-              router.push(`/thread/${event.thread_id}`);
-            }}
-            className="flex items-start gap-3 w-full px-3 py-2.5 text-left hover:bg-muted/50 transition-colors"
-          >
-            {/* Unread indicator */}
-            <span className="shrink-0 mt-1.5 w-2 h-2 rounded-full" style={{
-              backgroundColor: event.read ? "transparent" : "var(--color-blue-500, #3b82f6)",
-            }} />
-
-            {/* Actor avatar */}
-            <MemberAvatar
-              type={actorType(event.actor_id)}
-              name={event.actor_name}
-              size={20}
-            />
-
-            {/* Icon + text */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground font-mono shrink-0">
-                  {TYPE_ICONS[event.type]}
-                </span>
-                <span className="text-sm truncate">
-                  {formatEventText(event, t)}
-                </span>
-              </div>
-            </div>
-
-            {/* Time */}
-            <span className="text-xs text-muted-foreground shrink-0 mt-0.5">
-              {timeAgo(event.created_at)}
-            </span>
-          </button>
-        ))}
-      </div>
+          {event.read ? (
+            <Icon icon={CircleCheckBig} tint="tertiary" size={12} className="shrink-0" />
+          ) : (
+            <NotificationDot className="shrink-0" />
+          )}
+          <span className="flex-1 min-w-0 text-[length:var(--font-size-body-small)] truncate">
+            <EventText event={event} t={t} isRead={event.read} />
+          </span>
+          <span className="text-[length:var(--font-size-caption)] text-[var(--label-tertiary)] shrink-0">
+            {timeAgo(event.created_at)}
+          </span>
+        </div>
+      ))}
       {hasMore && (
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="mt-2 w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
-        >
-          {expanded
-            ? t("events.showLess")
-            : t("events.showMore").replace("{count}", String(events.length - COLLAPSED_LIMIT))}
-        </button>
+        <div className="feed-row-static relative flex items-center justify-center h-12">
+          <Button variant="ghost" size="xs" onClick={() => setExpanded(!expanded)}>
+            <Icon icon={expanded ? ChevronUp : ChevronDown} size={14} />
+            {expanded
+              ? t("events.showLess")
+              : t("events.showMore").replace("{count}", String(events.length - COLLAPSED_LIMIT))}
+          </Button>
+        </div>
       )}
     </div>
   );

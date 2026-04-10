@@ -227,19 +227,19 @@ export function MobileDetailSheet({
 
         {/* Scrollable content with tabs */}
         <div className="flex-1 overflow-y-auto overscroll-contain">
-          <Tabs defaultValue={0}>
-            <TabsList variant="line" className="w-full justify-start px-3 pt-1 shrink-0">
-              <TabsTrigger value={0} className="text-xs gap-1">
+          <Tabs defaultValue="0">
+            <TabsList variant="underline" className="w-full justify-start px-3 pt-1 shrink-0">
+              <TabsTrigger value="0" className="text-xs gap-1">
                 {t("sidebar.actionItems")}
                 {openCount > 0 && (
                   <span className="text-[10px] text-muted-foreground">({openCount})</span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value={1} className="text-xs">
+              <TabsTrigger value="1" className="text-xs">
                 {t("sidebar.participants")}
               </TabsTrigger>
             </TabsList>
-            <TabsContent value={0}>
+            <TabsContent value="0">
               <ActionItems
                 threadId={threadId}
                 tasks={tasks}
@@ -249,7 +249,7 @@ export function MobileDetailSheet({
                 embedded
               />
             </TabsContent>
-            <TabsContent value={1}>
+            <TabsContent value="1">
               <ParticipantsList
                 threadId={threadId}
                 participants={participants}

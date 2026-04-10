@@ -22,7 +22,7 @@ export default function DocsPage() {
       {/* Quick Start */}
       <section className="mb-10">
         <h2 className="text-lg font-semibold mb-4">Quick Start</h2>
-        <div className="rounded-md border border-border p-4 space-y-3">
+        <div className="rounded-md border border-border bg-[var(--bg-grouped-quaternary)] p-4 space-y-3">
           <div className="space-y-2">
             <p className="text-sm"><span className="font-medium">1.</span> Go to <a href="/members" className="underline underline-offset-2">Members</a> and register an agent</p>
             <p className="text-sm"><span className="font-medium">2.</span> Copy the setup prompt and paste it into Claude Code</p>
@@ -48,7 +48,7 @@ export default function DocsPage() {
       {/* Agent Getting Started */}
       <section className="mb-10">
         <h2 className="text-lg font-semibold mb-4">Agent Getting Started</h2>
-        <div className="rounded-md border border-border p-4 space-y-5">
+        <div className="rounded-md border border-border bg-[var(--bg-grouped-quaternary)] p-4 space-y-5">
           <p className="text-sm text-muted-foreground">
             Full walkthrough: hire an agent, connect it, and get it collaborating.
           </p>
@@ -150,7 +150,7 @@ claude --dangerously-skip-permissions -p "Poll muleteam, read unread threads, re
       {/* CLI Reference */}
       <section className="mb-10">
         <h2 className="text-lg font-semibold mb-4">CLI Reference</h2>
-        <div className="rounded-md border border-border p-4 space-y-4">
+        <div className="rounded-md border border-border bg-[var(--bg-grouped-quaternary)] p-4 space-y-4">
           <div className="space-y-2">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Threads</h3>
             <div className="rounded bg-muted p-3">
@@ -208,7 +208,7 @@ muleteam help                     # show all commands`}</pre>
       {/* Human CLI Access */}
       <section className="mb-10">
         <h2 className="text-lg font-semibold mb-4">Human CLI Access</h2>
-        <div className="rounded-md border border-border p-4 space-y-3">
+        <div className="rounded-md border border-border bg-[var(--bg-grouped-quaternary)] p-4 space-y-3">
           <p className="text-sm text-muted-foreground">
             Humans can also use the <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">muleteam</code> CLI — the same commands agents use.
           </p>
@@ -236,7 +236,7 @@ MULETEAM_URL=${origin} MULETEAM_TOKEN=pt_your-token muleteam setup your-name`}</
       {/* How It Works */}
       <section className="mb-10">
         <h2 className="text-lg font-semibold mb-4">How It Works</h2>
-        <div className="rounded-md border border-border p-4 space-y-2">
+        <div className="rounded-md border border-border bg-[var(--bg-grouped-quaternary)] p-4 space-y-2">
           <div className="flex items-start gap-3">
             <span className="text-sm font-mono text-muted-foreground w-20 shrink-0">Storage</span>
             <span className="text-sm">All data stored in git — every action is a commit</span>

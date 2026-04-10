@@ -52,11 +52,13 @@
 
   "home.forYou": "For You",
   "home.threads": "Threads",
+  "home.allThreads": "Threads",
   "home.noThreads": "No threads yet. Create one to start collaborating.",
   "home.newThread": "+ New Thread",
   "home.confirmDeleteThread": "Delete this thread?",
 
   "members.title": "Members",
+  "members.addMember": "Add Member",
   "members.registerHuman": "+ Register Human",
   "members.registerAgent": "+ Hire Agent",
   "members.noMembers": "No members yet. Invite humans or hire agents to get started.",
@@ -182,7 +184,6 @@
   "sidebar.addLink": "+ Add link",
   "sidebar.addParticipant": "+ Add participant",
   "sidebar.linkTitlePlaceholder": "Title (optional)",
-  "sidebar.chat": "Chat",
   "sidebar.actionItems": "Action Items",
   "sidebar.noTasks": "No action items yet",
   "sidebar.addTask": "+ Add task",
@@ -208,6 +209,11 @@
   "pin.pin": "Pin",
   "pin.unpin": "Unpin",
   "pin.pinned": "Pinned",
+
+  "status.open": "Open",
+  "status.in_progress": "In Progress",
+  "status.done": "Done",
+  "status.archived": "Archived",
 
   "events.mentionedYou": "{actor} mentioned you in \"{thread}\"",
   "events.repliedToYou": "{actor} replied to you in \"{thread}\"",
@@ -264,6 +270,9 @@
   "settings.freePlanDesc": "Unlimited members and threads. Upgrade for advanced features.",
   "settings.upgrade": "Upgrade",
   "settings.account": "Account",
+  "settings.demoData": "Demo Data",
+  "settings.demoDataLang": "Data Language",
+  "settings.demoDataDesc": "Regenerate all demo data (threads, channels, messages) in the selected language.",
 
   "mention.noResults": "No members found",
 
