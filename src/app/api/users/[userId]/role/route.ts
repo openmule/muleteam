@@ -36,7 +36,7 @@ export async function PATCH(
     const sql = await db();
 
     // Verify target user exists
-    const target = await sql`SELECT id, team_role FROM users WHERE id = ${userId}` as { id: string; team_role: string }[];
+    const target = await sql`SELECT id, team_role FROM users WHERE id::text = ${userId}` as { id: string; team_role: string }[];
     if (target.length === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -57,7 +57,7 @@ export async function PATCH(
       }
     }
 
-    await sql`UPDATE users SET team_role = ${role} WHERE id = ${userId}`;
+    await sql`UPDATE users SET team_role = ${role} WHERE id::text = ${userId}`;
 
     return NextResponse.json({ ok: true, role });
   });

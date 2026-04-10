@@ -57,7 +57,7 @@ export async function POST(
       }
 
       // Look up the creator's name for invited_by
-      const creators = (await sql`SELECT name FROM users WHERE id = ${invite.created_by}`) as { name: string }[];
+      const creators = (await sql`SELECT name FROM users WHERE id::text = ${invite.created_by}`) as { name: string }[];
       const creatorName = creators.length > 0 ? creators[0].name : "Unknown";
 
       // Create the user

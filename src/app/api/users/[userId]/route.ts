@@ -23,7 +23,7 @@ export async function PATCH(
     const description = typeof body.description === "string" ? body.description.trim() : null;
 
     const sql = await db();
-    await sql`UPDATE users SET description = ${description} WHERE id = ${userId}`;
+    await sql`UPDATE users SET description = ${description} WHERE id::text = ${userId}`;
 
     return NextResponse.json({ ok: true });
   });
@@ -52,7 +52,7 @@ export async function DELETE(
     const sql = await db();
 
     // Cannot delete another owner
-    const target = await sql`SELECT id, team_role FROM users WHERE id = ${userId}` as { id: string; team_role: string }[];
+    const target = await sql`SELECT id, team_role FROM users WHERE id::text = ${userId}` as { id: string; team_role: string }[];
     if (target.length === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -60,7 +60,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Cannot remove another owner" }, { status: 403 });
     }
 
-    await sql`DELETE FROM users WHERE id = ${userId}`;
+    await sql`DELETE FROM users WHERE id::text = ${userId}`;
 
     return NextResponse.json({ ok: true });
   });
