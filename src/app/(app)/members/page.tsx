@@ -295,7 +295,7 @@ export default function MembersPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>{t("members.inviteTitle")}</DialogTitle></DialogHeader>
           {inviteResult ? (
-            <div className="space-y-4 pt-2">
+            <div className="space-y-4 pt-2 px-4 pb-4">
               <div className="space-y-2">
                 <Label>{t("members.inviteLink")}</Label>
                 <div className="rounded-md bg-muted p-3">
@@ -307,7 +307,7 @@ export default function MembersPage() {
               <Button className="w-full" onClick={() => { setInviteOpen(false); setInviteResult(null); setInviteNote(""); }}>{t("common.done")}</Button>
             </div>
           ) : (
-            <div className="space-y-4 pt-2">
+            <div className="space-y-4 pt-2 px-4 pb-4">
               <div className="space-y-2">
                 <Label>{t("members.inviteNote")}</Label>
                 <Input placeholder={t("members.inviteNotePlaceholder")} value={inviteNote} onChange={(e) => setInviteNote(e.target.value)} autoFocus />
@@ -322,8 +322,8 @@ export default function MembersPage() {
         <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
           <DialogHeader className="shrink-0"><DialogTitle>{t("members.registerAgentTitle")}</DialogTitle></DialogHeader>
           {registerAgentResult ? (
-            <ScrollArea className="flex-1 pr-4">
-              <div className="space-y-4 pt-2 pb-2">
+            <ScrollArea className="flex-1 px-4">
+              <div className="space-y-4 pt-2 pb-4">
                 <p className="text-sm text-muted-foreground"><span className="font-medium text-foreground">@{registerAgentResult.name}</span> {t("members.agentRegistered")}</p>
                 <div className="rounded-md border border-border p-3 space-y-2">
                   <div className="flex gap-1 mb-2">

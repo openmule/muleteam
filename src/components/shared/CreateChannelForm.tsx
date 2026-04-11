@@ -124,7 +124,7 @@ export function CreateChannelForm({
   };
 
   return (
-    <div className="space-y-4 pt-2">
+    <div className="space-y-4 pt-2 px-4 pb-4">
       {error && (
         <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>
       )}
