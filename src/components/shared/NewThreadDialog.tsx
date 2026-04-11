@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -146,7 +147,7 @@ export function NewThreadDialog({
         <DialogHeader>
           <DialogTitle>{t("thread.newThreadTitle")}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 pt-2">
+        <DialogBody className="space-y-4 pt-2">
           <div className="space-y-2">
             <Label htmlFor="thread-title">{t("thread.title")}</Label>
             <Input
@@ -248,7 +249,7 @@ export function NewThreadDialog({
           <Button className="w-full" onClick={handleCreate} disabled={!title.trim() || creating}>
             {creating ? t("common.creating") : <>{t("thread.createThread")} <span className="ml-1 text-xs opacity-60">{isMac ? "\u2318\u21B5" : "Ctrl\u21B5"}</span></>}
           </Button>
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );
