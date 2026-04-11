@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { StatusBanner } from "@/components/thread/StatusBanner";
-import { CHANNEL_BADGE_COLORS, DEFAULT_BADGE_COLOR } from "@/components/layout/Sidebar";
+import { getChannelBadgeColor } from "@/components/layout/Sidebar";
 import { useT } from "@/lib/i18n";
 
 interface Participant {
@@ -278,7 +278,7 @@ export default function ThreadDetailPage({ threadId: threadIdProp, showChannelBa
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-semibold text-[var(--label-primary)]">{thread.title}</h1>
               {showChannelBadge && channelName && thread.channel_id && (() => {
-                const badgeColor = CHANNEL_BADGE_COLORS[thread.channel_id] ?? DEFAULT_BADGE_COLOR;
+                const badgeColor = getChannelBadgeColor(thread.channel_id);
                 return (
                   <span className={`text-xs px-2 h-5 inline-flex items-center rounded-full shrink-0 ${badgeColor.bg} ${badgeColor.text}`}>
                     {channelName}

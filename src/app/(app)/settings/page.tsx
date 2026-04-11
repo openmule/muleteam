@@ -18,6 +18,7 @@ export default function SettingsPage() {
   const [humanCount, setHumanCount] = useState(0);
   const [agentCount, setAgentCount] = useState(0);
   const [seeding, setSeeding] = useState(false);
+  const [dataLocale, setDataLocale] = useState<"en" | "zh">("zh");
 
   useEffect(() => {
     fetch("/api/users")
@@ -28,12 +29,25 @@ export default function SettingsPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => { if (data?.agents) setAgentCount(data.agents.length); })
       .catch(() => {});
+    // Detect current data language from first thread title
+    fetch("/api/threads")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const threads = data?.threads ?? [];
+        if (threads.length > 0) {
+          const hasChineseChar = /[\u4e00-\u9fff]/.test(threads[0].title);
+          setDataLocale(hasChineseChar ? "zh" : "en");
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleReseed = async (seedLocale: "en" | "zh") => {
+    if (seedLocale === dataLocale) return;
     setSeeding(true);
     try {
       await fetch(`/api/seed?locale=${seedLocale}`, { method: "POST" });
+      setDataLocale(seedLocale);
       window.location.reload();
     } catch {
       setSeeding(false);
@@ -128,7 +142,7 @@ export default function SettingsPage() {
                 <span className="text-sm text-[var(--label-secondary)]">Regenerate all demo data (threads, channels, messages) in the selected language.</span>
               </div>
               <Select
-                value={locale === "zh" ? "zh" : "en"}
+                value={dataLocale}
                 onValueChange={(val) => handleReseed(val as "en" | "zh")}
                 disabled={seeding}
               >

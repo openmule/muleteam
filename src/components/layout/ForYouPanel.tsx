@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/components/layout/AuthProvider";
 import { useNavigation } from "@/components/layout/NavigationContext";
 import { AtSign } from "lucide-react";
-import { CHANNEL_BADGE_COLORS, DEFAULT_BADGE_COLOR } from "@/components/layout/Sidebar";
+import { getChannelBadgeColor } from "@/components/layout/Sidebar";
 import ThreadDetailPage from "@/app/(app)/thread/[threadId]/page";
 import type { NotificationEvent, ThreadMeta } from "@/components/shared/types";
 
@@ -139,7 +139,7 @@ export function ForYouPanel() {
           {threadGroups.map((group) => {
             const isActive = group.threadId === selectedThreadId;
             const isUnread = group.hasUnread;
-            const badgeColor = group.channelId ? (CHANNEL_BADGE_COLORS[group.channelId] ?? DEFAULT_BADGE_COLOR) : null;
+            const badgeColor = group.channelId ? getChannelBadgeColor(group.channelId) : null;
 
             return (
               <button
