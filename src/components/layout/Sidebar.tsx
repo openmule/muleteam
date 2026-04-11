@@ -29,11 +29,91 @@ import {
   Search, CirclePlus, User, Moon, Languages, LogOut, Settings,
   AtSign, Wand, Pizza, PencilRuler, Briefcase, Newspaper,
   Users, Box, BookText, Hash, UserPlus, Bot, MessageCircle,
+  Code, Palette, Megaphone, Shield, Zap, Globe, Heart,
+  Camera, Music, Gamepad2, BookOpen, FlaskConical, Truck,
+  Building2, GraduationCap, Stethoscope, Scale, Wrench,
+  Rocket, Target, BarChart3, MessageSquare, Lightbulb,
 } from "lucide-react";
 import type { RegisteredAgent, ChannelMeta, User as UserType } from "@/components/shared/types";
 
-/** Channel icon + color mapping based on Figma design */
-const CHANNEL_CONFIG: Record<string, { icon: React.ComponentType<{ className?: string; strokeWidth?: number }>, color: string }> = {
+/** Keywords → icon mapping for auto-detection */
+const ICON_KEYWORDS: [string[], React.ComponentType<{ className?: string; strokeWidth?: number }>][] = [
+  [["engineer", "dev", "code", "tech", "backend", "frontend", "fullstack"], Code],
+  [["design", "ui", "ux", "visual", "graphic"], PencilRuler],
+  [["product", "pm", "roadmap", "feature"], Briefcase],
+  [["general", "all", "team", "everyone", "misc"], Wand],
+  [["ops", "infra", "devops", "deploy", "monitor", "sre"], Wrench],
+  [["marketing", "growth", "campaign", "brand"], Megaphone],
+  [["security", "auth", "compliance", "audit"], Shield],
+  [["data", "analytics", "metric", "insight", "bi"], BarChart3],
+  [["research", "explore", "discovery", "lab"], FlaskConical],
+  [["support", "help", "service", "customer"], Heart],
+  [["sales", "deal", "revenue", "crm"], Target],
+  [["finance", "billing", "payment", "budget"], Scale],
+  [["hr", "people", "culture", "recruit", "hiring"], Users],
+  [["education", "learn", "train", "onboard"], GraduationCap],
+  [["health", "medical", "wellness"], Stethoscope],
+  [["media", "content", "blog", "video", "photo"], Camera],
+  [["music", "audio", "sound"], Music],
+  [["game", "gaming", "play"], Gamepad2],
+  [["doc", "wiki", "knowledge", "docs"], BookOpen],
+  [["ship", "logistics", "supply"], Truck],
+  [["office", "workplace", "facility"], Building2],
+  [["launch", "release", "ship"], Rocket],
+  [["chat", "discuss", "talk", "forum"], MessageSquare],
+  [["idea", "brainstorm", "innovation"], Lightbulb],
+  [["global", "international", "i18n", "locale"], Globe],
+  [["api", "integration", "webhook", "connect"], Zap],
+  [["news", "update", "announce"], Newspaper],
+  [["art", "creative", "style"], Palette],
+];
+
+/** Color pool for auto-assignment */
+const COLOR_POOL = [
+  "text-[var(--color-purple-1000)]",
+  "text-[var(--color-blue-1000)]",
+  "text-[var(--color-pink-1000)]",
+  "text-[var(--color-orange-1000)]",
+  "text-[var(--color-cyan-1000)]",
+  "text-[var(--color-green-1000)]",
+  "text-[var(--color-red-1000)]",
+  "text-[var(--color-indigo-1000)]",
+  "text-[var(--color-brown-1000)]",
+  "text-[var(--color-teal-1000)]",
+];
+
+/** Deterministic hash for consistent color assignment */
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+/** Auto-detect icon and color from channel name/id */
+function getChannelConfig(channelId: string, channelName: string): { icon: React.ComponentType<{ className?: string; strokeWidth?: number }>, color: string } {
+  // Check hardcoded overrides first
+  if (CHANNEL_CONFIG_OVERRIDES[channelId]) return CHANNEL_CONFIG_OVERRIDES[channelId];
+
+  // Auto-detect icon from name keywords
+  const nameLower = (channelId + " " + channelName).toLowerCase();
+  let icon: React.ComponentType<{ className?: string; strokeWidth?: number }> = Hash;
+  for (const [keywords, candidateIcon] of ICON_KEYWORDS) {
+    if (keywords.some(kw => nameLower.includes(kw))) {
+      icon = candidateIcon;
+      break;
+    }
+  }
+
+  // Deterministic color from channel id
+  const color = COLOR_POOL[hashString(channelId) % COLOR_POOL.length];
+
+  return { icon, color };
+}
+
+/** Hardcoded overrides for known channels (from Figma design) */
+const CHANNEL_CONFIG_OVERRIDES: Record<string, { icon: React.ComponentType<{ className?: string; strokeWidth?: number }>, color: string }> = {
   general: { icon: Wand, color: "text-[var(--color-purple-1000)]" },
   engineering: { icon: Pizza, color: "text-[var(--color-blue-1000)]" },
   design: { icon: PencilRuler, color: "text-[var(--color-pink-1000)]" },
@@ -41,7 +121,10 @@ const CHANNEL_CONFIG: Record<string, { icon: React.ComponentType<{ className?: s
   ops: { icon: Newspaper, color: "text-[var(--color-orange-1000)]" },
 };
 
-const DEFAULT_CHANNEL_CONFIG = { icon: Wand, color: "text-[var(--label-primary)] opacity-60" };
+/** Public accessor — used by ChannelPanel and other components */
+export const CHANNEL_CONFIG = new Proxy({} as Record<string, { icon: React.ComponentType<{ className?: string; strokeWidth?: number }>, color: string }>, {
+  get: (_, channelId: string) => getChannelConfig(channelId, channelId),
+});
 
 const BOTTOM_NAV = [
   { href: "/members", labelKey: "nav.members", icon: Users },
@@ -226,7 +309,7 @@ export function Sidebar() {
         {/* Channels list — 2px gap between items with 1px hover ownership per side */}
         <div className="flex-1 overflow-y-auto px-2">
           {channels.map((channel) => {
-            const config = CHANNEL_CONFIG[channel.id] ?? DEFAULT_CHANNEL_CONFIG;
+            const config = getChannelConfig(channel.id, channel.name);
             const Icon = config.icon;
             const isActive = activeView === "channel" && activeChannelId === channel.id;
             return (
@@ -240,7 +323,7 @@ export function Sidebar() {
                 }`}
               >
                 <Icon className={`${ICON_STYLE} ${isActive ? "" : config.color}`} strokeWidth={ICON_STROKE} />
-                {channel.name}
+                <span className="truncate">{channel.name}</span>
               </button>
             );
           })}
@@ -305,14 +388,25 @@ export function Sidebar() {
 }
 
 /** Export channel config for reuse in channel detail pages */
-export { CHANNEL_CONFIG, ICON_STROKE };
+export { ICON_STROKE };
 
-/** Channel badge colors: bg (100 level) + text (1000 level) */
-export const CHANNEL_BADGE_COLORS: Record<string, { bg: string; text: string }> = {
-  general: { bg: "bg-[var(--color-purple-100)]", text: "text-[var(--color-purple-1000)]" },
-  engineering: { bg: "bg-[var(--color-blue-100)]", text: "text-[var(--color-blue-1000)]" },
-  design: { bg: "bg-[var(--color-pink-100)]", text: "text-[var(--color-pink-1000)]" },
-  product: { bg: "bg-[var(--color-orange-100)]", text: "text-[var(--color-orange-1000)]" },
-  ops: { bg: "bg-[var(--color-orange-100)]", text: "text-[var(--color-orange-1000)]" },
+/** Badge color mapping: text-[var(--color-X-1000)] → { bg: bg-[var(--color-X-100)], text: text-[var(--color-X-1000)] } */
+const COLOR_TO_BADGE: Record<string, { bg: string; text: string }> = {
+  "text-[var(--color-purple-1000)]": { bg: "bg-[var(--color-purple-100)]", text: "text-[var(--color-purple-1000)]" },
+  "text-[var(--color-blue-1000)]": { bg: "bg-[var(--color-blue-100)]", text: "text-[var(--color-blue-1000)]" },
+  "text-[var(--color-pink-1000)]": { bg: "bg-[var(--color-pink-100)]", text: "text-[var(--color-pink-1000)]" },
+  "text-[var(--color-orange-1000)]": { bg: "bg-[var(--color-orange-100)]", text: "text-[var(--color-orange-1000)]" },
+  "text-[var(--color-cyan-1000)]": { bg: "bg-[var(--color-cyan-100)]", text: "text-[var(--color-cyan-1000)]" },
+  "text-[var(--color-green-1000)]": { bg: "bg-[var(--color-green-100)]", text: "text-[var(--color-green-1000)]" },
+  "text-[var(--color-red-1000)]": { bg: "bg-[var(--color-red-100)]", text: "text-[var(--color-red-1000)]" },
+  "text-[var(--color-indigo-1000)]": { bg: "bg-[var(--color-indigo-100)]", text: "text-[var(--color-indigo-1000)]" },
+  "text-[var(--color-brown-1000)]": { bg: "bg-[var(--color-brown-100)]", text: "text-[var(--color-brown-1000)]" },
+  "text-[var(--color-teal-1000)]": { bg: "bg-[var(--color-teal-100)]", text: "text-[var(--color-teal-1000)]" },
 };
 export const DEFAULT_BADGE_COLOR = { bg: "bg-[var(--fill-quaternary)]", text: "text-[var(--label-secondary)]" };
+
+/** Get badge colors for a channel — auto-derived from channel icon color */
+export function getChannelBadgeColor(channelId: string): { bg: string; text: string } {
+  const config = getChannelConfig(channelId, channelId);
+  return COLOR_TO_BADGE[config.color] ?? DEFAULT_BADGE_COLOR;
+}
