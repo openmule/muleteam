@@ -278,6 +278,8 @@ export default function ResetPasswordPage() {
       {/* PixelBlast background */}
       <div className="absolute inset-0 z-0">
         <PixelBlast
+          className=""
+          style={{}}
           variant="square"
           pixelSize={2}
           color="#999999"
