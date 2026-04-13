@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import {
   InputGroup,
   InputGroupAddon,
@@ -10,7 +9,7 @@ import {
   InputGroupButton,
 } from "@/components/ui/input-group";
 import { Icon } from "@/components/ui/icon";
-import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react";
 import PixelBlast from "@/components/PixelBlast";
 
 /* ── Scramble Reveal Hook ── */
@@ -80,6 +79,11 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [forgotError, setForgotError] = useState("");
 
   // Force dark mode on mount
   useEffect(() => {
@@ -117,6 +121,33 @@ export default function LoginPage() {
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) return;
+    setForgotError("");
+    setForgotLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setForgotError(data.error || "Something went wrong");
+        return;
+      }
+
+      setForgotSuccess(true);
+    } catch {
+      setForgotError("Something went wrong. Please try again.");
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -184,81 +215,158 @@ export default function LoginPage() {
             {/* Form content — vertically centered */}
             <div className="flex flex-col flex-1">
               <div className="flex-1 flex flex-col justify-start lg:justify-center max-w-[460px] mx-auto w-full" style={{ gap: 64 }}>
-                {/* Title */}
-                <div className="text-center flex flex-col" style={{ gap: "var(--space-100)" }}>
-                  <h1 className="font-bold whitespace-nowrap" style={{ fontSize: "var(--font-size-title-page)", lineHeight: "150%", color: "var(--label-primary)" }}>
-                    Welcome to MuleTeam
-                  </h1>
-                  <p style={{ fontSize: "var(--font-size-body-base)", color: "var(--label-secondary)" }}>
-                    Sign in to your account
-                  </p>
-                </div>
+                {forgotMode ? (
+                  /* ── Forgot Password Mode ── */
+                  <>
+                    {/* Title */}
+                    <div className="text-center flex flex-col" style={{ gap: "var(--space-100)" }}>
+                      <h1 className="font-bold whitespace-nowrap" style={{ fontSize: "var(--font-size-title-page)", lineHeight: "150%", color: "var(--label-primary)" }}>
+                        Forgot Password
+                      </h1>
+                      <p style={{ fontSize: "var(--font-size-body-base)", color: "var(--label-secondary)" }}>
+                        {forgotSuccess
+                          ? "If an account exists with that email, a reset link has been sent."
+                          : "Enter your email and we'll send you a reset link"
+                        }
+                      </p>
+                    </div>
 
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="flex flex-col">
-                  <div className="flex flex-col" style={{ gap: "var(--space-300)" }}>
-                    {/* Error */}
-                    {error && (
-                      <div className="rounded-[8px] px-3 py-2 text-sm" style={{ backgroundColor: "var(--color-red-100)", color: "var(--color-red-1000)" }}>
-                        {error}
+                    {!forgotSuccess ? (
+                      <form onSubmit={handleForgotSubmit} className="flex flex-col">
+                        <div className="flex flex-col" style={{ gap: "var(--space-300)" }}>
+                          {/* Error */}
+                          {forgotError && (
+                            <div className="rounded-[8px] px-3 py-2 text-sm" style={{ backgroundColor: "var(--color-red-100)", color: "var(--color-red-1000)" }}>
+                              {forgotError}
+                            </div>
+                          )}
+
+                          {/* Email */}
+                          <InputGroup size="lg" className="!bg-transparent">
+                            <InputGroupAddon>
+                              <Mail size={16} />
+                            </InputGroupAddon>
+                            <InputGroupInput
+                              type="email"
+                              placeholder="Email address"
+                              value={forgotEmail}
+                              onChange={(e) => setForgotEmail(e.target.value)}
+                              autoComplete="email"
+                            />
+                          </InputGroup>
+
+                          {/* Submit */}
+                          <div style={{ paddingTop: "var(--space-400)" }}>
+                            <Button type="submit" size="lg" className="w-full" disabled={!forgotEmail.trim() || forgotLoading}>
+                              {forgotLoading ? "Sending..." : "Send Reset Link"}
+                            </Button>
+                          </div>
+
+                          {/* Back to login */}
+                          <div className="flex justify-center">
+                            <button
+                              type="button"
+                              className="cursor-pointer hover:underline inline-flex items-center"
+                              style={{ fontSize: "var(--font-size-footnote)", color: "var(--label-tertiary)", gap: "var(--space-100)" }}
+                              onClick={() => { setForgotMode(false); setForgotError(""); }}
+                            >
+                              <ArrowLeft size={12} />
+                              Back to login
+                            </button>
+                          </div>
+                        </div>
+                      </form>
+                    ) : (
+                      <div className="flex flex-col" style={{ gap: "var(--space-300)" }}>
+                        <div style={{ paddingTop: "var(--space-200)" }}>
+                          <Button size="lg" className="w-full" onClick={() => { setForgotMode(false); setForgotSuccess(false); setForgotEmail(""); }}>
+                            Back to Login
+                          </Button>
+                        </div>
                       </div>
                     )}
-
-                    {/* Email */}
-                    <InputGroup size="lg" className="!bg-transparent">
-                      <InputGroupAddon>
-                        <Mail size={16} />
-                      </InputGroupAddon>
-                      <InputGroupInput
-                        type="email"
-                        placeholder="Email address"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        autoComplete="email"
-                      />
-                    </InputGroup>
-
-                    {/* Password */}
-                    <InputGroup size="lg" className="!bg-transparent">
-                      <InputGroupAddon>
-                        <Lock size={16} />
-                      </InputGroupAddon>
-                      <InputGroupInput
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        autoComplete="current-password"
-                      />
-                      <InputGroupButton
-                        size="icon-sm"
-                        onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                        type="button"
-                      >
-                        <Icon icon={showPassword ? EyeOff : Eye} size={16} tint="tertiary" />
-                      </InputGroupButton>
-                    </InputGroup>
-
-                    {/* Forgot password */}
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        className="cursor-pointer hover:underline"
-                        style={{ fontSize: "var(--font-size-footnote)", color: "var(--label-tertiary)" }}
-                      >
-                        Forgot password?
-                      </button>
+                  </>
+                ) : (
+                  /* ── Normal Login Mode ── */
+                  <>
+                    {/* Title */}
+                    <div className="text-center flex flex-col" style={{ gap: "var(--space-100)" }}>
+                      <h1 className="font-bold whitespace-nowrap" style={{ fontSize: "var(--font-size-title-page)", lineHeight: "150%", color: "var(--label-primary)" }}>
+                        Welcome to MuleTeam
+                      </h1>
+                      <p style={{ fontSize: "var(--font-size-body-base)", color: "var(--label-secondary)" }}>
+                        Sign in to your account
+                      </p>
                     </div>
 
-                    {/* Submit */}
-                    <div style={{ paddingTop: "var(--space-400)" }}>
-                      <Button type="submit" size="lg" className="w-full" disabled={submitDisabled}>
-                        {loading ? "Signing in..." : "Sign In"}
-                      </Button>
-                    </div>
-                  </div>
-                </form>
+                    {/* Form */}
+                    <form onSubmit={handleSubmit} className="flex flex-col">
+                      <div className="flex flex-col" style={{ gap: "var(--space-300)" }}>
+                        {/* Error */}
+                        {error && (
+                          <div className="rounded-[8px] px-3 py-2 text-sm" style={{ backgroundColor: "var(--color-red-100)", color: "var(--color-red-1000)" }}>
+                            {error}
+                          </div>
+                        )}
+
+                        {/* Email */}
+                        <InputGroup size="lg" className="!bg-transparent">
+                          <InputGroupAddon>
+                            <Mail size={16} />
+                          </InputGroupAddon>
+                          <InputGroupInput
+                            type="email"
+                            placeholder="Email address"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            autoComplete="email"
+                          />
+                        </InputGroup>
+
+                        {/* Password */}
+                        <InputGroup size="lg" className="!bg-transparent">
+                          <InputGroupAddon>
+                            <Lock size={16} />
+                          </InputGroupAddon>
+                          <InputGroupInput
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            autoComplete="current-password"
+                          />
+                          <InputGroupButton
+                            size="icon-sm"
+                            onClick={() => setShowPassword(!showPassword)}
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                            type="button"
+                          >
+                            <Icon icon={showPassword ? EyeOff : Eye} size={16} tint="tertiary" />
+                          </InputGroupButton>
+                        </InputGroup>
+
+                        {/* Forgot password */}
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            className="cursor-pointer hover:underline"
+                            style={{ fontSize: "var(--font-size-footnote)", color: "var(--label-tertiary)" }}
+                            onClick={() => { setForgotMode(true); setError(""); }}
+                          >
+                            Forgot password?
+                          </button>
+                        </div>
+
+                        {/* Submit */}
+                        <div style={{ paddingTop: "var(--space-400)" }}>
+                          <Button type="submit" size="lg" className="w-full" disabled={submitDisabled}>
+                            {loading ? "Signing in..." : "Sign In"}
+                          </Button>
+                        </div>
+                      </div>
+                    </form>
+                  </>
+                )}
               </div>
 
               {/* Bottom: Terms */}
