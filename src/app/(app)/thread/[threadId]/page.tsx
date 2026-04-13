@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ActivityFeed } from "@/components/thread/ActivityFeed";
-import { CommentInput } from "@/components/thread/CommentInput";
+import { ThreadChatInput } from "@/components/thread/ThreadChatInput";
 import { ThreadSidebar } from "@/components/thread/ThreadSidebar";
 import { MarkdownBody } from "@/components/thread/MarkdownBody";
 import { JoinButton, LeaveButton } from "@/components/thread/JoinButton";
@@ -333,12 +333,12 @@ export default function ThreadDetailPage({ threadId: threadIdProp, showChannelBa
           {/* Input or Join — fixed glass bottom */}
           <div className="px-6 pb-6 pt-0 shrink-0 relative z-10 backdrop-blur-[20px]" style={{ backgroundColor: "color-mix(in srgb, var(--bg-grouped-quinary) 85%, transparent)" }}>
             {isMember ? (
-              <CommentInput
+              <ThreadChatInput
                 threadId={threadId}
-                onSubmit={handleSendMessage}
+                participants={thread?.participants}
                 replyTo={replyTo}
                 onCancelReply={() => setReplyTo(null)}
-                participants={thread?.participants}
+                onSend={handleSendMessage}
               />
             ) : (
               <JoinBar threadId={threadId} onJoined={handleJoined} />

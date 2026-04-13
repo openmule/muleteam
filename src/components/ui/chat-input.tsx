@@ -37,6 +37,7 @@ export interface ModelOption {
 export interface ChatInputProps {
   value?: string
   onChange?: (value: string) => void
+  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
   placeholder?: string
   files?: ChatInputFile[]
   onFileRemove?: (id: string) => void
@@ -50,6 +51,8 @@ export interface ChatInputProps {
   model?: string
   models?: ModelOption[]
   onModelChange?: (value: string) => void
+  /** Content to render above the textarea (e.g. reply bar, mention autocomplete) */
+  headerContent?: React.ReactNode
 }
 
 const sizeConfig = {
@@ -81,6 +84,7 @@ const ChatInput = React.forwardRef<HTMLDivElement, ChatInputProps>(
       placeholder = "Message...",
       files = [],
       onFileRemove,
+      onKeyDown: externalKeyDown,
       onAttach,
       onSend,
       onStop,
@@ -91,6 +95,7 @@ const ChatInput = React.forwardRef<HTMLDivElement, ChatInputProps>(
       model,
       models = [],
       onModelChange,
+      headerContent,
     },
     ref
   ) => {
@@ -112,6 +117,10 @@ const ChatInput = React.forwardRef<HTMLDivElement, ChatInputProps>(
     }, [value, adjustHeight])
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Call external onKeyDown first; if it prevents default, skip internal logic
+      externalKeyDown?.(e)
+      if (e.defaultPrevented) return
+
       if (e.key === "Enter" && e.shiftKey) {
         return // Allow Shift+Enter for line breaks
       }
@@ -137,6 +146,9 @@ const ChatInput = React.forwardRef<HTMLDivElement, ChatInputProps>(
             className
           )}
         >
+          {/* Header content (reply bar, mention autocomplete, etc.) */}
+          {headerContent}
+
           {/* Attachments */}
           {files.length > 0 && (
             <div className={cn("flex flex-wrap", s.attachments)}>
