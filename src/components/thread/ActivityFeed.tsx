@@ -33,34 +33,35 @@ export function ActivityFeed({
   const containerRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
 
+  const forceScrollRef = useRef(false);
+
+  // Mark force-scroll when scrollToken changes (user sent a message)
+  useEffect(() => {
+    if (scrollToken) forceScrollRef.current = true;
+  }, [scrollToken]);
+
   useEffect(() => {
     const viewport = containerRef.current;
     if (!viewport) return;
 
     const isInitialLoad = prevCountRef.current === 0 && messages.length > 0;
+    const messageCountIncreased = messages.length > prevCountRef.current;
     const nearBottom =
-      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 100;
+      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 200;
 
-    if (isInitialLoad || nearBottom) {
+    if (isInitialLoad || forceScrollRef.current || (messageCountIncreased && nearBottom)) {
       if (isInitialLoad) {
         viewport.scrollTop = viewport.scrollHeight;
       } else {
-        viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+        requestAnimationFrame(() => {
+          viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+        });
       }
+      forceScrollRef.current = false;
     }
 
     prevCountRef.current = messages.length;
   }, [messages]);
-
-  // Force scroll to bottom when scrollToken changes (e.g. after sending a message)
-  useEffect(() => {
-    if (!scrollToken) return;
-    const viewport = containerRef.current;
-    if (!viewport) return;
-    requestAnimationFrame(() => {
-      viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
-    });
-  }, [scrollToken]);
 
   // Build message lookup for reply targets
   const messageMap = useMemo(() => {
