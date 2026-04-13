@@ -112,7 +112,10 @@ const ChatInput = React.forwardRef<HTMLDivElement, ChatInputProps>(
     }, [value, adjustHeight])
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter" && !e.shiftKey && !loading) {
+      if (e.key === "Enter" && e.shiftKey) {
+        return // Allow Shift+Enter for line breaks
+      }
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !loading) {
         e.preventDefault()
         if (hasContent) onSend?.()
       }
