@@ -144,7 +144,7 @@ export function Sidebar() {
   const { activeChannelId, activeView, setChannel: navSetChannel, setView } = useNavigation();
   const { locale, setLocale, t } = useI18n();
   const { theme, setTheme } = useTheme();
-  const isDark = theme === "dark";
+  const isDark = theme === "dark" || (theme === "system" && typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   const [agents, setAgents] = useState<RegisteredAgent[]>([]);
   const [channels, setChannels] = useState<ChannelMeta[]>([]);
