@@ -79,6 +79,17 @@
   color: var(--label-secondary);
 }
 
+/* Override browser autofill background */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: var(--label-primary) !important;
+  background-clip: text !important;
+  caret-color: var(--label-primary);
+}
+
 /* Consistent thin scrollbar — no border, no hover thickening */
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;
