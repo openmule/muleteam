@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { memberUrl } from "@/components/shared/helpers";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
+import { MemberHoverCard } from "@/components/shared/MemberHoverCard";
 import { MessageCircle } from "lucide-react";
 import { MarkdownBody } from "./MarkdownBody";
 
@@ -197,9 +198,11 @@ export function ActivityItem({
             {/* Name + time (right-aligned) */}
             <div className="flex items-center gap-1">
               <span className="text-[length:var(--font-size-subheadline)] text-[var(--label-secondary)] opacity-0 group-hover/item:opacity-100 transition-opacity">{timeAgo(message.ts)}</span>
-              <Link href={memberUrl(message.from)} className="text-[length:var(--font-size-body-small)] font-semibold text-[var(--label-primary)] hover:underline">
-                {message.from_name}
-              </Link>
+              <MemberHoverCard participantId={message.from}>
+                <Link href={memberUrl(message.from)} className="text-[length:var(--font-size-body-small)] font-semibold text-[var(--label-primary)] hover:underline">
+                  {message.from_name}
+                </Link>
+              </MemberHoverCard>
             </div>
             {/* Message bubble — width fits content, min 48px, max aligns with others' left edge */}
             <div className="bg-[var(--fill-quaternary)] rounded-[8px] px-4 py-3 max-w-[calc(100%-64px+24px)] w-fit flex flex-col gap-4">
@@ -230,9 +233,11 @@ export function ActivityItem({
           <div className="flex flex-col gap-[7px] flex-1 min-w-0 mr-[28px]">
             {/* Name + time */}
             <div className="flex items-center gap-1">
-              <Link href={memberUrl(message.from)} className="text-[length:var(--font-size-body-small)] font-semibold text-[var(--label-primary)] hover:underline">
-                {isAgent ? `@${message.from_name}` : message.from_name}
-              </Link>
+              <MemberHoverCard participantId={message.from}>
+                <Link href={memberUrl(message.from)} className="text-[length:var(--font-size-body-small)] font-semibold text-[var(--label-primary)] hover:underline">
+                  {isAgent ? `@${message.from_name}` : message.from_name}
+                </Link>
+              </MemberHoverCard>
               <span className="text-[length:var(--font-size-subheadline)] text-[var(--label-secondary)] opacity-0 group-hover/item:opacity-100 transition-opacity">{timeAgo(message.ts)}</span>
               {onReply && (
                 <button

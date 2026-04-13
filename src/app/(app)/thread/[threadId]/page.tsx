@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ActivityFeed } from "@/components/thread/ActivityFeed";
-import { ChatInput } from "@/components/ui/chat-input";
+import { CommentInput } from "@/components/thread/CommentInput";
 import { ThreadSidebar } from "@/components/thread/ThreadSidebar";
 import { MarkdownBody } from "@/components/thread/MarkdownBody";
 import { JoinButton, LeaveButton } from "@/components/thread/JoinButton";
@@ -333,7 +333,13 @@ export default function ThreadDetailPage({ threadId: threadIdProp, showChannelBa
           {/* Input or Join — fixed glass bottom */}
           <div className="px-6 pb-6 pt-0 shrink-0 relative z-10 backdrop-blur-[20px]" style={{ backgroundColor: "color-mix(in srgb, var(--bg-grouped-quinary) 85%, transparent)" }}>
             {isMember ? (
-              <ChatInputWrapper onSend={(body) => handleSendMessage(body, replyTo?.id)} />
+              <CommentInput
+                threadId={threadId}
+                onSubmit={handleSendMessage}
+                replyTo={replyTo}
+                onCancelReply={() => setReplyTo(null)}
+                participants={thread?.participants}
+              />
             ) : (
               <JoinBar threadId={threadId} onJoined={handleJoined} />
             )}
@@ -363,27 +369,7 @@ export default function ThreadDetailPage({ threadId: threadIdProp, showChannelBa
   );
 }
 
-/** Thin wrapper around ChatInput to manage local value state */
-function ChatInputWrapper({ onSend }: { onSend: (body: string) => void }) {
-  const [value, setValue] = useState("");
-  const t = useT();
-  return (
-    <ChatInput
-      value={value}
-      onChange={setValue}
-      placeholder={t("thread.writeComment")}
-      onSend={() => {
-        if (value.trim()) {
-          onSend(value.trim());
-          setValue("");
-        }
-      }}
-      size="sm"
-    />
-  );
-}
-
-/** Join bar — same container style as ChatInput, with text + join button */
+/** Join bar — same container style as CommentInput, with text + join button */
 function JoinBar({ threadId, onJoined }: { threadId: string; onJoined: () => void }) {
   const [joining, setJoining] = useState(false);
   const t = useT();
