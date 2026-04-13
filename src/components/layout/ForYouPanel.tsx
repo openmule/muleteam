@@ -37,10 +37,11 @@ interface ThreadGroup {
   channelName?: string;
   statusLabel?: string;
   status?: string;
-  latestEvent: NotificationEvent;
+  latestEvent?: NotificationEvent;
   hasUnread: boolean;
   lastMessagePreview?: string;
   lastMessageTime?: string;
+  updatedAt: string;
 }
 
 export function ForYouPanel() {
@@ -68,32 +69,36 @@ export function ForYouPanel() {
     if (!authLoading) fetchData();
   }, [authLoading, fetchData]);
 
-  // Group events by thread, take latest event per thread
-  const threadGroups: ThreadGroup[] = (() => {
-    const map = new Map<string, ThreadGroup>();
-    for (const event of events) {
-      const existing = map.get(event.thread_id);
-      if (!existing || new Date(event.created_at) > new Date(existing.latestEvent.created_at)) {
-        const thread = threads.find((t) => t.id === event.thread_id);
-        const channel = thread?.channel_id ? channels.find((c) => c.id === thread.channel_id) : null;
-        map.set(event.thread_id, {
-          threadId: event.thread_id,
-          threadTitle: event.thread_title,
-          channelId: thread?.channel_id,
-          channelName: channel?.name,
-          statusLabel: (thread as any)?.status_label,
-          status: thread?.status,
-          latestEvent: event,
-          hasUnread: !event.read && !readThreadIds.has(event.thread_id),
-          lastMessagePreview: (thread as any)?.last_message?.body,
-          lastMessageTime: (thread as any)?.last_message?.ts ? timeAgo(new Date((thread as any).last_message.ts).toISOString()) : undefined,
-        });
-      }
+  // Build latest event per thread (for unread status)
+  const latestEventByThread = new Map<string, NotificationEvent>();
+  for (const event of events) {
+    const existing = latestEventByThread.get(event.thread_id);
+    if (!existing || new Date(event.created_at) > new Date(existing.created_at)) {
+      latestEventByThread.set(event.thread_id, event);
     }
-    return Array.from(map.values()).sort(
-      (a, b) => new Date(b.latestEvent.created_at).getTime() - new Date(a.latestEvent.created_at).getTime()
-    );
-  })();
+  }
+
+  // Show ALL threads (not just those with events), sorted by updated_at
+  const threadGroups: ThreadGroup[] = threads
+    .filter((t) => t.status !== "archived")
+    .map((thread) => {
+      const event = latestEventByThread.get(thread.id);
+      const channel = thread.channel_id ? channels.find((c) => c.id === thread.channel_id) : null;
+      return {
+        threadId: thread.id,
+        threadTitle: thread.title,
+        channelId: thread.channel_id,
+        channelName: channel?.name,
+        statusLabel: (thread as any)?.status_label,
+        status: thread.status,
+        latestEvent: event,
+        hasUnread: event ? (!event.read && !readThreadIds.has(thread.id)) : false,
+        lastMessagePreview: (thread as any)?.last_message?.body,
+        lastMessageTime: (thread as any)?.last_message?.ts ? timeAgo(new Date((thread as any).last_message.ts).toISOString()) : undefined,
+        updatedAt: thread.updated_at,
+      };
+    })
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
   // Auto-select first thread
   useEffect(() => {
@@ -175,9 +180,9 @@ export function ForYouPanel() {
                     </span>
                   )}
                   <span className="text-xs truncate flex-1 text-[var(--label-secondary)]">
-                    {formatEventBody(group.latestEvent)}
+                    {group.latestEvent ? formatEventBody(group.latestEvent) : (group.lastMessagePreview || "")}
                   </span>
-                  <span className="text-xs shrink-0 text-[var(--label-secondary)]">{timeAgo(group.latestEvent.created_at)}</span>
+                  <span className="text-xs shrink-0 text-[var(--label-secondary)]">{group.latestEvent ? timeAgo(group.latestEvent.created_at) : (group.lastMessageTime || "")}</span>
                 </div>
               </button>
             );
