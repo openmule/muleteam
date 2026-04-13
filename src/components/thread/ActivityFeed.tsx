@@ -20,11 +20,14 @@ export function ActivityFeed({
   messages,
   onReply,
   currentUserId,
+  scrollToken,
 }: {
   threadId: string;
   messages: Message[];
   onReply?: (messageId: string) => void;
   currentUserId?: string;
+  /** Increment to force scroll to bottom (e.g. after sending a message) */
+  scrollToken?: number;
 }) {
   const t = useT();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -48,6 +51,16 @@ export function ActivityFeed({
 
     prevCountRef.current = messages.length;
   }, [messages]);
+
+  // Force scroll to bottom when scrollToken changes (e.g. after sending a message)
+  useEffect(() => {
+    if (!scrollToken) return;
+    const viewport = containerRef.current;
+    if (!viewport) return;
+    requestAnimationFrame(() => {
+      viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+    });
+  }, [scrollToken]);
 
   // Build message lookup for reply targets
   const messageMap = useMemo(() => {

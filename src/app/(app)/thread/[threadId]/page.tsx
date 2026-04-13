@@ -115,6 +115,7 @@ export default function ThreadDetailPage({ threadId: threadIdProp, showChannelBa
   const [allUsers, setAllUsers] = useState<UserInfo[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
+  const [scrollToken, setScrollToken] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const fetchThread = useCallback(async () => {
@@ -234,6 +235,7 @@ export default function ThreadDetailPage({ threadId: threadIdProp, showChannelBa
       body: JSON.stringify({ body, reply_to: replyToId }),
     });
     setReplyTo(null);
+    setScrollToken((t) => t + 1);
     // Don't block on refetch — input clears immediately after POST succeeds
     fetchMessages();
   };
@@ -328,7 +330,7 @@ export default function ThreadDetailPage({ threadId: threadIdProp, showChannelBa
           </div>
 
           {/* Messages */}
-          <ActivityFeed threadId={threadId} messages={messages} onReply={isMember ? handleReply : undefined} currentUserId={currentUser?.id} />
+          <ActivityFeed threadId={threadId} messages={messages} onReply={isMember ? handleReply : undefined} currentUserId={currentUser?.id} scrollToken={scrollToken} />
 
           {/* Input or Join — fixed glass bottom */}
           <div className="px-6 pb-6 pt-0 shrink-0 relative z-10 backdrop-blur-[20px]" style={{ backgroundColor: "color-mix(in srgb, var(--bg-grouped-quinary) 85%, transparent)" }}>
