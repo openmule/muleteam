@@ -28,9 +28,11 @@ interface MemberData {
 export function MemberHoverCard({
   participantId,
   children,
+  align = "left",
 }: {
   participantId: string;
   children: React.ReactNode;
+  align?: "left" | "right";
 }) {
   const t = useT();
   const [visible, setVisible] = useState(false);
@@ -117,7 +119,7 @@ export function MemberHoverCard({
       {children}
       {visible && (
         <div
-          className="absolute left-0 top-full z-50 mt-1.5 w-64 rounded-lg border border-border bg-background shadow-lg"
+          className={`absolute top-full z-50 mt-1.5 w-64 rounded-lg border border-border bg-background shadow-lg ${align === "right" ? "right-0" : "left-0"}`}
           onMouseEnter={() => clearTimeout(leaveTimer.current)}
           onMouseLeave={handleLeave}
         >
