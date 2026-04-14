@@ -4,20 +4,30 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/layout/AuthProvider";
+import { useNavigation } from "@/components/layout/NavigationContext";
+import { CHANNEL_CONFIG, ICON_STROKE } from "@/components/layout/Sidebar";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { setupPrompt, openCodeSetupPrompt, openClawSetupPrompt, claudeMdSnippet, openCodeSnippet, openClawSkillSnippet } from "@/components/shared/setupPrompt";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { useT } from "@/lib/i18n";
 import { timeAgo, memberUrl } from "@/components/shared/helpers";
 import { Input } from "@/components/ui/input";
+import {
+  TitleBar,
+  TitleBarHeading,
+  TitleBarTitle,
+  TitleBarBack,
+} from "@/components/patterns/titlebar";
 import type { User, RegisteredAgent, ThreadMeta, ChannelMeta } from "@/components/shared/types";
 
 export default function MemberDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user: currentUser, loading: authLoading } = useAuth();
+  const { setChannel: navSetChannel } = useNavigation();
 
   const memberType = params.type as string;
   const entityId = params.entityId as string;
@@ -127,114 +137,44 @@ export default function MemberDetailPage() {
 
   if (isAgent && memberAgent) {
     return (
-      <main className="mx-auto max-w-4xl px-6 py-10">
-        <button
-          className="text-sm text-muted-foreground hover:text-foreground mb-6 flex items-center gap-1"
-          onClick={() => router.push("/members")}
-        >
-          &larr; Members
-        </button>
+      <main className="h-full flex flex-col">
+        {/* TitleBar with breadcrumb */}
+        <TitleBar className="backdrop-blur-[24px]" style={{ backgroundColor: "color-mix(in srgb, var(--bg-grouped-tertiary) 85%, transparent)" }}>
+          <TitleBarBack onClick={() => router.push("/members")}>Members</TitleBarBack>
+        </TitleBar>
 
-        <div className="flex items-center gap-4 mb-8">
-          <MemberAvatar type="agent" name={memberAgent.name} size={48} />
-          <div>
-            <h1 className="text-xl font-semibold">@{memberAgent.name}</h1>
-            <p className="text-xs text-muted-foreground font-mono mt-0.5">
-              {memberAgent.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}
-            </p>
-            {memberAgent.description && (
-              <p className="text-sm text-muted-foreground mt-0.5">{memberAgent.description}</p>
-            )}
-            {/* Tags display and edit */}
-            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-              {memberAgent.capabilities?.map((tag) => (
-                <span key={tag} className="inline-flex h-5 items-center rounded bg-[var(--color-blue-100)] px-1.5 text-[10px] font-medium text-[var(--color-blue-1000)]">
-                  {tag}
-                </span>
-              ))}
-              {editingTags ? (
-                <div className="flex items-center gap-2 w-full mt-1">
-                  <input
-                    type="text"
-                    className="text-xs border border-border rounded px-2 py-1 bg-background text-foreground flex-1"
-                    value={tagsDraft}
-                    onChange={(e) => setTagsDraft(e.target.value)}
-                    placeholder={t("members.tagsPlaceholder")}
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") setEditingTags(false);
-                      if (e.key === "Enter") {
-                        setSavingTags(true);
-                        const tags = tagsDraft.split(",").map(s => s.trim()).filter(Boolean);
-                        fetch(`/api/agents/${entityId}`, {
-                          method: "PATCH",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ capabilities: tags }),
-                        }).then(async (res) => {
-                          if (res.ok) {
-                            const data = await res.json();
-                            setMemberAgent({ ...memberAgent, capabilities: data.agent.capabilities });
-                          }
-                          setEditingTags(false);
-                        }).finally(() => setSavingTags(false));
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={savingTags}
-                    onClick={() => {
-                      setSavingTags(true);
-                      const tags = tagsDraft.split(",").map(s => s.trim()).filter(Boolean);
-                      fetch(`/api/agents/${entityId}`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ capabilities: tags }),
-                      }).then(async (res) => {
-                        if (res.ok) {
-                          const data = await res.json();
-                          setMemberAgent({ ...memberAgent, capabilities: data.agent.capabilities });
-                        }
-                        setEditingTags(false);
-                      }).finally(() => setSavingTags(false));
-                    }}
-                  >
-                    {savingTags ? "..." : t("common.save")}
-                  </Button>
-                  <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setEditingTags(false)}>
-                    {t("common.cancel")}
-                  </button>
+        <div className="flex-1 overflow-y-auto scrollbar-thin -mt-16 pt-16">
+          <div className="mx-auto max-w-[848px] w-full px-6 pb-16">
+            {/* Centered profile header */}
+            <div className="flex flex-col items-center text-center pt-24 pb-16">
+              <MemberAvatar type="agent" name={memberAgent.name} size={96} />
+              <div className="mt-3 flex items-center gap-2">
+                <h1 className="text-[length:var(--font-size-subtitle)] font-bold leading-[1.5] text-[var(--label-primary)]">@{memberAgent.name}</h1>
+                <span className="bg-[var(--color-orange-100)] text-[var(--color-orange-1000)] text-xs px-3 h-6 inline-flex items-center rounded-full">Agent</span>
+              </div>
+              {memberAgent.description && (
+                <p className="text-[length:var(--font-size-body-small)] text-[var(--label-secondary)] mt-3 max-w-[480px]">{memberAgent.description}</p>
+              )}
+              {memberAgent.capabilities && memberAgent.capabilities.length > 0 && (
+                <div className="flex items-center gap-1 mt-3 flex-wrap justify-center">
+                  {memberAgent.capabilities.map((tag) => (
+                    <span key={tag} className="bg-[var(--fill-quaternary)] text-[var(--label-primary)] text-xs px-2 h-5 inline-flex items-center rounded-full">{tag}</span>
+                  ))}
                 </div>
-              ) : (
-                <button
-                  className="text-[10px] text-muted-foreground hover:text-foreground"
-                  onClick={() => {
-                    setTagsDraft((memberAgent.capabilities ?? []).join(", "));
-                    setEditingTags(true);
-                  }}
-                >
-                  {(memberAgent.capabilities?.length ?? 0) > 0 ? t("members.editTags") : `+ ${t("members.tags")}`}
-                </button>
               )}
             </div>
-          </div>
-          <span className="inline-flex h-6 items-center rounded bg-muted px-2 text-xs font-medium text-muted-foreground ml-auto">
-            Agent
-          </span>
-        </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="rounded-md border border-border p-3">
+        <div className="grid grid-cols-2 gap-4 mb-16">
+          <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-3">
             <p className="text-xs text-muted-foreground mb-1">Created</p>
             <p className="text-sm">{memberAgent.created_at ? new Date(memberAgent.created_at).toLocaleDateString() : "—"}</p>
           </div>
-          <div className="rounded-md border border-border p-3">
+          <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-3">
             <p className="text-xs text-muted-foreground mb-1">Last Seen</p>
             <p className="text-sm">{timeAgo(memberAgent.last_seen_at)}</p>
           </div>
           {memberAgent.created_by && (
-            <div className="rounded-md border border-border p-3 col-span-2">
+            <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-3 col-span-2">
               <p className="text-xs text-muted-foreground mb-1">{t("members.hiredBy")}</p>
               <p className="text-sm">
                 <Link href={memberUrl(`human:${memberAgent.created_by.id}`)} className="hover:underline">
@@ -246,35 +186,30 @@ export default function MemberDetailPage() {
         </div>
 
         {/* Setup Instructions (always visible) */}
-        <div className="rounded-md border border-border p-4 mb-8">
-          <h2 className="text-sm font-semibold mb-1">{t("agent.setupGuide")}</h2>
-          <p className="text-xs text-muted-foreground mb-3">{t("agent.setupGuideDesc")}</p>
+        <div className="mb-14">
+          <div className="flex items-center justify-between h-8 pl-1">
+            <h2 className="text-[length:var(--font-size-subheading)] font-semibold">{t("agent.setupGuide")}</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1 mb-5 pl-1">{t("agent.setupGuideDesc")}</p>
+          <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-4">
 
           {/* CLI Install command */}
           <details className="mb-4">
             <summary className="text-xs font-medium cursor-pointer hover:text-foreground">
               {t("agent.cliInstall")}
             </summary>
-            <div className="rounded bg-muted p-3 mt-2">
+            <div className="rounded bg-[var(--fill-quaternary)] p-3 mt-2">
               <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed break-all">{`mkdir -p ~/.local/bin && curl -sL ${typeof window !== "undefined" ? window.location.origin : ""}/cli/muleteam -o ~/.local/bin/muleteam && chmod +x ~/.local/bin/muleteam && export PATH="$HOME/.local/bin:$PATH" && MULETEAM_URL=${typeof window !== "undefined" ? window.location.origin : ""} MULETEAM_TOKEN=<your-token> muleteam setup ${memberAgent.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`}</pre>
             </div>
             <p className="text-[11px] text-muted-foreground mt-1.5">{t("agent.cliInstallNote")}</p>
           </details>
-          <div className="flex gap-1 mb-3">
-            {(["claude", "opencode", "openclaw"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setSnippetTab(tab)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  snippetTab === tab
-                    ? "bg-foreground text-background"
-                    : "bg-muted text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {tab === "claude" ? t("members.tabClaudeCode") : tab === "opencode" ? t("members.tabOpenCode") : t("members.tabOpenClaw")}
-              </button>
-            ))}
-          </div>
+          <Tabs value={snippetTab} onValueChange={(v) => setSnippetTab(v as "claude" | "opencode" | "openclaw")} className="mb-3">
+            <TabsList variant="segmented" size="sm">
+              <TabsTrigger value="claude">{t("members.tabClaudeCode")}</TabsTrigger>
+              <TabsTrigger value="opencode">{t("members.tabOpenCode")}</TabsTrigger>
+              <TabsTrigger value="openclaw">{t("members.tabOpenClaw")}</TabsTrigger>
+            </TabsList>
+          </Tabs>
           <p className="text-xs font-medium mb-2">
             {snippetTab === "claude"
               ? "CLAUDE.md"
@@ -282,7 +217,7 @@ export default function MemberDetailPage() {
               ? "AGENTS.md"
               : "SKILL.md"}
           </p>
-          <div className="rounded bg-muted p-3">
+          <div className="rounded bg-[var(--fill-quaternary)] p-3">
             <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed">
               {snippetTab === "claude"
                 ? claudeMdSnippet(memberAgent.name, memberAgent.description)
@@ -302,20 +237,16 @@ export default function MemberDetailPage() {
                 : openClawSkillSnippet(memberAgent.name, memberAgent.description)
             }
           />
+          </div>
         </div>
 
         {/* Token Management */}
-        <div className="rounded-md border border-border p-4 mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-sm font-semibold">{t("agent.tokenManagement")}</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {newToken ? t("agent.newTokenGenerated") : t("agent.tokenDesc")}
-              </p>
-            </div>
+        <div className="mb-14">
+          <div className="flex items-center justify-between h-8 pl-1">
+            <h2 className="text-[length:var(--font-size-subheading)] font-semibold">{t("agent.tokenManagement")}</h2>
             {!newToken && (
               <>
-                <Button variant="outline" size="sm" onClick={() => setConfirmRegenerate(true)} disabled={regenerating}>
+                <Button variant="outline-filled" size="sm" onClick={() => setConfirmRegenerate(true)} disabled={regenerating}>
                   {regenerating ? "..." : t("agent.regenerateToken")}
                 </Button>
                 <ConfirmDialog
@@ -331,6 +262,10 @@ export default function MemberDetailPage() {
               </>
             )}
           </div>
+          <p className="text-xs text-muted-foreground mt-1 mb-5 pl-1">
+            {newToken ? t("agent.newTokenGenerated") : t("agent.tokenDesc")}
+          </p>
+          <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-4">
           {(() => {
             const origin = typeof window !== "undefined" ? window.location.origin : "";
             const tokenValue = newToken || "<your-token>";
@@ -340,34 +275,26 @@ export default function MemberDetailPage() {
               openclaw: openClawSetupPrompt(origin, memberAgent.name, tokenValue, memberAgent.description),
             };
             return (
-              <div className="mt-3 space-y-3">
+              <div className="space-y-3">
                 {newToken && (
-                  <div className="rounded bg-muted/50 border border-border p-2">
+                  <div className="rounded bg-muted/50 border border-[var(--border-color-secondary)] p-2">
                     <p className="text-[11px] text-muted-foreground">
                       {t("members.token")}: <code className="font-mono text-foreground break-all">{newToken}</code>
                     </p>
                   </div>
                 )}
-                <div className="rounded-md border border-border p-3 space-y-2">
-                  <div className="flex gap-1 mb-2">
-                    {(["claude", "opencode", "openclaw"] as const).map((tab) => (
-                      <button
-                        key={tab}
-                        onClick={() => setSetupTab(tab)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                          setupTab === tab
-                            ? "bg-foreground text-background"
-                            : "bg-muted text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        {tab === "claude" ? t("members.tabClaudeCode") : tab === "opencode" ? t("members.tabOpenCode") : t("members.tabOpenClaw")}
-                      </button>
-                    ))}
-                  </div>
+                <div className="space-y-2">
+                  <Tabs value={setupTab} onValueChange={(v) => setSetupTab(v as "claude" | "opencode" | "openclaw")} className="mb-2">
+                    <TabsList variant="segmented" size="sm">
+                      <TabsTrigger value="claude">{t("members.tabClaudeCode")}</TabsTrigger>
+                      <TabsTrigger value="opencode">{t("members.tabOpenCode")}</TabsTrigger>
+                      <TabsTrigger value="openclaw">{t("members.tabOpenClaw")}</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
                   <p className="text-xs font-medium">
                     {setupTab === "claude" ? t("members.pasteSetupPrompt") : setupTab === "opencode" ? t("members.pasteOpenCode") : t("members.pasteOpenClaw")}
                   </p>
-                  <div className="rounded bg-muted p-2 max-h-48 overflow-y-auto">
+                  <div className="rounded bg-[var(--fill-quaternary)] p-2 max-h-48 overflow-y-auto">
                     <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed break-all">
                       {setupTexts[setupTab]}
                     </pre>
@@ -381,44 +308,58 @@ export default function MemberDetailPage() {
               </div>
             );
           })()}
+          </div>
         </div>
 
         {/* Channels */}
-        <div className="mb-8">
-          <h2 className="text-sm font-semibold mb-3">Channels ({memberChannels.length})</h2>
+        <div className="mb-14">
+          <div className="flex items-center justify-between h-8 pl-1 mb-5"><h2 className="text-[length:var(--font-size-subheading)] font-semibold">Channels ({memberChannels.length})</h2></div>
           {memberChannels.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Not in any channels yet.</p>
+            <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-4">
+              <p className="text-sm text-[var(--label-tertiary)] text-center">Not in any channels yet.</p>
+            </div>
           ) : (
-            <div className="space-y-1">
-              {memberChannels.map((p) => (
-                <div key={p.id} className="flex items-center gap-2 rounded px-3 py-2 text-sm hover:bg-muted/50 cursor-pointer" onClick={() => router.push("/channels")}>
-                  <span className="font-medium">{p.name}</span>
+            <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-1 member-list-container">
+              {memberChannels.map((p) => {
+                const chConfig = CHANNEL_CONFIG[p.id];
+                const ChIcon = chConfig?.icon;
+                return (
+                <div key={p.id} className="member-list-row relative flex items-center justify-between rounded-[8px] px-3 h-11 text-sm hover:bg-[var(--fill-quaternary)] cursor-pointer transition-colors" onClick={() => navSetChannel(p.id)}>
+                  <div className="flex items-center gap-2">
+                    {ChIcon && <ChIcon className={`size-4 shrink-0 ${chConfig.color}`} strokeWidth={ICON_STROKE} />}
+                    <span>{p.name}</span>
+                  </div>
                   <span className="text-xs text-muted-foreground">{p.members.length} members</span>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
 
         {/* Threads */}
         <div>
-          <h2 className="text-sm font-semibold mb-3">Threads ({memberThreads.length})</h2>
+          <div className="flex items-center justify-between h-8 pl-1 mb-5"><h2 className="text-[length:var(--font-size-subheading)] font-semibold">Threads ({memberThreads.length})</h2></div>
           {memberThreads.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Not participating in any threads yet.</p>
+            <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-4">
+              <p className="text-sm text-[var(--label-tertiary)] text-center">Not participating in any threads yet.</p>
+            </div>
           ) : (
-            <div className="divide-y divide-border rounded-md border border-border">
+            <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-1 member-list-container">
               {memberThreads.map((t) => (
                 <div
                   key={t.id}
-                  className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="member-list-row relative flex items-center gap-3 px-3 h-11 rounded-[8px] cursor-pointer hover:bg-[var(--fill-quaternary)] transition-colors"
                   onClick={() => router.push(`/thread/${t.id}`)}
                 >
-                  <span className="text-sm font-medium flex-1 truncate">{t.title}</span>
+                  <span className="text-sm flex-1 truncate">{t.title}</span>
                   <span className="text-xs text-muted-foreground shrink-0">{timeAgo(t.updated_at)}</span>
                 </div>
               ))}
             </div>
           )}
+        </div>
+        </div>
         </div>
       </main>
     );
@@ -426,118 +367,52 @@ export default function MemberDetailPage() {
 
   if (!isAgent && memberUser) {
     return (
-      <main className="mx-auto max-w-4xl px-6 py-10">
-        <button
-          className="text-sm text-muted-foreground hover:text-foreground mb-6 flex items-center gap-1"
-          onClick={() => router.push("/members")}
-        >
-          &larr; Members
-        </button>
+      <main className="h-full flex flex-col">
+        {/* TitleBar with breadcrumb */}
+        <TitleBar className="backdrop-blur-[24px]" style={{ backgroundColor: "color-mix(in srgb, var(--bg-grouped-tertiary) 85%, transparent)" }}>
+          <TitleBarBack onClick={() => router.push("/members")}>Members</TitleBarBack>
+        </TitleBar>
 
-        <div className="flex items-center gap-4 mb-8">
-          <MemberAvatar type="human" name={memberUser.name} size={48} avatarUrl={memberUser.avatar_url} />
-          <div>
-            <h1 className="text-xl font-semibold">{memberUser.name}</h1>
-            {editingDescription ? (
-              <div className="flex items-center gap-2 mt-1">
-                <input
-                  type="text"
-                  className="text-sm border border-border rounded px-2 py-1 bg-background text-foreground w-64"
-                  value={descriptionDraft}
-                  onChange={(e) => setDescriptionDraft(e.target.value)}
-                  placeholder="Add a description..."
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") setEditingDescription(false);
-                    if (e.key === "Enter") {
-                      setSavingDescription(true);
-                      fetch(`/api/users/${entityId}`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ description: descriptionDraft }),
-                      }).then(() => {
-                        setMemberUser({ ...memberUser, description: descriptionDraft || undefined });
-                        setEditingDescription(false);
-                      }).finally(() => setSavingDescription(false));
-                    }
-                  }}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={savingDescription}
-                  onClick={() => {
-                    setSavingDescription(true);
-                    fetch(`/api/users/${entityId}`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ description: descriptionDraft }),
-                    }).then(() => {
-                      setMemberUser({ ...memberUser, description: descriptionDraft || undefined });
-                      setEditingDescription(false);
-                    }).finally(() => setSavingDescription(false));
-                  }}
-                >
-                  {savingDescription ? "Saving..." : "Save"}
-                </Button>
-                <button
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                  onClick={() => setEditingDescription(false)}
-                >
-                  Cancel
-                </button>
+        <div className="flex-1 overflow-y-auto scrollbar-thin -mt-16 pt-16">
+          <div className="mx-auto max-w-[848px] w-full px-6 pb-16">
+            {/* Centered profile header */}
+            <div className="flex flex-col items-center text-center pt-24 pb-16">
+              <MemberAvatar type="human" name={memberUser.name} size={96} avatarUrl={memberUser.avatar_url} />
+              <div className="mt-3 flex items-center gap-2">
+                <h1 className="text-[length:var(--font-size-subtitle)] font-bold leading-[1.5] text-[var(--label-primary)]">{memberUser.name}</h1>
+                <span className="bg-[var(--color-green-100)] text-[var(--color-green-1000)] text-xs px-3 h-6 inline-flex items-center rounded-full">Human</span>
               </div>
-            ) : (
-              <div className="flex items-center gap-2 mt-0.5">
-                <p className="text-sm text-muted-foreground">
-                  {memberUser.description || (isOwnProfile ? "No description" : "")}
-                </p>
-                {isOwnProfile && (
-                  <button
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                    onClick={() => {
-                      setDescriptionDraft(memberUser.description || "");
-                      setEditingDescription(true);
-                    }}
-                  >
-                    {memberUser.description ? "Edit" : "Add"}
-                  </button>
-                )}
-              </div>
-            )}
-            {isOwnProfile && (
-              <p className="text-xs text-muted-foreground mt-0.5">{memberUser.email}</p>
-            )}
-          </div>
-          <span className="inline-flex h-6 items-center rounded bg-muted px-2 text-xs font-medium text-muted-foreground ml-auto">
-            Human
-          </span>
-        </div>
+              {memberUser.description && (
+                <p className="text-[length:var(--font-size-body-small)] text-[var(--label-secondary)] mt-3 max-w-[480px]">{memberUser.description}</p>
+              )}
+            </div>
 
-        <div className="flex gap-4 mb-8 flex-wrap">
+
+        <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-4 mb-16">
           {memberUser.created_at && (
-            <div className="rounded-md border border-border p-3">
-              <p className="text-xs text-muted-foreground mb-1">Joined</p>
-              <p className="text-sm">{new Date(memberUser.created_at).toLocaleDateString()}</p>
+            <div className="flex items-center justify-between py-2">
+              <span className="text-sm text-[var(--label-primary)]">Joined</span>
+              <span className="text-sm text-[var(--label-secondary)]">{new Date(memberUser.created_at).toLocaleDateString()}</span>
             </div>
           )}
           {memberUser.invited_by && (
-            <div className="rounded-md border border-border p-3">
-              <p className="text-xs text-muted-foreground mb-1">Invited by</p>
-              <p className="text-sm">
-                <Link href={memberUrl(`human:${memberUser.invited_by.id}`)} className="hover:underline">
-                  {memberUser.invited_by.name}
-                </Link>
-              </p>
+            <div className="flex items-center justify-between py-2">
+              <span className="text-sm text-[var(--label-primary)]">Invited by</span>
+              <Link href={memberUrl(`human:${memberUser.invited_by.id}`)} className="text-sm text-[var(--label-secondary)] hover:underline">
+                {memberUser.invited_by.name}
+              </Link>
             </div>
           )}
         </div>
 
         {/* Webhook Notifications — own profile only */}
         {isOwnProfile && (
-          <div className="rounded-md border border-border p-4 mb-8">
-            <h2 className="text-sm font-semibold mb-1">{t("webhook.title")}</h2>
-            <p className="text-xs text-muted-foreground mb-3">{t("webhook.help")}</p>
+          <div className="mb-14">
+            <div className="flex items-center justify-between h-8 pl-1">
+              <h2 className="text-[length:var(--font-size-subheading)] font-semibold">{t("webhook.title")}</h2>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1 mb-5 pl-1">{t("webhook.help")}</p>
+            <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-4">
             <div className="flex items-center gap-2">
               <Input
                 type="url"
@@ -614,7 +489,7 @@ export default function MemberDetailPage() {
               <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
                 {t("webhook.samplePayload")}
               </summary>
-              <div className="rounded bg-muted p-3 mt-2">
+              <div className="rounded bg-[var(--fill-quaternary)] p-3 mt-2">
                 <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed">{`{
   "event": "mention",
   "thread_id": "abc123",
@@ -629,16 +504,17 @@ export default function MemberDetailPage() {
                 {t("webhook.eventTypes")}
               </p>
             </details>
+            </div>
           </div>
         )}
 
         {/* Personal Access Tokens — own profile only */}
         {isOwnProfile && (
-          <div className="rounded-md border border-border p-4 mb-8">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="text-sm font-semibold">{t("pat.title")}</h2>
+          <div className="mb-14">
+            <div className="flex items-center justify-between h-8 pl-1">
+              <h2 className="text-[length:var(--font-size-subheading)] font-semibold">{t("pat.title")}</h2>
               <Button
-                variant="outline"
+                variant="outline-filled"
                 size="sm"
                 disabled={patGenerating}
                 onClick={async () => {
@@ -665,15 +541,16 @@ export default function MemberDetailPage() {
                   }
                 }}
               >
-                {patGenerating ? "..." : t("pat.generate")}
+              {patGenerating ? "..." : t("pat.generate")}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground mb-3">{t("pat.description")}</p>
+            <p className="text-xs text-muted-foreground mt-1 mb-5 pl-1">{t("pat.description")}</p>
+            <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-4">
 
             {newPatToken && (
-              <div className="rounded-md border border-border bg-muted/50 p-3 mb-3 space-y-2">
+              <div className="rounded-md bg-[var(--bg-grouped-quaternary)] bg-muted/50 p-3 mb-3 space-y-2">
                 <p className="text-xs text-[var(--color-green-1000)] font-medium">{t("pat.generated")}</p>
-                <div className="rounded bg-muted p-2">
+                <div className="rounded bg-[var(--fill-quaternary)] p-2">
                   <code className="text-[11px] font-mono break-all text-foreground">{newPatToken}</code>
                 </div>
                 <CopyButton className="w-full" label={t("common.copy")} text={newPatToken} />
@@ -681,7 +558,7 @@ export default function MemberDetailPage() {
                   <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
                     {t("pat.cliUsage")}
                   </summary>
-                  <div className="rounded bg-muted p-2 mt-1">
+                  <div className="rounded bg-[var(--fill-quaternary)] p-2 mt-1">
                     <pre className="text-[11px] font-mono whitespace-pre-wrap leading-relaxed break-all">{`MULETEAM_TOKEN=${newPatToken} muleteam setup ${currentUser?.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ?? "your-name"}`}</pre>
                   </div>
                 </details>
@@ -689,9 +566,9 @@ export default function MemberDetailPage() {
             )}
 
             {pats.length === 0 ? (
-              <p className="text-xs text-muted-foreground">{t("pat.noTokens")}</p>
+              <p className="text-sm text-[var(--label-tertiary)] text-center">{t("pat.noTokens")}</p>
             ) : (
-              <div className="divide-y divide-border rounded-md border border-border">
+              <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-1 member-list-container">
                 {pats.map((pat) => (
                   <div key={pat.id} className="flex items-center gap-3 px-3 py-2">
                     <div className="flex-1 min-w-0">
@@ -730,52 +607,66 @@ export default function MemberDetailPage() {
                 setPats((prev) => prev.filter((p) => p.id !== idToRevoke));
               }}
             />
+            </div>
           </div>
         )}
 
         {/* Channels */}
-        <div className="mb-8">
-          <h2 className="text-sm font-semibold mb-3">Channels ({memberChannels.length})</h2>
+        <div className="mb-14">
+          <div className="flex items-center justify-between h-8 pl-1 mb-5"><h2 className="text-[length:var(--font-size-subheading)] font-semibold">Channels ({memberChannels.length})</h2></div>
           {memberChannels.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Not in any channels yet.</p>
+            <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-4">
+              <p className="text-sm text-[var(--label-tertiary)] text-center">Not in any channels yet.</p>
+            </div>
           ) : (
-            <div className="space-y-1">
-              {memberChannels.map((p) => (
-                <div key={p.id} className="flex items-center gap-2 rounded px-3 py-2 text-sm hover:bg-muted/50 cursor-pointer" onClick={() => router.push("/channels")}>
-                  <span className="font-medium">{p.name}</span>
+            <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-1 member-list-container">
+              {memberChannels.map((p) => {
+                const chConfig = CHANNEL_CONFIG[p.id];
+                const ChIcon = chConfig?.icon;
+                return (
+                <div key={p.id} className="member-list-row relative flex items-center justify-between rounded-[8px] px-3 h-11 text-sm hover:bg-[var(--fill-quaternary)] cursor-pointer transition-colors" onClick={() => navSetChannel(p.id)}>
+                  <div className="flex items-center gap-2">
+                    {ChIcon && <ChIcon className={`size-4 shrink-0 ${chConfig.color}`} strokeWidth={ICON_STROKE} />}
+                    <span>{p.name}</span>
+                  </div>
                   <span className="text-xs text-muted-foreground">{p.members.length} members</span>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
 
         {/* Threads */}
         <div>
-          <h2 className="text-sm font-semibold mb-3">Threads ({memberThreads.length})</h2>
+          <div className="flex items-center justify-between h-8 pl-1 mb-5"><h2 className="text-[length:var(--font-size-subheading)] font-semibold">Threads ({memberThreads.length})</h2></div>
           {memberThreads.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Not participating in any threads yet.</p>
+            <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-4">
+              <p className="text-sm text-[var(--label-tertiary)] text-center">Not participating in any threads yet.</p>
+            </div>
           ) : (
-            <div className="divide-y divide-border rounded-md border border-border">
+            <div className="rounded-md bg-[var(--bg-grouped-quaternary)] p-1 member-list-container">
               {memberThreads.map((t) => (
                 <div
                   key={t.id}
-                  className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="member-list-row relative flex items-center gap-3 px-3 h-11 rounded-[8px] cursor-pointer hover:bg-[var(--fill-quaternary)] transition-colors"
                   onClick={() => router.push(`/thread/${t.id}`)}
                 >
-                  <span className="text-sm font-medium flex-1 truncate">{t.title}</span>
+                  <span className="text-sm flex-1 truncate">{t.title}</span>
                   <span className="text-xs text-muted-foreground shrink-0">{timeAgo(t.updated_at)}</span>
                 </div>
               ))}
             </div>
           )}
         </div>
+        </div>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
+    <main className="mx-auto max-w-[800px] px-6 py-10">
       <button
         className="text-sm text-muted-foreground hover:text-foreground mb-6 flex items-center gap-1"
         onClick={() => router.push("/members")}
