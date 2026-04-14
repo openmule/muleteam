@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/layout/AuthProvider";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,12 @@ import { setupPrompt, openCodeSetupPrompt, openClawSetupPrompt } from "@/compone
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { timeAgo, memberUrl } from "@/components/shared/helpers";
 import { useT } from "@/lib/i18n";
+import {
+  TitleBar,
+  TitleBarHeading,
+  TitleBarTitle,
+  TitleBarActions,
+} from "@/components/patterns/titlebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -179,27 +185,57 @@ export default function MembersPage() {
     );
   };
 
-  return (
-    <main className="h-full overflow-y-auto scrollbar-thin">
-      <div className="mx-auto max-w-[800px] w-full">
-        {/* Title area */}
-        <div className="flex items-start justify-between pt-20 pb-10">
-          <div className="flex flex-col gap-3">
-            <h1 className="text-[length:var(--font-size-title-page)] font-bold leading-[1.2] text-[var(--label-primary)]">Members</h1>
-            <p className="text-sm text-[var(--label-secondary)]">Manage team members and AI agents.</p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Button variant="outline-filled" size="sm" onClick={() => setInviteOpen(true)}>
-              <UserPlus className="h-4 w-4 mr-1" strokeWidth={1.5} /> Invite Member
-            </Button>
-            <Button variant="outline-filled" size="sm" onClick={() => setRegisterAgentOpen(true)}>
-              <Bot className="h-4 w-4 mr-1" strokeWidth={1.5} /> Hire Agent
-            </Button>
-          </div>
-        </div>
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  const titleRef = useRef<HTMLDivElement>(null);
 
-        {/* Members list */}
-        <div className="flex flex-col pb-20">
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const titleEl = titleRef.current;
+      if (titleEl) {
+        setScrolled(titleEl.getBoundingClientRect().bottom < 64);
+      }
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const actionButtons = (
+    <>
+      <Button variant="outline-filled" size="sm" onClick={() => setInviteOpen(true)}>
+        <UserPlus className="h-4 w-4 mr-1" strokeWidth={1.5} /> Invite Member
+      </Button>
+      <Button variant="outline-filled" size="sm" onClick={() => setRegisterAgentOpen(true)}>
+        <Bot className="h-4 w-4 mr-1" strokeWidth={1.5} /> Hire Agent
+      </Button>
+    </>
+  );
+
+  return (
+    <main className="h-full flex flex-col">
+      {/* TitleBar — fixed at top */}
+      <TitleBar className={`transition-all duration-200 ${scrolled ? "border-b border-[var(--border-color-secondary)] backdrop-blur-[20px]" : ""}`} style={scrolled ? { backgroundColor: "color-mix(in srgb, var(--bg-grouped-tertiary) 85%, transparent)" } : undefined}>
+        <TitleBarHeading className={`transition-opacity duration-200 ${scrolled ? "opacity-100" : "opacity-0"}`}>
+          <TitleBarTitle>Members</TitleBarTitle>
+        </TitleBarHeading>
+        <TitleBarActions>
+          {actionButtons}
+        </TitleBarActions>
+      </TitleBar>
+
+      {/* Scrollable content */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
+        <div className="mx-auto max-w-[800px] w-full">
+          {/* Page title — centered */}
+          <div ref={titleRef} className="flex flex-col items-center text-center pt-24 pb-16">
+            <h1 className="text-[length:var(--font-size-title-page)] font-bold leading-[1.2] text-[var(--label-primary)]">Members</h1>
+            <p className="text-[length:var(--font-size-body-base)] text-[var(--label-secondary)] mt-3">Manage team members and AI agents.</p>
+          </div>
+
+          {/* Members list */}
+          <div className="flex flex-col pb-20">
           {/* Humans */}
           {allUsers.map((u) => {
             const isCurrentUser = u.id === user?.id;
@@ -288,6 +324,7 @@ export default function MembersPage() {
             </div>
           )}
         </div>
+      </div>
       </div>
 
       {/* Dialogs — kept outside the scrollable area */}

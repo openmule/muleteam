@@ -12,6 +12,12 @@ import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { useT } from "@/lib/i18n";
 import { timeAgo, memberUrl } from "@/components/shared/helpers";
 import { Input } from "@/components/ui/input";
+import {
+  TitleBar,
+  TitleBarHeading,
+  TitleBarTitle,
+  TitleBarBack,
+} from "@/components/patterns/titlebar";
 import type { User, RegisteredAgent, ThreadMeta, ChannelMeta } from "@/components/shared/types";
 
 export default function MemberDetailPage() {
@@ -127,31 +133,35 @@ export default function MemberDetailPage() {
 
   if (isAgent && memberAgent) {
     return (
-      <main className="mx-auto max-w-4xl px-6 py-10">
-        <button
-          className="text-sm text-muted-foreground hover:text-foreground mb-6 flex items-center gap-1"
-          onClick={() => router.push("/members")}
-        >
-          &larr; Members
-        </button>
+      <main className="h-full flex flex-col">
+        {/* TitleBar with breadcrumb */}
+        <TitleBar>
+          <TitleBarBack onClick={() => router.push("/members")}>Members</TitleBarBack>
+          <TitleBarHeading>
+            <TitleBarTitle>@{memberAgent.name}</TitleBarTitle>
+          </TitleBarHeading>
+        </TitleBar>
 
-        <div className="flex items-center gap-4 mb-8">
-          <MemberAvatar type="agent" name={memberAgent.name} size={48} />
-          <div>
-            <h1 className="text-xl font-semibold">@{memberAgent.name}</h1>
-            <p className="text-xs text-muted-foreground font-mono mt-0.5">
-              {memberAgent.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}
-            </p>
-            {memberAgent.description && (
-              <p className="text-sm text-muted-foreground mt-0.5">{memberAgent.description}</p>
-            )}
-            {/* Tags display and edit */}
-            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-              {memberAgent.capabilities?.map((tag) => (
-                <span key={tag} className="inline-flex h-5 items-center rounded bg-[var(--color-blue-100)] px-1.5 text-[10px] font-medium text-[var(--color-blue-1000)]">
-                  {tag}
-                </span>
-              ))}
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
+          <div className="mx-auto max-w-[800px] w-full px-6">
+            {/* Centered profile header */}
+            <div className="flex flex-col items-center text-center pt-24 pb-16">
+              <MemberAvatar type="agent" name={memberAgent.name} size={80} />
+              <div className="mt-4 flex items-center gap-2">
+                <h1 className="text-[length:var(--font-size-title-page)] font-bold text-[var(--label-primary)]">@{memberAgent.name}</h1>
+                <span className="bg-[var(--color-orange-100)] text-[var(--color-orange-1000)] text-[10px] px-1.5 h-4 inline-flex items-center rounded-full">Agent</span>
+              </div>
+              {memberAgent.description && (
+                <p className="text-[length:var(--font-size-body-base)] text-[var(--label-secondary)] mt-2 max-w-[480px]">{memberAgent.description}</p>
+              )}
+              {memberAgent.capabilities && memberAgent.capabilities.length > 0 && (
+                <div className="flex items-center gap-1.5 mt-3 flex-wrap justify-center">
+                  {memberAgent.capabilities.map((tag) => (
+                    <span key={tag} className="bg-[var(--fill-quaternary)] text-[var(--label-secondary)] text-[10px] px-1.5 h-4 inline-flex items-center rounded-full">{tag}</span>
+                  ))}
+                </div>
+              )}
+            </div>
               {editingTags ? (
                 <div className="flex items-center gap-2 w-full mt-1">
                   <input
@@ -420,24 +430,34 @@ export default function MemberDetailPage() {
             </div>
           )}
         </div>
+        </div>
       </main>
     );
   }
 
   if (!isAgent && memberUser) {
     return (
-      <main className="mx-auto max-w-4xl px-6 py-10">
-        <button
-          className="text-sm text-muted-foreground hover:text-foreground mb-6 flex items-center gap-1"
-          onClick={() => router.push("/members")}
-        >
-          &larr; Members
-        </button>
+      <main className="h-full flex flex-col">
+        {/* TitleBar with breadcrumb */}
+        <TitleBar>
+          <TitleBarBack onClick={() => router.push("/members")}>Members</TitleBarBack>
+          <TitleBarHeading>
+            <TitleBarTitle>{memberUser.name}</TitleBarTitle>
+          </TitleBarHeading>
+        </TitleBar>
 
-        <div className="flex items-center gap-4 mb-8">
-          <MemberAvatar type="human" name={memberUser.name} size={48} avatarUrl={memberUser.avatar_url} />
-          <div>
-            <h1 className="text-xl font-semibold">{memberUser.name}</h1>
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
+          <div className="mx-auto max-w-[800px] w-full px-6">
+            {/* Centered profile header */}
+            <div className="flex flex-col items-center text-center pt-24 pb-16">
+              <MemberAvatar type="human" name={memberUser.name} size={80} avatarUrl={memberUser.avatar_url} />
+              <div className="mt-4 flex items-center gap-2">
+                <h1 className="text-[length:var(--font-size-title-page)] font-bold text-[var(--label-primary)]">{memberUser.name}</h1>
+                <span className="bg-[var(--color-green-100)] text-[var(--color-green-1000)] text-[10px] px-1.5 h-4 inline-flex items-center rounded-full">Human</span>
+              </div>
+              {memberUser.description && (
+                <p className="text-[length:var(--font-size-body-base)] text-[var(--label-secondary)] mt-2 max-w-[480px]">{memberUser.description}</p>
+              )}
             {editingDescription ? (
               <div className="flex items-center gap-2 mt-1">
                 <input
@@ -769,6 +789,8 @@ export default function MemberDetailPage() {
               ))}
             </div>
           )}
+        </div>
+        </div>
         </div>
       </main>
     );
