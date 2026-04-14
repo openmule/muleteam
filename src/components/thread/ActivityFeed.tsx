@@ -32,8 +32,16 @@ export function ActivityFeed({
   const t = useT();
   const containerRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
+  const prevThreadIdRef = useRef(threadId);
 
   const forceScrollRef = useRef(false);
+
+  // Reset scroll state when switching threads
+  if (threadId !== prevThreadIdRef.current) {
+    prevCountRef.current = 0;
+    prevThreadIdRef.current = threadId;
+    forceScrollRef.current = false;
+  }
 
   // Mark force-scroll when scrollToken changes (user sent a message)
   useEffect(() => {
