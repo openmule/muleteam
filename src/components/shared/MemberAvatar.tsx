@@ -58,7 +58,7 @@ export function MemberAvatar({
 
   // Agent: DiceBear image + bot badge
   const url = `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${encodeURIComponent(name)}`;
-  const showBadge = size >= 20;
+  const showBadge = false;
   // Badge scales with avatar size
   const badgeSize = Math.max(10, Math.round(size * 0.38));
 

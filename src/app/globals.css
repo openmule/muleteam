@@ -79,6 +79,28 @@
   color: var(--label-secondary);
 }
 
+/* Member list separator — hides on hover of current and adjacent rows */
+.member-list-container > .member-list-row:not(:first-child)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background-color: var(--border-color-tertiary);
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+.member-list-container > .member-list-row:hover::before,
+.member-list-container > .member-list-row:hover + .member-list-row::before {
+  opacity: 0;
+}
+/* Members page list — separator aligned with name (after avatar) */
+.member-list-container.member-list-main > .member-list-row:not(:first-child)::before {
+  left: 79px;
+  right: 0;
+}
+
 /* Override browser autofill background */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
