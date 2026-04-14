@@ -155,6 +155,23 @@ export default function MembersPage() {
     if (res.ok) fetchInvites();
   };
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  const titleRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const titleEl = titleRef.current;
+      if (titleEl) {
+        setScrolled(titleEl.getBoundingClientRect().bottom < 64);
+      }
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [loading]);
+
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -185,30 +202,13 @@ export default function MembersPage() {
     );
   };
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [scrolled, setScrolled] = useState(false);
-  const titleRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const onScroll = () => {
-      const titleEl = titleRef.current;
-      if (titleEl) {
-        setScrolled(titleEl.getBoundingClientRect().bottom < 64);
-      }
-    };
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, []);
-
   const actionButtons = (
     <>
-      <Button variant="outline-filled" size="sm" onClick={() => setInviteOpen(true)}>
-        <UserPlus className="h-4 w-4 mr-1" strokeWidth={1.5} /> Invite Member
+      <Button variant="outline-filled" size="default" onClick={() => setInviteOpen(true)}>
+        <UserPlus className="h-4 w-4" strokeWidth={1.5} /> Invite Member
       </Button>
-      <Button variant="outline-filled" size="sm" onClick={() => setRegisterAgentOpen(true)}>
-        <Bot className="h-4 w-4 mr-1" strokeWidth={1.5} /> Hire Agent
+      <Button variant="outline-filled" size="default" onClick={() => setRegisterAgentOpen(true)}>
+        <Bot className="h-4 w-4" strokeWidth={1.5} /> Hire Agent
       </Button>
     </>
   );
@@ -216,7 +216,7 @@ export default function MembersPage() {
   return (
     <main className="h-full flex flex-col">
       {/* TitleBar — fixed at top */}
-      <TitleBar className={`transition-all duration-200 ${scrolled ? "border-b border-[var(--border-color-secondary)] backdrop-blur-[20px]" : ""}`} style={scrolled ? { backgroundColor: "color-mix(in srgb, var(--bg-grouped-tertiary) 85%, transparent)" } : undefined}>
+      <TitleBar className="backdrop-blur-[24px] transition-all duration-200" style={{ backgroundColor: "color-mix(in srgb, var(--bg-grouped-tertiary) 85%, transparent)" }}>
         <TitleBarHeading className={`transition-opacity duration-200 ${scrolled ? "opacity-100" : "opacity-0"}`}>
           <TitleBarTitle>Members</TitleBarTitle>
         </TitleBarHeading>
@@ -226,7 +226,7 @@ export default function MembersPage() {
       </TitleBar>
 
       {/* Scrollable content */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin -mt-16 pt-16">
         <div className="mx-auto max-w-[800px] w-full">
           {/* Page title — centered */}
           <div ref={titleRef} className="flex flex-col items-center text-center pt-24 pb-16">
@@ -235,14 +235,14 @@ export default function MembersPage() {
           </div>
 
           {/* Members list */}
-          <div className="flex flex-col pb-20">
+          <div className="flex flex-col pb-20 member-list-container member-list-main">
           {/* Humans */}
           {allUsers.map((u) => {
             const isCurrentUser = u.id === user?.id;
             return (
               <div
                 key={`human:${u.id}`}
-                className="group flex items-center gap-3 py-4 border-b border-[var(--border-color-primary)] cursor-pointer"
+                className="member-list-row group relative flex items-center gap-4 py-4 px-3 rounded-[8px] cursor-pointer hover:bg-[var(--fill-quaternary)] transition-colors"
                 onClick={() => router.push(memberUrl(`human:${u.id}`))}
               >
                 <MemberAvatar type="human" name={u.name} size={48} avatarUrl={u.avatar_url} />
@@ -287,7 +287,7 @@ export default function MembersPage() {
           {agents.map((agent) => (
             <div
               key={`agent:${agent.id}`}
-              className="group flex items-start gap-3 py-4 border-b border-[var(--border-color-primary)] cursor-pointer"
+              className="member-list-row group relative flex items-center gap-3 py-4 px-3 rounded-[8px] cursor-pointer hover:bg-[var(--fill-quaternary)] transition-colors"
               onClick={() => router.push(memberUrl(`agent:${agent.id}`))}
             >
               <MemberAvatar type="agent" name={agent.name} size={48} />

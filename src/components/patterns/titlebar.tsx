@@ -14,7 +14,7 @@ function TitleBar({ className, children, ...props }: React.ComponentProps<"div">
     <div
       data-slot="titlebar"
       className={cn(
-        "flex items-center gap-[var(--space-300)] shrink-0",
+        "flex items-center gap-[var(--space-300)] shrink-0 relative z-10",
         "h-16 px-5",
         className
       )}

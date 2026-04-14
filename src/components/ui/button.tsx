@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-[4px] whitespace-nowrap text-[length:var(--font-size-body-small)] font-normal transition-colors focus-visible:outline-solid focus-visible:outline-[4px] focus-visible:outline-[var(--gray-negative-200)] focus-visible:-outline-offset-1 disabled:pointer-events-none disabled:opacity-50 active:translate-y-px [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&>svg:first-child]:ml-[-2px] [&>svg:last-child]:mr-[-2px]",
+  "inline-flex items-center justify-center gap-[6px] whitespace-nowrap text-[length:var(--font-size-body-small)] font-normal transition-colors focus-visible:outline-solid focus-visible:outline-[4px] focus-visible:outline-[var(--gray-negative-200)] focus-visible:-outline-offset-1 disabled:pointer-events-none disabled:opacity-50 active:translate-y-px [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:[stroke-width:1.5px] [&>svg:first-child]:ml-[-2px] [&>svg:last-child]:mr-[-2px]",
   {
     variants: {
       variant: {
@@ -18,7 +18,7 @@ const buttonVariants = cva(
           "border border-input bg-[var(--bg-grouped-quaternary)] hover:bg-accent hover:text-accent-foreground",
         secondary:
           "bg-[var(--fill-tertiary)] text-secondary-foreground hover:bg-[var(--fill-primary)]",
-        ghost: "hover:opacity-60",
+        ghost: "hover:bg-[var(--fill-tertiary)]",
         link: "text-primary underline-offset-4 hover:underline",
         accent:
           "bg-[var(--accent-primary-1000)] text-[var(--gray-white-1000)] hover:bg-[var(--accent-primary-1000)]/90",

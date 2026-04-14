@@ -8,13 +8,13 @@ export function CopyButton({
   text,
   label,
   className,
-  variant = "outline",
+  variant = "outline-filled",
   size = "sm",
 }: {
   text: string;
   label: string;
   className?: string;
-  variant?: "outline" | "default";
+  variant?: "outline" | "outline-filled" | "default";
   size?: "sm" | "default";
 }) {
   const t = useT();
