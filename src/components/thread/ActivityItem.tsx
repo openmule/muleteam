@@ -198,7 +198,7 @@ export function ActivityItem({
             {/* Name + time (right-aligned) */}
             <div className="flex items-center gap-1">
               <span className="text-[length:var(--font-size-subheadline)] text-[var(--label-secondary)] opacity-0 group-hover/item:opacity-100 transition-opacity">{timeAgo(message.ts)}</span>
-              <MemberHoverCard participantId={message.from}>
+              <MemberHoverCard participantId={message.from} align="right">
                 <Link href={memberUrl(message.from)} className="text-[length:var(--font-size-body-small)] font-semibold text-[var(--label-primary)] hover:underline">
                   {message.from_name}
                 </Link>
