@@ -68,7 +68,10 @@ export function MentionAutocomplete({
     // Show "no results" when visible but empty
     return (
       <div className="absolute bottom-full left-0 right-0 mb-1 z-50">
-        <div className="bg-popover border border-border rounded-md shadow-md p-2">
+        <div
+          className="bg-[var(--bg-grouped-quaternary)] border-[length:var(--border-width-primary)] border-border rounded-[8px] p-2"
+          style={{ boxShadow: "var(--shadow-medium)" }}
+        >
           <div className="text-xs text-muted-foreground px-2 py-1">
             {t("mention.noResults")}
           </div>
@@ -81,8 +84,8 @@ export function MentionAutocomplete({
     <div className="absolute bottom-full left-0 right-0 mb-1 z-50">
       <div
         ref={listRef}
-        className="bg-popover border border-border rounded-md shadow-md py-1 overflow-y-auto"
-        style={{ maxHeight: MAX_VISIBLE * 40 }}
+        className="bg-[var(--bg-grouped-quaternary)] border-[length:var(--border-width-primary)] border-border rounded-[8px] p-2 overflow-y-auto"
+        style={{ maxHeight: MAX_VISIBLE * 44, boxShadow: "var(--shadow-medium)" }}
         role="listbox"
       >
         {sorted.map((member, index) => (
@@ -91,10 +94,10 @@ export function MentionAutocomplete({
             ref={(el) => { itemRefs.current[index] = el; }}
             role="option"
             aria-selected={index === selectedIndex}
-            className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors ${
+            className={`w-full flex items-center gap-2 h-9 px-2 text-[length:var(--font-size-body-small)] text-left rounded-[var(--radius-h36)] transition-colors ${
               index === selectedIndex
                 ? "bg-accent text-accent-foreground"
-                : "hover:bg-accent/50"
+                : "hover:bg-[var(--fill-quaternary)]"
             }`}
             onMouseEnter={() => onHover(index)}
             onMouseDown={(e) => {
