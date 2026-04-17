@@ -12,14 +12,17 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { setupPrompt, openCodeSetupPrompt, openClawSetupPrompt, claudeMdSnippet, openCodeSnippet, openClawSkillSnippet } from "@/components/shared/setupPrompt";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
+import { EditProfileDialog } from "@/components/shared/EditProfileDialog";
 import { useT } from "@/lib/i18n";
 import { timeAgo, memberUrl } from "@/components/shared/helpers";
 import { Input } from "@/components/ui/input";
+import { Pencil } from "lucide-react";
 import {
   TitleBar,
   TitleBarHeading,
   TitleBarTitle,
   TitleBarBack,
+  TitleBarActions,
 } from "@/components/patterns/titlebar";
 import type { User, RegisteredAgent, ThreadMeta, ChannelMeta } from "@/components/shared/types";
 
@@ -59,6 +62,7 @@ export default function MemberDetailPage() {
   const [patGenerating, setPatGenerating] = useState(false);
   const [newPatToken, setNewPatToken] = useState<string | null>(null);
   const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
   const t = useT();
 
   useEffect(() => {
@@ -135,13 +139,42 @@ export default function MemberDetailPage() {
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   const memberChannels = channels.filter((p) => p.members.some((m) => m.id === rawId));
 
+  // Can current user edit this agent? (creator or owner)
+  const canEditAgent = isAgent && memberAgent && currentUser && (
+    memberAgent.created_by?.id === currentUser.id ||
+    currentUser.team_role === "owner"
+  );
+
   if (isAgent && memberAgent) {
     return (
       <main className="h-full flex flex-col">
         {/* TitleBar with breadcrumb */}
         <TitleBar className="backdrop-blur-[24px]" style={{ backgroundColor: "color-mix(in srgb, var(--bg-grouped-tertiary) 85%, transparent)" }}>
           <TitleBarBack onClick={() => router.push("/members")}>Members</TitleBarBack>
+          {canEditAgent && (
+            <TitleBarActions>
+              <Button variant="ghost" icon size="sm" onClick={() => setEditProfileOpen(true)}>
+                <Pencil />
+              </Button>
+            </TitleBarActions>
+          )}
         </TitleBar>
+
+        {/* Edit Agent Profile Dialog */}
+        {canEditAgent && (
+          <EditProfileDialog
+            type="agent"
+            open={editProfileOpen}
+            onOpenChange={setEditProfileOpen}
+            agentId={memberAgent.id}
+            name={memberAgent.name}
+            description={memberAgent.description}
+            tags={memberAgent.capabilities}
+            onSaved={(data) => {
+              setMemberAgent((prev) => prev ? { ...prev, name: data.name, description: data.description, capabilities: data.tags } : prev);
+            }}
+          />
+        )}
 
         <div className="flex-1 overflow-y-auto scrollbar-thin -mt-16 pt-16">
           <div className="mx-auto max-w-[848px] w-full px-6 pb-16">
@@ -371,7 +404,30 @@ export default function MemberDetailPage() {
         {/* TitleBar with breadcrumb */}
         <TitleBar className="backdrop-blur-[24px]" style={{ backgroundColor: "color-mix(in srgb, var(--bg-grouped-tertiary) 85%, transparent)" }}>
           <TitleBarBack onClick={() => router.push("/members")}>Members</TitleBarBack>
+          {isOwnProfile && (
+            <TitleBarActions>
+              <Button variant="ghost" icon size="sm" onClick={() => setEditProfileOpen(true)}>
+                <Pencil />
+              </Button>
+            </TitleBarActions>
+          )}
         </TitleBar>
+
+        {/* Edit User Profile Dialog */}
+        {isOwnProfile && (
+          <EditProfileDialog
+            type="user"
+            open={editProfileOpen}
+            onOpenChange={setEditProfileOpen}
+            userId={memberUser.id}
+            name={memberUser.name}
+            description={memberUser.description}
+            avatarUrl={memberUser.avatar_url}
+            onSaved={(data) => {
+              setMemberUser((prev) => prev ? { ...prev, name: data.name, description: data.description } : prev);
+            }}
+          />
+        )}
 
         <div className="flex-1 overflow-y-auto scrollbar-thin -mt-16 pt-16">
           <div className="mx-auto max-w-[848px] w-full px-6 pb-16">

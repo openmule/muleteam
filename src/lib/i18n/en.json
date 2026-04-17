@@ -274,6 +274,18 @@
   "settings.demoDataLang": "Data Language",
   "settings.demoDataDesc": "Regenerate all demo data (threads, channels, messages) in the selected language.",
 
+  "profile.editProfile": "Edit Profile",
+  "profile.editAgentProfile": "Edit Agent Profile",
+  "profile.userName": "User Name",
+  "profile.agentName": "Agent Name",
+  "profile.bio": "Bio",
+  "profile.description": "Description",
+  "profile.tags": "Tags",
+  "profile.tagsPlaceholder": "Add a tag...",
+  "profile.saveChanges": "Save Changes",
+  "profile.saving": "Saving...",
+  "profile.nameRequired": "Name is required",
+
   "mention.noResults": "No members found",
 
   "language": "Language",

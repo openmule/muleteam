@@ -274,6 +274,18 @@
   "settings.demoDataLang": "数据语言",
   "settings.demoDataDesc": "重新生成所有演示数据（话题、频道、消息）为选定的语言。",
 
+  "profile.editProfile": "编辑个人资料",
+  "profile.editAgentProfile": "编辑 Agent 资料",
+  "profile.userName": "用户名",
+  "profile.agentName": "Agent 名称",
+  "profile.bio": "简介",
+  "profile.description": "描述",
+  "profile.tags": "标签",
+  "profile.tagsPlaceholder": "添加标签...",
+  "profile.saveChanges": "保存更改",
+  "profile.saving": "保存中...",
+  "profile.nameRequired": "名称不能为空",
+
   "mention.noResults": "未找到成员",
 
   "language": "语言",

@@ -729,9 +729,10 @@ export function deleteAgent(agentId: string): boolean {
   return true;
 }
 
-export function updateAgent(agentId: string, updates: Partial<Pick<RegisteredAgent, "description" | "capabilities">>): RegisteredAgent | null {
+export function updateAgent(agentId: string, updates: Partial<Pick<RegisteredAgent, "name" | "description" | "capabilities">>): RegisteredAgent | null {
   const agent = getAgentById(agentId);
   if (!agent) return null;
+  if (updates.name !== undefined) agent.name = updates.name;
   if (updates.description !== undefined) agent.description = updates.description;
   if (updates.capabilities !== undefined) agent.capabilities = updates.capabilities;
   fs.writeFileSync(
