@@ -8,7 +8,7 @@ import { useI18n } from "@/lib/i18n";
 import { useTheme } from "@/lib/use-theme";
 import { memberUrl } from "@/components/shared/helpers";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
-import { NewThreadDialog } from "@/components/shared/NewThreadDialog";
+import { NewThreadForm } from "@/components/shared/NewThreadDialog";
 import { CreateChannelForm } from "@/components/shared/CreateChannelForm";
 import {
   DropdownMenu,
@@ -369,12 +369,12 @@ export function Sidebar() {
       </Dialog>
 
       <Dialog open={createThreadOpen} onOpenChange={setCreateThreadOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t("thread.newThreadTitle")}</DialogTitle>
           </DialogHeader>
           <div className="pt-2">
-            <NewThreadDialog
+            <NewThreadForm
               agents={agents}
               users={allUsers}
               channels={channels}
