@@ -20,12 +20,26 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const description = typeof body.description === "string" ? body.description.trim() : null;
 
+    await ensureMigrations();
     const sql = await db();
-    await sql`UPDATE users SET description = ${description} WHERE id::text = ${userId}`;
 
-    return NextResponse.json({ ok: true });
+    // Build dynamic update
+    if (typeof body.name === "string" && body.name.trim()) {
+      const name = body.name.trim();
+      await sql`UPDATE users SET name = ${name} WHERE id::text = ${userId}`;
+    }
+    if (typeof body.description === "string") {
+      const description = body.description.trim() || null;
+      await sql`UPDATE users SET description = ${description} WHERE id::text = ${userId}`;
+    }
+
+    // Fetch updated user to return
+    const result = (await sql`
+      SELECT id, email, name, description, avatar_url, team_role FROM users WHERE id::text = ${userId}
+    `) as { id: string; email: string; name: string; description: string | null; avatar_url: string | null; team_role: string | null }[];
+
+    return NextResponse.json({ ok: true, user: result[0] ?? null });
   });
 }
 

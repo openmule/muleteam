@@ -30,8 +30,9 @@ export async function PATCH(
 
     const { agentId } = await params;
     const body = await request.json();
-    const updates: { description?: string; capabilities?: string[] } = {};
+    const updates: { name?: string; description?: string; capabilities?: string[] } = {};
 
+    if (typeof body.name === "string" && body.name.trim()) updates.name = body.name.trim();
     if (typeof body.description === "string") updates.description = body.description;
     if (Array.isArray(body.capabilities)) {
       updates.capabilities = body.capabilities
