@@ -7,6 +7,7 @@ import {
   Trash2, Upload, Loader2,
 } from "lucide-react";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
+import { MemberHoverCard } from "@/components/shared/MemberHoverCard";
 import { memberUrl } from "@/components/shared/helpers";
 import { useRouter } from "next/navigation";
 import { Pictogram } from "@/components/ui/pictogram";
@@ -239,9 +240,13 @@ export function ThreadSidebar({
                   onClick={() => router.push(memberUrl(p.id))}
                   className="flex items-start gap-2 px-3 py-2 rounded-[8px] hover:bg-[var(--fill-quaternary)] transition-colors cursor-pointer"
                 >
-                  <MemberAvatar type={p.type} name={p.name} size={36} />
+                  <MemberHoverCard participantId={p.id}>
+                    <MemberAvatar type={p.type} name={p.name} size={36} />
+                  </MemberHoverCard>
                   <div className="flex flex-col gap-1 min-w-0">
-                    <span className="text-sm text-[var(--label-primary)]">{p.name}</span>
+                    <MemberHoverCard participantId={p.id}>
+                      <span className="text-sm text-[var(--label-primary)]">{p.name}</span>
+                    </MemberHoverCard>
                     <div className="flex items-center gap-1 flex-wrap">
                       {isAgent ? (
                         <>

@@ -208,7 +208,9 @@ export function ParticipantsList({
 
             return (
               <div key={p.id} className="flex items-center gap-2 text-sm">
-                <MemberAvatar type={p.type} name={p.name} size={20} avatarUrl={!isAgent ? userMap.get(p.id.split(":").slice(1).join(":"))?.avatar_url : undefined} />
+                <MemberHoverCard participantId={p.id}>
+                  <MemberAvatar type={p.type} name={p.name} size={20} avatarUrl={!isAgent ? userMap.get(p.id.split(":").slice(1).join(":"))?.avatar_url : undefined} />
+                </MemberHoverCard>
                 <MemberHoverCard participantId={p.id}>
                   <Link href={memberUrl(p.id)} className="hover:underline">
                     {isAgent ? `@${p.name}` : p.name}
