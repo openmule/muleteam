@@ -103,13 +103,17 @@ export function ForYouPanel() {
   // Auto-select first thread
   useEffect(() => {
     if (threadGroups.length > 0 && !selectedThreadId) {
-      setSelectedThreadId(threadGroups[0].threadId);
+      const firstId = threadGroups[0].threadId;
+      setSelectedThreadId(firstId);
+      window.history.replaceState(null, "", `/thread/${firstId}`);
     }
   }, [threadGroups.length, selectedThreadId]);
 
   const handleSelectThread = (threadId: string) => {
     setSelectedThreadId(threadId);
     setReadThreadIds((prev) => new Set(prev).add(threadId));
+    // Update browser URL to reflect the active thread
+    window.history.replaceState(null, "", `/thread/${threadId}`);
     // Mark events as read
     events
       .filter((e) => e.thread_id === threadId && !e.read)

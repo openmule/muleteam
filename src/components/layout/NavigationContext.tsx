@@ -38,6 +38,10 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
   const setThread = useCallback((threadId: string) => {
     setActiveThreadId(threadId);
+    // Update browser URL to reflect the active thread (enables link sharing, back/forward, debugging)
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `/thread/${threadId}`);
+    }
   }, []);
 
   const setView = useCallback((view: NavigationState["activeView"]) => {
