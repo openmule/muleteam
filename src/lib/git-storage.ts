@@ -9,8 +9,69 @@ function REPO_BASE(): string {
   return getRepoPath() || DEFAULT_REPO_BASE;
 }
 
-// In-memory mutex for git operations
-let gitLock: Promise<void> = Promise.resolve();
+// ── Per-thread repo layout ──
+// Global data (channels, agents): .data/repos/global/
+// Per-thread repos:               .data/repos/threads/{threadId}/
+//
+// Each thread repo contains flat paths:
+//   meta.json, messages.jsonl, tasks.json, links.json,
+//   artifacts/, workspace/
+
+function REPOS_ROOT(): string {
+  const base = REPO_BASE();
+  // New layout: sibling "repos" dir next to legacy "repo" dir
+  // If REPO_BASE points to .data/repo, repos root is .data/repos
+  // If REPO_BASE is custom (tenant), use <base>/repos
+  if (base.endsWith("/repo") || base.endsWith("\\repo")) {
+    return base.slice(0, -"/repo".length) + path.sep + "repos";
+  }
+  return path.join(base, "repos");
+}
+
+function GLOBAL_REPO_DIR(): string {
+  return path.join(REPOS_ROOT(), "global");
+}
+
+function THREAD_REPO_DIR(threadId: string): string {
+  return path.join(REPOS_ROOT(), "threads", threadId);
+}
+
+// ── Per-thread git locks ──
+// Each thread repo gets its own serialization lock so concurrent
+// operations on different threads don't block each other.
+const threadLocks = new Map<string, Promise<void>>();
+const globalLock = { promise: Promise.resolve() };
+
+async function withThreadLock<T>(threadId: string, fn: () => T): Promise<T> {
+  const prev = threadLocks.get(threadId) || Promise.resolve();
+  let resolve: () => void;
+  const next = new Promise<void>(r => { resolve = r; });
+  threadLocks.set(threadId, next);
+  await prev;
+  try {
+    return fn();
+  } finally {
+    resolve!();
+  }
+}
+
+async function withGlobalLock<T>(fn: () => T): Promise<T> {
+  const prev = globalLock.promise;
+  let resolve: () => void;
+  globalLock.promise = new Promise<void>(r => { resolve = r; });
+  await prev;
+  try {
+    return fn();
+  } finally {
+    resolve!();
+  }
+}
+
+// Legacy compat — wraps thread lock for callers that still use withGitLock
+async function withGitLock<T>(fn: () => T): Promise<T> {
+  // Fall back to global lock for backward compat (used only by workspace writes)
+  return withGlobalLock(fn);
+}
 
 // Types
 export interface ThreadMeta {
@@ -89,31 +150,125 @@ export interface ChannelMeta {
   updated_at: string;
 }
 
-// Initialize the repo directory
-export function initRepo(): void {
-  if (!fs.existsSync(REPO_BASE())) {
-    fs.mkdirSync(REPO_BASE(),{ recursive: true });
-    execSync("git init", { cwd: REPO_BASE() });
-    execSync('git config user.email "system@muleteam.local"', { cwd: REPO_BASE() });
-    execSync('git config user.name "MuleTeam System"', { cwd: REPO_BASE() });
-    fs.writeFileSync(path.join(REPO_BASE(),".gitkeep"), "");
-    execSync("git add . && git commit -m 'init'", { cwd: REPO_BASE() });
+// ── Git repo initialization ──
+
+function initGitRepo(dir: string): void {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
   }
+  if (!fs.existsSync(path.join(dir, ".git"))) {
+    execSync("git init", { cwd: dir });
+    execSync('git config user.email "system@muleteam.local"', { cwd: dir });
+    execSync('git config user.name "MuleTeam System"', { cwd: dir });
+    fs.writeFileSync(path.join(dir, ".gitkeep"), "");
+    execSync("git add . && git commit -m 'init'", { cwd: dir });
+  }
+}
+
+/** Initialize the global repo (channels, agents). */
+function initGlobalRepo(): void {
+  initGitRepo(GLOBAL_REPO_DIR());
+}
+
+/** Initialize a per-thread repo. Creates and git-inits if needed. */
+function initThreadRepo(threadId: string): void {
+  initGitRepo(THREAD_REPO_DIR(threadId));
+}
+
+/**
+ * Public initRepo — ensures global repo exists and runs migration if needed.
+ * Kept for backward compatibility with callers (e.g. seed route).
+ */
+export function initRepo(): void {
+  initGlobalRepo();
+  migrateIfNeeded();
 }
 
 export function clearRepo(): void {
-  const base = REPO_BASE();
-  for (const dir of ["threads", "channels", "agents"]) {
-    const p = path.join(base, dir);
+  // Clear global data
+  const globalDir = GLOBAL_REPO_DIR();
+  for (const dir of ["channels", "agents"]) {
+    const p = path.join(globalDir, dir);
     if (fs.existsSync(p)) fs.rmSync(p, { recursive: true });
+  }
+  // Clear all per-thread repos
+  const threadsRoot = path.join(REPOS_ROOT(), "threads");
+  if (fs.existsSync(threadsRoot)) fs.rmSync(threadsRoot, { recursive: true });
+
+  // Also clear legacy repo threads if still present
+  const legacyThreads = path.join(REPO_BASE(), "threads");
+  if (fs.existsSync(legacyThreads)) fs.rmSync(legacyThreads, { recursive: true });
+}
+
+// ── Migration from monolithic to per-thread repos ──
+
+let migrationDone = false;
+
+function migrateIfNeeded(): void {
+  if (migrationDone) return;
+  migrationDone = true;
+
+  const legacyThreadsDir = path.join(REPO_BASE(), "threads");
+  if (!fs.existsSync(legacyThreadsDir)) return;
+
+  // Check if there are thread directories in the legacy location
+  const entries = fs.readdirSync(legacyThreadsDir).filter(d => {
+    return fs.existsSync(path.join(legacyThreadsDir, d, "meta.json"));
+  });
+
+  if (entries.length === 0) return;
+
+  // Also migrate channels and agents from legacy repo to global repo
+  const legacyBase = REPO_BASE();
+  initGlobalRepo();
+
+  for (const subdir of ["channels", "agents"]) {
+    const legacyPath = path.join(legacyBase, subdir);
+    const globalPath = path.join(GLOBAL_REPO_DIR(), subdir);
+    if (fs.existsSync(legacyPath) && !fs.existsSync(globalPath)) {
+      copyDirRecursive(legacyPath, globalPath);
+    }
+  }
+  gitCommitInRepo(GLOBAL_REPO_DIR(), "Migrate global data from legacy repo", "MuleTeam System", "system@muleteam.local");
+
+  // Migrate each thread to its own repo
+  for (const threadId of entries) {
+    const legacyDir = path.join(legacyThreadsDir, threadId);
+    const newDir = THREAD_REPO_DIR(threadId);
+    if (fs.existsSync(newDir) && fs.existsSync(path.join(newDir, "meta.json"))) {
+      continue; // Already migrated
+    }
+    initGitRepo(newDir);
+    // Copy all thread files to the new per-thread repo (flat layout)
+    copyDirRecursive(legacyDir, newDir);
+    gitCommitInRepo(newDir, `Migrate thread ${threadId} from legacy repo`, "MuleTeam System", "system@muleteam.local");
+  }
+
+  // Remove legacy threads dir after successful migration
+  fs.rmSync(legacyThreadsDir, { recursive: true, force: true });
+}
+
+function copyDirRecursive(src: string, dest: string): void {
+  if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src)) {
+    const srcPath = path.join(src, entry);
+    const destPath = path.join(dest, entry);
+    const stat = fs.statSync(srcPath);
+    if (stat.isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
   }
 }
 
-// Thread operations
+// ── Thread operations ──
+
 export function createThread(meta: ThreadMeta): void {
-  initRepo();
-  const threadDir = path.join(REPO_BASE(),"threads", meta.id);
-  fs.mkdirSync(threadDir, { recursive: true });
+  initGlobalRepo();
+  migrateIfNeeded();
+  const threadDir = THREAD_REPO_DIR(meta.id);
+  initGitRepo(threadDir);
   fs.mkdirSync(path.join(threadDir, "artifacts"), { recursive: true });
   fs.mkdirSync(path.join(threadDir, "workspace"), { recursive: true });
   fs.writeFileSync(path.join(threadDir, "meta.json"), JSON.stringify(meta, null, 2));
@@ -141,42 +296,44 @@ Record important decisions made in this thread. Format:
 ---
 (Decisions will be added above this line)
 `);
-  gitCommit(`Create thread: ${meta.title}`, "MuleTeam System", "system@muleteam.local");
+  gitCommitInRepo(threadDir, `Create thread: ${meta.title}`, "MuleTeam System", "system@muleteam.local");
 }
 
 export function getThread(threadId: string): ThreadMeta | null {
-  initRepo();
-  const metaPath = path.join(REPO_BASE(),"threads", threadId, "meta.json");
+  migrateIfNeeded();
+  const metaPath = path.join(THREAD_REPO_DIR(threadId), "meta.json");
   if (!fs.existsSync(metaPath)) return null;
   return JSON.parse(fs.readFileSync(metaPath, "utf-8"));
 }
 
 export function listThreads(locale?: string): ThreadMeta[] {
-  initRepo();
-  const threadsDir = path.join(REPO_BASE(),"threads");
-  if (!fs.existsSync(threadsDir)) {
+  initGlobalRepo();
+  migrateIfNeeded();
+  const threadsRoot = path.join(REPOS_ROOT(), "threads");
+  if (!fs.existsSync(threadsRoot)) {
     seedDefaultThreads(locale);
     return listThreads();
   }
-  const threads = fs.readdirSync(threadsDir)
-    .filter(d => fs.existsSync(path.join(threadsDir, d, "meta.json")))
-    .map(d => {
-      const meta = JSON.parse(fs.readFileSync(path.join(threadsDir, d, "meta.json"), "utf-8"));
-      // Attach last message preview
-      const messagesPath = path.join(threadsDir, d, "messages.jsonl");
-      if (fs.existsSync(messagesPath)) {
-        const content = fs.readFileSync(messagesPath, "utf-8").trim();
-        if (content) {
-          const lines = content.split("\n");
-          try {
-            const last = JSON.parse(lines[lines.length - 1]);
-            meta.last_message = { from_name: last.from_name, body: last.body, ts: last.ts };
-          } catch { /* ignore parse errors */ }
-        }
+  const threadDirs = fs.readdirSync(threadsRoot).filter(d => {
+    return fs.existsSync(path.join(threadsRoot, d, "meta.json"));
+  });
+  const threads = threadDirs.map(d => {
+    const threadDir = path.join(threadsRoot, d);
+    const meta = JSON.parse(fs.readFileSync(path.join(threadDir, "meta.json"), "utf-8"));
+    // Attach last message preview
+    const messagesPath = path.join(threadDir, "messages.jsonl");
+    if (fs.existsSync(messagesPath)) {
+      const content = fs.readFileSync(messagesPath, "utf-8").trim();
+      if (content) {
+        const lines = content.split("\n");
+        try {
+          const last = JSON.parse(lines[lines.length - 1]);
+          meta.last_message = { from_name: last.from_name, body: last.body, ts: last.ts };
+        } catch { /* ignore parse errors */ }
       }
-      return meta;
-    })
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+    }
+    return meta;
+  }).sort((a: ThreadMeta, b: ThreadMeta) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
   if (threads.length === 0) {
     seedDefaultThreads(locale);
     return listThreads();
@@ -273,7 +430,7 @@ function seedDefaultThreads(locale?: string): void {
   createThread(welcomeMeta);
 
   // Seed README with actual getting-started content
-  const welcomeReadmePath = path.join(REPO_BASE(), "threads", "welcome", "workspace", "README.md");
+  const welcomeReadmePath = path.join(THREAD_REPO_DIR("welcome"), "workspace", "README.md");
   fs.writeFileSync(welcomeReadmePath, isZh
     ? `# 欢迎来到你的团队！
 
@@ -311,7 +468,7 @@ function seedDefaultThreads(locale?: string): void {
     type: "system",
     body: welcomeBody,
   };
-  const welcomeMsgPath = path.join(REPO_BASE(), "threads", "welcome", "messages.jsonl");
+  const welcomeMsgPath = path.join(THREAD_REPO_DIR("welcome"), "messages.jsonl");
   fs.appendFileSync(welcomeMsgPath, JSON.stringify(welcomeMsg) + "\n");
 
   // 2. Introductions thread
@@ -327,7 +484,7 @@ function seedDefaultThreads(locale?: string): void {
   createThread(introMeta);
 
   // Seed README with intro thread purpose
-  const introReadmePath = path.join(REPO_BASE(), "threads", "introductions", "workspace", "README.md");
+  const introReadmePath = path.join(THREAD_REPO_DIR("introductions"), "workspace", "README.md");
   fs.writeFileSync(introReadmePath, isZh
     ? `# 团队自我介绍
 
@@ -359,10 +516,11 @@ New team members post here to introduce themselves — who you are, what you're 
     type: "system",
     body: introBody,
   };
-  const introMsgPath = path.join(REPO_BASE(), "threads", "introductions", "messages.jsonl");
+  const introMsgPath = path.join(THREAD_REPO_DIR("introductions"), "messages.jsonl");
   fs.appendFileSync(introMsgPath, JSON.stringify(introMsg) + "\n");
 
-  gitCommit("Seed default threads: Welcome + Introductions", "MuleTeam System", "system@muleteam.local");
+  gitCommitInRepo(THREAD_REPO_DIR("welcome"), "Seed welcome thread content", "MuleTeam System", "system@muleteam.local");
+  gitCommitInRepo(THREAD_REPO_DIR("introductions"), "Seed introductions thread content", "MuleTeam System", "system@muleteam.local");
 }
 
 export function updateThread(threadId: string, updates: Partial<Pick<ThreadMeta, "status" | "description" | "labels" | "channel_id">>): void {
@@ -373,8 +531,8 @@ export function updateThread(threadId: string, updates: Partial<Pick<ThreadMeta,
   if (updates.labels !== undefined) meta.labels = updates.labels;
   if ("channel_id" in updates) meta.channel_id = updates.channel_id || undefined;
   meta.updated_at = new Date().toISOString();
-  fs.writeFileSync(path.join(REPO_BASE(),"threads", threadId, "meta.json"), JSON.stringify(meta, null, 2));
-  gitCommit(`Update thread: ${threadId}`, "MuleTeam System", "system@muleteam.local");
+  fs.writeFileSync(path.join(THREAD_REPO_DIR(threadId), "meta.json"), JSON.stringify(meta, null, 2));
+  gitCommitInRepo(THREAD_REPO_DIR(threadId), `Update thread: ${threadId}`, "MuleTeam System", "system@muleteam.local");
 }
 
 export function updateThreadStatus(threadId: string, status: ThreadMeta["status"]): void {
@@ -382,11 +540,10 @@ export function updateThreadStatus(threadId: string, status: ThreadMeta["status"
 }
 
 export function deleteThread(threadId: string): boolean {
-  initRepo();
-  const threadDir = path.join(REPO_BASE(),"threads", threadId);
+  migrateIfNeeded();
+  const threadDir = THREAD_REPO_DIR(threadId);
   if (!fs.existsSync(threadDir)) return false;
   fs.rmSync(threadDir, { recursive: true, force: true });
-  gitCommit(`Delete thread: ${threadId}`, "MuleTeam System", "system@muleteam.local");
   return true;
 }
 
@@ -400,7 +557,8 @@ export function joinThread(threadId: string, participant: Participant): void {
 
   meta.participants.push(participant);
   meta.updated_at = new Date().toISOString();
-  fs.writeFileSync(path.join(REPO_BASE(),"threads", threadId, "meta.json"), JSON.stringify(meta, null, 2));
+  const threadDir = THREAD_REPO_DIR(threadId);
+  fs.writeFileSync(path.join(threadDir, "meta.json"), JSON.stringify(meta, null, 2));
 
   // Add activity message
   const message: Message = {
@@ -411,10 +569,10 @@ export function joinThread(threadId: string, participant: Participant): void {
     type: "activity",
     body: `${participant.name} joined the thread`,
   };
-  const messagesPath = path.join(REPO_BASE(),"threads", threadId, "messages.jsonl");
+  const messagesPath = path.join(threadDir, "messages.jsonl");
   fs.appendFileSync(messagesPath, JSON.stringify(message) + "\n");
 
-  gitCommit(`${participant.name} joined thread: ${threadId}`, "MuleTeam System", "system@muleteam.local");
+  gitCommitInRepo(threadDir, `${participant.name} joined thread: ${threadId}`, "MuleTeam System", "system@muleteam.local");
 }
 
 // Leave thread — remove participant and log activity
@@ -427,7 +585,8 @@ export function removeThreadParticipant(threadId: string, participantId: string)
 
   meta.participants = meta.participants.filter(p => p.id !== participantId);
   meta.updated_at = new Date().toISOString();
-  fs.writeFileSync(path.join(REPO_BASE(),"threads", threadId, "meta.json"), JSON.stringify(meta, null, 2));
+  const threadDir = THREAD_REPO_DIR(threadId);
+  fs.writeFileSync(path.join(threadDir, "meta.json"), JSON.stringify(meta, null, 2));
 
   // Add activity message
   const message: Message = {
@@ -438,10 +597,10 @@ export function removeThreadParticipant(threadId: string, participantId: string)
     type: "activity",
     body: `${participant.name} left the thread`,
   };
-  const messagesPath = path.join(REPO_BASE(),"threads", threadId, "messages.jsonl");
+  const messagesPath = path.join(threadDir, "messages.jsonl");
   fs.appendFileSync(messagesPath, JSON.stringify(message) + "\n");
 
-  gitCommit(`${participant.name} left thread: ${threadId}`, "MuleTeam System", "system@muleteam.local");
+  gitCommitInRepo(threadDir, `${participant.name} left thread: ${threadId}`, "MuleTeam System", "system@muleteam.local");
 }
 
 // Check if a user/agent is a participant (direct or via group)
@@ -463,8 +622,9 @@ export function isParticipant(threadId: string, userId: string): boolean {
 
 // Message operations
 export function addMessage(threadId: string, message: Message): void {
-  initRepo();
-  const messagesPath = path.join(REPO_BASE(),"threads", threadId, "messages.jsonl");
+  initThreadRepo(threadId);
+  const threadDir = THREAD_REPO_DIR(threadId);
+  const messagesPath = path.join(threadDir, "messages.jsonl");
   if (!fs.existsSync(messagesPath)) throw new Error("Thread not found");
   fs.appendFileSync(messagesPath, JSON.stringify(message) + "\n");
 
@@ -473,10 +633,11 @@ export function addMessage(threadId: string, message: Message): void {
   if (meta) {
     meta.updated_at = new Date().toISOString();
     if (meta.status === "open") meta.status = "in_progress";
-    fs.writeFileSync(path.join(REPO_BASE(),"threads", threadId, "meta.json"), JSON.stringify(meta, null, 2));
+    fs.writeFileSync(path.join(threadDir, "meta.json"), JSON.stringify(meta, null, 2));
   }
 
-  gitCommit(
+  gitCommitInRepo(
+    threadDir,
     `${message.from_name}: ${message.body}`,
     message.from_name,
     `${message.from.replace(":", "-")}@muleteam.local`
@@ -484,8 +645,8 @@ export function addMessage(threadId: string, message: Message): void {
 }
 
 export function getMessages(threadId: string): Message[] {
-  initRepo();
-  const messagesPath = path.join(REPO_BASE(),"threads", threadId, "messages.jsonl");
+  migrateIfNeeded();
+  const messagesPath = path.join(THREAD_REPO_DIR(threadId), "messages.jsonl");
   if (!fs.existsSync(messagesPath)) return [];
   const content = fs.readFileSync(messagesPath, "utf-8").trim();
   if (!content) return [];
@@ -494,8 +655,10 @@ export function getMessages(threadId: string): Message[] {
 
 // Artifact operations
 export function saveArtifact(threadId: string, html: string, summary: string, authorName: string, authorId: string, messageId: string): ArtifactVersion {
-  initRepo();
-  const artifactsDir = path.join(REPO_BASE(),"threads", threadId, "artifacts");
+  initThreadRepo(threadId);
+  const threadDir = THREAD_REPO_DIR(threadId);
+  const artifactsDir = path.join(threadDir, "artifacts");
+  if (!fs.existsSync(artifactsDir)) fs.mkdirSync(artifactsDir, { recursive: true });
   const versionsPath = path.join(artifactsDir, "versions.json");
 
   let versions: ArtifactVersion[] = [];
@@ -507,9 +670,9 @@ export function saveArtifact(threadId: string, html: string, summary: string, au
   fs.writeFileSync(path.join(artifactsDir, `v${newVersion}.html`), html);
   fs.writeFileSync(path.join(artifactsDir, "latest.html"), html);
 
-  gitCommit(`Artifact v${newVersion}: ${summary}`, authorName, `${authorId.replace(":", "-")}@muleteam.local`);
+  gitCommitInRepo(threadDir, `Artifact v${newVersion}: ${summary}`, authorName, `${authorId.replace(":", "-")}@muleteam.local`);
 
-  const commitHash = execSync("git rev-parse HEAD", { cwd: REPO_BASE() }).toString().trim();
+  const commitHash = execSync("git rev-parse HEAD", { cwd: threadDir }).toString().trim();
 
   const versionEntry: ArtifactVersion = {
     version: newVersion,
@@ -521,14 +684,14 @@ export function saveArtifact(threadId: string, html: string, summary: string, au
 
   versions.push(versionEntry);
   fs.writeFileSync(versionsPath, JSON.stringify(versions, null, 2));
-  gitCommit(`Update versions.json for v${newVersion}`, authorName, `${authorId.replace(":", "-")}@muleteam.local`);
+  gitCommitInRepo(threadDir, `Update versions.json for v${newVersion}`, authorName, `${authorId.replace(":", "-")}@muleteam.local`);
 
   return versionEntry;
 }
 
 export function getArtifact(threadId: string, version?: number): string | null {
-  initRepo();
-  const artifactsDir = path.join(REPO_BASE(),"threads", threadId, "artifacts");
+  migrateIfNeeded();
+  const artifactsDir = path.join(THREAD_REPO_DIR(threadId), "artifacts");
   const filename = version ? `v${version}.html` : "latest.html";
   const filePath = path.join(artifactsDir, filename);
   if (!fs.existsSync(filePath)) return null;
@@ -536,15 +699,15 @@ export function getArtifact(threadId: string, version?: number): string | null {
 }
 
 export function getArtifactVersions(threadId: string): ArtifactVersion[] {
-  initRepo();
-  const versionsPath = path.join(REPO_BASE(),"threads", threadId, "artifacts", "versions.json");
+  migrateIfNeeded();
+  const versionsPath = path.join(THREAD_REPO_DIR(threadId), "artifacts", "versions.json");
   if (!fs.existsSync(versionsPath)) return [];
   return JSON.parse(fs.readFileSync(versionsPath, "utf-8"));
 }
 
 // Workspace file operations
 function resolveWorkspacePath(threadId: string, filename: string): string {
-  const workspaceDir = path.join(REPO_BASE(),"threads", threadId, "workspace");
+  const workspaceDir = path.join(THREAD_REPO_DIR(threadId), "workspace");
   const resolved = path.resolve(workspaceDir, filename);
   // Path traversal protection
   if (!resolved.startsWith(workspaceDir + path.sep) && resolved !== workspaceDir) {
@@ -554,8 +717,8 @@ function resolveWorkspacePath(threadId: string, filename: string): string {
 }
 
 export function listWorkspaceFiles(threadId: string): WorkspaceFile[] {
-  initRepo();
-  const workspaceDir = path.join(REPO_BASE(),"threads", threadId, "workspace");
+  migrateIfNeeded();
+  const workspaceDir = path.join(THREAD_REPO_DIR(threadId), "workspace");
   if (!fs.existsSync(workspaceDir)) return [];
 
   const results: WorkspaceFile[] = [];
@@ -582,14 +745,14 @@ export function listWorkspaceFiles(threadId: string): WorkspaceFile[] {
 }
 
 export function readWorkspaceFile(threadId: string, filename: string): string | null {
-  initRepo();
+  migrateIfNeeded();
   const filePath = resolveWorkspacePath(threadId, filename);
   if (!fs.existsSync(filePath)) return null;
   return fs.readFileSync(filePath, "utf-8");
 }
 
 export function readWorkspaceBinary(threadId: string, filename: string): Buffer | null {
-  initRepo();
+  migrateIfNeeded();
   const filePath = resolveWorkspacePath(threadId, filename);
   if (!fs.existsSync(filePath)) return null;
   return fs.readFileSync(filePath);
@@ -601,14 +764,14 @@ export async function writeWorkspaceFile(threadId: string, filename: string, con
   if (Buffer.byteLength(content) > MAX_FILE_SIZE) {
     throw new Error("File size exceeds 10MB limit");
   }
-  initRepo();
+  initThreadRepo(threadId);
   const filePath = resolveWorkspacePath(threadId, filename);
   const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(filePath, content);
 
-  await withGitLock(() => {
-    gitCommit(`${author} wrote workspace/${filename}`, author, `${author.replace(/\s+/g, "-").toLowerCase()}@muleteam.local`);
+  await withThreadLock(threadId, () => {
+    gitCommitInRepo(THREAD_REPO_DIR(threadId), `${author} wrote workspace/${filename}`, author, `${author.replace(/\s+/g, "-").toLowerCase()}@muleteam.local`);
   });
 }
 
@@ -616,33 +779,33 @@ export async function writeWorkspaceBinary(threadId: string, filename: string, d
   if (data.length > MAX_FILE_SIZE) {
     throw new Error("File size exceeds 10MB limit");
   }
-  initRepo();
+  initThreadRepo(threadId);
   const filePath = resolveWorkspacePath(threadId, filename);
   const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(filePath, data);
 
-  await withGitLock(() => {
-    gitCommit(`${author} uploaded workspace/${filename}`, author, `${author.replace(/\s+/g, "-").toLowerCase()}@muleteam.local`);
+  await withThreadLock(threadId, () => {
+    gitCommitInRepo(THREAD_REPO_DIR(threadId), `${author} uploaded workspace/${filename}`, author, `${author.replace(/\s+/g, "-").toLowerCase()}@muleteam.local`);
   });
 }
 
 export async function deleteWorkspaceFile(threadId: string, filename: string, author: string): Promise<boolean> {
-  initRepo();
+  migrateIfNeeded();
   const filePath = resolveWorkspacePath(threadId, filename);
   if (!fs.existsSync(filePath)) return false;
   fs.unlinkSync(filePath);
 
-  await withGitLock(() => {
-    gitCommit(`${author} deleted workspace/${filename}`, author, `${author.replace(/\s+/g, "-").toLowerCase()}@muleteam.local`);
+  await withThreadLock(threadId, () => {
+    gitCommitInRepo(THREAD_REPO_DIR(threadId), `${author} deleted workspace/${filename}`, author, `${author.replace(/\s+/g, "-").toLowerCase()}@muleteam.local`);
   });
   return true;
 }
 
 // Links operations
 export function getLinks(threadId: string): HyperlinkEntry[] {
-  initRepo();
-  const linksPath = path.join(REPO_BASE(),"threads", threadId, "links.json");
+  migrateIfNeeded();
+  const linksPath = path.join(THREAD_REPO_DIR(threadId), "links.json");
   if (!fs.existsSync(linksPath)) return [];
   try {
     return JSON.parse(fs.readFileSync(linksPath, "utf-8"));
@@ -652,47 +815,49 @@ export function getLinks(threadId: string): HyperlinkEntry[] {
 }
 
 export function addLink(threadId: string, link: HyperlinkEntry): void {
-  initRepo();
-  const linksPath = path.join(REPO_BASE(),"threads", threadId, "links.json");
+  initThreadRepo(threadId);
+  const threadDir = THREAD_REPO_DIR(threadId);
+  const linksPath = path.join(threadDir, "links.json");
   const links = getLinks(threadId);
   links.push(link);
   fs.writeFileSync(linksPath, JSON.stringify(links, null, 2));
-  gitCommit(`Add link: ${link.title}`, link.added_by, `system@muleteam.local`);
+  gitCommitInRepo(threadDir, `Add link: ${link.title}`, link.added_by, `system@muleteam.local`);
 }
 
 export function removeLink(threadId: string, linkId: string): boolean {
-  initRepo();
-  const linksPath = path.join(REPO_BASE(),"threads", threadId, "links.json");
+  initThreadRepo(threadId);
+  const threadDir = THREAD_REPO_DIR(threadId);
+  const linksPath = path.join(threadDir, "links.json");
   const links = getLinks(threadId);
   const filtered = links.filter(l => l.id !== linkId);
   if (filtered.length === links.length) return false;
   fs.writeFileSync(linksPath, JSON.stringify(filtered, null, 2));
-  gitCommit(`Remove link: ${linkId}`, "MuleTeam System", "system@muleteam.local");
+  gitCommitInRepo(threadDir, `Remove link: ${linkId}`, "MuleTeam System", "system@muleteam.local");
   return true;
 }
 
-// Agent registration
-function AGENTS_DIR(): string { return path.join(REPO_BASE(), "agents"); }
+// Agent registration — stored in global repo
+function AGENTS_DIR(): string { return path.join(GLOBAL_REPO_DIR(), "agents"); }
 
 function ensureAgentsDir(): void {
-  initRepo();
+  initGlobalRepo();
   if (!fs.existsSync(AGENTS_DIR())) {
-    fs.mkdirSync(AGENTS_DIR(),{ recursive: true });
+    fs.mkdirSync(AGENTS_DIR(), { recursive: true });
   }
 }
 
 export function registerAgent(agent: RegisteredAgent): void {
   ensureAgentsDir();
   fs.writeFileSync(
-    path.join(AGENTS_DIR(),`${agent.id}.json`),
+    path.join(AGENTS_DIR(), `${agent.id}.json`),
     JSON.stringify(agent, null, 2)
   );
-  gitCommit(`Register agent: ${agent.name}`, "MuleTeam System", "system@muleteam.local");
+  gitCommitInRepo(GLOBAL_REPO_DIR(), `Register agent: ${agent.name}`, "MuleTeam System", "system@muleteam.local");
 }
 
 export function getAgentById(agentId: string): RegisteredAgent | null {
   ensureAgentsDir();
-  const agentPath = path.join(AGENTS_DIR(),`${agentId}.json`);
+  const agentPath = path.join(AGENTS_DIR(), `${agentId}.json`);
   if (!fs.existsSync(agentPath)) return null;
   return JSON.parse(fs.readFileSync(agentPath, "utf-8"));
 }
@@ -703,7 +868,7 @@ export function getAgentByToken(tokenHash: string): RegisteredAgent | null {
   for (const file of fs.readdirSync(AGENTS_DIR())) {
     if (!file.endsWith(".json")) continue;
     const agent: RegisteredAgent = JSON.parse(
-      fs.readFileSync(path.join(AGENTS_DIR(),file), "utf-8")
+      fs.readFileSync(path.join(AGENTS_DIR(), file), "utf-8")
     );
     if (agent.token_hash === tokenHash) return agent;
   }
@@ -715,17 +880,17 @@ export function listRegisteredAgents(): RegisteredAgent[] {
   if (!fs.existsSync(AGENTS_DIR())) return [];
   return fs.readdirSync(AGENTS_DIR())
     .filter(f => f.endsWith(".json"))
-    .map(f => JSON.parse(fs.readFileSync(path.join(AGENTS_DIR(),f), "utf-8")))
+    .map(f => JSON.parse(fs.readFileSync(path.join(AGENTS_DIR(), f), "utf-8")))
     .sort((a, b) => new Date(b.last_seen_at).getTime() - new Date(a.last_seen_at).getTime());
 }
 
 export function deleteAgent(agentId: string): boolean {
   ensureAgentsDir();
-  const agentPath = path.join(AGENTS_DIR(),`${agentId}.json`);
+  const agentPath = path.join(AGENTS_DIR(), `${agentId}.json`);
   if (!fs.existsSync(agentPath)) return false;
   const agent = JSON.parse(fs.readFileSync(agentPath, "utf-8"));
   fs.unlinkSync(agentPath);
-  gitCommit(`Delete agent: ${agent.name}`, "MuleTeam System", "system@muleteam.local");
+  gitCommitInRepo(GLOBAL_REPO_DIR(), `Delete agent: ${agent.name}`, "MuleTeam System", "system@muleteam.local");
   return true;
 }
 
@@ -736,10 +901,10 @@ export function updateAgent(agentId: string, updates: Partial<Pick<RegisteredAge
   if (updates.description !== undefined) agent.description = updates.description;
   if (updates.capabilities !== undefined) agent.capabilities = updates.capabilities;
   fs.writeFileSync(
-    path.join(AGENTS_DIR(),`${agentId}.json`),
+    path.join(AGENTS_DIR(), `${agentId}.json`),
     JSON.stringify(agent, null, 2)
   );
-  gitCommit(`Update agent: ${agent.name}`, "MuleTeam System", "system@muleteam.local");
+  gitCommitInRepo(GLOBAL_REPO_DIR(), `Update agent: ${agent.name}`, "MuleTeam System", "system@muleteam.local");
   return agent;
 }
 
@@ -748,14 +913,13 @@ export function updateAgentLastSeen(agentId: string): void {
   if (!agent) return;
   agent.last_seen_at = new Date().toISOString();
   fs.writeFileSync(
-    path.join(AGENTS_DIR(),`${agentId}.json`),
+    path.join(AGENTS_DIR(), `${agentId}.json`),
     JSON.stringify(agent, null, 2)
   );
 }
 
 // Poll activity — returns threads with messages since a given timestamp
 export function pollActivity(sinceTs?: number, threadIds?: string[]): { thread_id: string; title: string; new_messages: number; latest_ts: number }[] {
-  initRepo();
   const threads = listThreads();
   const results: { thread_id: string; title: string; new_messages: number; latest_ts: number }[] = [];
 
@@ -786,7 +950,7 @@ export function getAgentByName(name: string): RegisteredAgent | null {
   for (const file of fs.readdirSync(AGENTS_DIR())) {
     if (!file.endsWith(".json")) continue;
     const agent: RegisteredAgent = JSON.parse(
-      fs.readFileSync(path.join(AGENTS_DIR(),file), "utf-8")
+      fs.readFileSync(path.join(AGENTS_DIR(), file), "utf-8")
     );
     if (agent.name.toLowerCase().trim() === normalizedName) return agent;
   }
@@ -803,14 +967,15 @@ export interface GitLogEntry {
 }
 
 export function getThreadGitLog(threadId: string, limit = 20): GitLogEntry[] {
-  initRepo();
+  migrateIfNeeded();
+  const threadDir = THREAD_REPO_DIR(threadId);
+  if (!fs.existsSync(path.join(threadDir, ".git"))) return [];
   const safeLimit = Math.max(1, Math.min(500, Math.floor(Number(limit)) || 20));
-  const threadDir = path.join("threads", threadId);
   try {
-    // Use %x00 as record separator and %x01 as field separator to handle multiline messages
+    // Per-thread repo: log the entire repo (no path filter needed)
     const log = execSync(
-      `git log --format="%x00%H%x01%h%x01%an%x01%aI%x01%B" -n ${safeLimit} -- "${threadDir}"`,
-      { cwd: REPO_BASE() }
+      `git log --format="%x00%H%x01%h%x01%an%x01%aI%x01%B" -n ${safeLimit}`,
+      { cwd: threadDir }
     ).toString().trim();
     if (!log) return [];
     return log.split("\x00").filter(Boolean).map(record => {
@@ -823,27 +988,27 @@ export function getThreadGitLog(threadId: string, limit = 20): GitLogEntry[] {
   }
 }
 
-// Channel operations
-function CHANNELS_DIR(): string { return path.join(REPO_BASE(), "channels"); }
+// Channel operations — stored in global repo
+function CHANNELS_DIR(): string { return path.join(GLOBAL_REPO_DIR(), "channels"); }
 
 function ensureChannelsDir(): void {
-  initRepo();
+  initGlobalRepo();
   if (!fs.existsSync(CHANNELS_DIR())) {
-    fs.mkdirSync(CHANNELS_DIR(),{ recursive: true });
+    fs.mkdirSync(CHANNELS_DIR(), { recursive: true });
   }
 }
 
 export function createChannel(channel: ChannelMeta): void {
   ensureChannelsDir();
-  const channelDir = path.join(CHANNELS_DIR(),channel.id);
+  const channelDir = path.join(CHANNELS_DIR(), channel.id);
   fs.mkdirSync(channelDir, { recursive: true });
   fs.writeFileSync(path.join(channelDir, "meta.json"), JSON.stringify(channel, null, 2));
-  gitCommit(`Create channel: ${channel.name}`, "MuleTeam System", "system@muleteam.local");
+  gitCommitInRepo(GLOBAL_REPO_DIR(), `Create channel: ${channel.name}`, "MuleTeam System", "system@muleteam.local");
 }
 
 export function getChannel(channelId: string): ChannelMeta | null {
   ensureChannelsDir();
-  const metaPath = path.join(CHANNELS_DIR(),channelId, "meta.json");
+  const metaPath = path.join(CHANNELS_DIR(), channelId, "meta.json");
   if (!fs.existsSync(metaPath)) return null;
   return JSON.parse(fs.readFileSync(metaPath, "utf-8"));
 }
@@ -852,8 +1017,8 @@ export function listChannels(): ChannelMeta[] {
   ensureChannelsDir();
   if (!fs.existsSync(CHANNELS_DIR())) return [];
   return fs.readdirSync(CHANNELS_DIR())
-    .filter(d => fs.existsSync(path.join(CHANNELS_DIR(),d, "meta.json")))
-    .map(d => JSON.parse(fs.readFileSync(path.join(CHANNELS_DIR(),d, "meta.json"), "utf-8")))
+    .filter(d => fs.existsSync(path.join(CHANNELS_DIR(), d, "meta.json")))
+    .map(d => JSON.parse(fs.readFileSync(path.join(CHANNELS_DIR(), d, "meta.json"), "utf-8")))
     .sort((a: ChannelMeta, b: ChannelMeta) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 }
 
@@ -863,16 +1028,16 @@ export function updateChannel(channelId: string, updates: Partial<Pick<ChannelMe
   if (updates.name !== undefined) channel.name = updates.name;
   if (updates.description !== undefined) channel.description = updates.description;
   channel.updated_at = new Date().toISOString();
-  fs.writeFileSync(path.join(CHANNELS_DIR(),channelId, "meta.json"), JSON.stringify(channel, null, 2));
-  gitCommit(`Update channel: ${channelId}`, "MuleTeam System", "system@muleteam.local");
+  fs.writeFileSync(path.join(CHANNELS_DIR(), channelId, "meta.json"), JSON.stringify(channel, null, 2));
+  gitCommitInRepo(GLOBAL_REPO_DIR(), `Update channel: ${channelId}`, "MuleTeam System", "system@muleteam.local");
 }
 
 export function deleteChannel(channelId: string): boolean {
   ensureChannelsDir();
-  const channelDir = path.join(CHANNELS_DIR(),channelId);
+  const channelDir = path.join(CHANNELS_DIR(), channelId);
   if (!fs.existsSync(channelDir)) return false;
   fs.rmSync(channelDir, { recursive: true, force: true });
-  gitCommit(`Delete channel: ${channelId}`, "MuleTeam System", "system@muleteam.local");
+  gitCommitInRepo(GLOBAL_REPO_DIR(), `Delete channel: ${channelId}`, "MuleTeam System", "system@muleteam.local");
   return true;
 }
 
@@ -882,8 +1047,8 @@ export function addChannelMember(channelId: string, member: Participant): void {
   if (channel.members.some(m => m.id === member.id)) return;
   channel.members.push(member);
   channel.updated_at = new Date().toISOString();
-  fs.writeFileSync(path.join(CHANNELS_DIR(),channelId, "meta.json"), JSON.stringify(channel, null, 2));
-  gitCommit(`Add member ${member.name} to channel ${channel.name}`, "MuleTeam System", "system@muleteam.local");
+  fs.writeFileSync(path.join(CHANNELS_DIR(), channelId, "meta.json"), JSON.stringify(channel, null, 2));
+  gitCommitInRepo(GLOBAL_REPO_DIR(), `Add member ${member.name} to channel ${channel.name}`, "MuleTeam System", "system@muleteam.local");
 }
 
 export function removeChannelMember(channelId: string, memberId: string): void {
@@ -891,8 +1056,8 @@ export function removeChannelMember(channelId: string, memberId: string): void {
   if (!channel) throw new Error("Channel not found");
   channel.members = channel.members.filter(m => m.id !== memberId);
   channel.updated_at = new Date().toISOString();
-  fs.writeFileSync(path.join(CHANNELS_DIR(),channelId, "meta.json"), JSON.stringify(channel, null, 2));
-  gitCommit(`Remove member ${memberId} from channel ${channel.name}`, "MuleTeam System", "system@muleteam.local");
+  fs.writeFileSync(path.join(CHANNELS_DIR(), channelId, "meta.json"), JSON.stringify(channel, null, 2));
+  gitCommitInRepo(GLOBAL_REPO_DIR(), `Remove member ${memberId} from channel ${channel.name}`, "MuleTeam System", "system@muleteam.local");
 }
 
 export function listThreadsByChannel(channelId: string): ThreadMeta[] {
@@ -914,8 +1079,8 @@ export interface ActionItem {
 }
 
 export function getThreadTasks(threadId: string): ActionItem[] {
-  initRepo();
-  const tasksPath = path.join(REPO_BASE(),"threads", threadId, "tasks.json");
+  migrateIfNeeded();
+  const tasksPath = path.join(THREAD_REPO_DIR(threadId), "tasks.json");
   if (!fs.existsSync(tasksPath)) return [];
   try {
     return JSON.parse(fs.readFileSync(tasksPath, "utf-8"));
@@ -925,17 +1090,19 @@ export function getThreadTasks(threadId: string): ActionItem[] {
 }
 
 export function addThreadTask(threadId: string, task: ActionItem): void {
-  initRepo();
-  const tasksPath = path.join(REPO_BASE(),"threads", threadId, "tasks.json");
+  initThreadRepo(threadId);
+  const threadDir = THREAD_REPO_DIR(threadId);
+  const tasksPath = path.join(threadDir, "tasks.json");
   const tasks = getThreadTasks(threadId);
   tasks.push(task);
   fs.writeFileSync(tasksPath, JSON.stringify(tasks, null, 2));
-  gitCommit(`Add task: ${task.description}`, task.created_by_name, `system@muleteam.local`);
+  gitCommitInRepo(threadDir, `Add task: ${task.description}`, task.created_by_name, `system@muleteam.local`);
 }
 
 export function updateThreadTask(threadId: string, taskId: string, updates: Partial<ActionItem>): ActionItem | null {
-  initRepo();
-  const tasksPath = path.join(REPO_BASE(),"threads", threadId, "tasks.json");
+  initThreadRepo(threadId);
+  const threadDir = THREAD_REPO_DIR(threadId);
+  const tasksPath = path.join(threadDir, "tasks.json");
   const tasks = getThreadTasks(threadId);
   const idx = tasks.findIndex(t => t.id === taskId);
   if (idx === -1) return null;
@@ -949,45 +1116,35 @@ export function updateThreadTask(threadId: string, taskId: string, updates: Part
 
   tasks[idx] = task;
   fs.writeFileSync(tasksPath, JSON.stringify(tasks, null, 2));
-  gitCommit(`Update task: ${task.description}`, "MuleTeam System", "system@muleteam.local");
+  gitCommitInRepo(threadDir, `Update task: ${task.description}`, "MuleTeam System", "system@muleteam.local");
   return task;
 }
 
 export function deleteThreadTask(threadId: string, taskId: string): boolean {
-  initRepo();
-  const tasksPath = path.join(REPO_BASE(),"threads", threadId, "tasks.json");
+  initThreadRepo(threadId);
+  const threadDir = THREAD_REPO_DIR(threadId);
+  const tasksPath = path.join(threadDir, "tasks.json");
   const tasks = getThreadTasks(threadId);
   const filtered = tasks.filter(t => t.id !== taskId);
   if (filtered.length === tasks.length) return false;
   fs.writeFileSync(tasksPath, JSON.stringify(filtered, null, 2));
-  gitCommit(`Remove task: ${taskId}`, "MuleTeam System", "system@muleteam.local");
+  gitCommitInRepo(threadDir, `Remove task: ${taskId}`, "MuleTeam System", "system@muleteam.local");
   return true;
 }
 
-// Git helpers
-function gitCommit(message: string, authorName: string, authorEmail: string): void {
+// ── Git helpers ──
+
+/** Commit all changes in a specific repo directory. */
+function gitCommitInRepo(repoDir: string, message: string, authorName: string, authorEmail: string): void {
   try {
-    execSync("git add -A", { cwd: REPO_BASE() });
-    const status = execSync("git status --porcelain", { cwd: REPO_BASE() }).toString().trim();
+    execSync("git add -A", { cwd: repoDir });
+    const status = execSync("git status --porcelain", { cwd: repoDir }).toString().trim();
     if (!status) return; // Nothing to commit
     execSync(
       `git -c user.name="${authorName}" -c user.email="${authorEmail}" commit -m "${message.replace(/"/g, '\\"')}"`,
-      { cwd: REPO_BASE() }
+      { cwd: repoDir }
     );
   } catch {
     // Ignore commit errors (e.g., nothing to commit)
-  }
-}
-
-// Serialize git commit operations
-async function withGitLock<T>(fn: () => T): Promise<T> {
-  const prev = gitLock;
-  let resolve: () => void;
-  gitLock = new Promise<void>(r => { resolve = r; });
-  await prev;
-  try {
-    return fn();
-  } finally {
-    resolve!();
   }
 }
