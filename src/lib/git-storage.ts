@@ -208,7 +208,38 @@ function migrateIfNeeded(): void {
   if (migrationDone) return;
   migrationDone = true;
 
-  const legacyThreadsDir = path.join(REPO_BASE(), "threads");
+  const legacyBase = REPO_BASE();
+  initGlobalRepo();
+
+  // Always check and migrate channels/agents from legacy repo to global repo
+  let globalDataMigrated = false;
+  for (const subdir of ["channels", "agents"]) {
+    const legacyPath = path.join(legacyBase, subdir);
+    const globalPath = path.join(GLOBAL_REPO_DIR(), subdir);
+    if (fs.existsSync(legacyPath)) {
+      // Copy files that don't exist in globalPath yet
+      if (!fs.existsSync(globalPath)) {
+        copyDirRecursive(legacyPath, globalPath);
+        globalDataMigrated = true;
+      } else {
+        // Global dir exists but may be empty — copy individual files
+        const legacyFiles = fs.readdirSync(legacyPath);
+        for (const file of legacyFiles) {
+          const src = path.join(legacyPath, file);
+          const dst = path.join(globalPath, file);
+          if (!fs.existsSync(dst) && fs.statSync(src).isFile()) {
+            fs.copyFileSync(src, dst);
+            globalDataMigrated = true;
+          }
+        }
+      }
+    }
+  }
+  if (globalDataMigrated) {
+    gitCommitInRepo(GLOBAL_REPO_DIR(), "Migrate global data from legacy repo", "MuleTeam System", "system@muleteam.local");
+  }
+
+  const legacyThreadsDir = path.join(legacyBase, "threads");
   if (!fs.existsSync(legacyThreadsDir)) return;
 
   // Check if there are thread directories in the legacy location
@@ -217,19 +248,6 @@ function migrateIfNeeded(): void {
   });
 
   if (entries.length === 0) return;
-
-  // Also migrate channels and agents from legacy repo to global repo
-  const legacyBase = REPO_BASE();
-  initGlobalRepo();
-
-  for (const subdir of ["channels", "agents"]) {
-    const legacyPath = path.join(legacyBase, subdir);
-    const globalPath = path.join(GLOBAL_REPO_DIR(), subdir);
-    if (fs.existsSync(legacyPath) && !fs.existsSync(globalPath)) {
-      copyDirRecursive(legacyPath, globalPath);
-    }
-  }
-  gitCommitInRepo(GLOBAL_REPO_DIR(), "Migrate global data from legacy repo", "MuleTeam System", "system@muleteam.local");
 
   // Migrate each thread to its own repo
   for (const threadId of entries) {
