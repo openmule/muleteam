@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: deploy-vm
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -17,6 +21,7 @@ jobs:
           password: ${{ secrets.VM_PASSWORD }}
           command_timeout: 10m
           script: |
+            set -e
             rm -f /root/package-lock.json /root/package.json
             cd /root/muleteam
             git checkout -- .
